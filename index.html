@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gasolineras España</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root { --azul:#1565C0; --verde:#2E7D32; --borde:#ddd; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, Arial, sans-serif; display:flex; height:100vh; }
+  #panel { width:330px; min-width:280px; padding:14px; overflow-y:auto; border-right:1px solid var(--borde); background:#fafafa; }
+  h1 { font-size:1.15rem; margin:0 0 10px; color:var(--azul); }
+  fieldset { border:1px solid var(--borde); border-radius:8px; margin:0 0 12px; padding:8px 10px; background:#fff; }
+  legend { font-size:.85rem; font-weight:600; color:#555; padding:0 4px; }
+  label { display:block; font-size:.85rem; margin:6px 0 2px; }
+  select, input[type=text] { width:100%; padding:6px; border:1px solid var(--borde); border-radius:6px; font-size:.9rem; }
+  input[type=range] { width:100%; }
+  .fila { display:flex; gap:8px; align-items:center; margin-top:6px; }
+  button { cursor:pointer; border:none; border-radius:6px; padding:8px 10px; font-size:.9rem; background:var(--azul); color:#fff; width:100%; margin-top:6px; }
+  button.sec { background:#fff; color:var(--azul); border:1px solid var(--azul); }
+  button:hover { opacity:.9; }
+  #marcas { max-height:150px; overflow-y:auto; border:1px solid var(--borde); border-radius:6px; padding:4px; background:#fff; }
+  #marcas label { margin:2px 0; font-size:.85rem; display:flex; gap:6px; align-items:center; }
+  #mapa { flex:1; }
+  #estado { font-size:.8rem; color:#666; margin-top:8px; }
+  .precio { font-weight:700; color:var(--verde); }
+  .popup small { color:#666; }
+  @media (max-width: 700px) {
+    body { flex-direction:column; }
+    #panel { width:100%; height:45%; border-right:none; border-bottom:1px solid var(--borde); }
+    #mapa { height:55%; }
+  }
+</style>
+</head>
+<body>
+<div id="panel">
+  <h1>⛽ Gasolineras España</h1>
+
+  <fieldset>
+    <legend>Ubicación</legend>
+    <div class="fila">
+      <button id="btnGps" style="margin-top:0">Usar mi ubicación</button>
+    </div>
+    <label for="direccion">o dirección:</label>
+    <input type="text" id="direccion" placeholder="Calle, número, ciudad…">
+    <button class="sec" id="btnDir">Buscar dirección</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Ruta</legend>
+    <label for="destino">Destino:</label>
+    <input type="text" id="destino" placeholder="Dirección de destino…">
+    <button id="btnRuta">Calcular ruta</button>
+    <button class="sec" id="btnQuitarRuta">Quitar ruta</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Preferencias</legend>
+    <label for="carburante">Carburante:</label>
+    <select id="carburante"></select>
+
+    <label for="radio">Radio de desvío: <span id="radioVal">3</span> km</label>
+    <input type="range" id="radio" min="1" max="10" step="0.5" value="3">
+
+    <div class="fila">
+      <input type="checkbox" id="soloRuta">
+      <label for="soloRuta" style="margin:0">Solo gasolineras en la ruta (sin desvíos)</label>
+    </div>
+
+    <label>Marcas:</label>
+    <div id="marcas"><em style="font-size:.8rem">Cargando…</em></div>
+  </fieldset>
+
+  <button class="sec" id="btnActualizar">Actualizar precios</button>
+  <div id="estado"></div>
+</div>
+<div id="mapa"></div>
+
+<script>
+/* ============ Configuración ============ */
+const FUELS = {
+  GASOLEO_A:      { label:"Diésel",          campo:"Precio Gasoleo A" },
+  GASOLEO_PREMIUM:{ label:"Diésel Premium",  campo:"Precio Gasoleo Premium" },
+  GASOLINA_95:    { label:"Gasolina 95",     campo:"Precio Gasolina 95 E5" },
+  GASOLINA_98:    { label:"Gasolina 98",     campo:"Precio Gasolina 98 E5" },
+  GLP:            { label:"Autogás (GLP)",   campo:"Precio Gases licuados del petróleo" },
+  GNC:            { label:"GNC",             campo:"Precio Gas natural comprimido" },
+  GNL:            { label:"GNL",             campo:"Precio Gas natural licuado" }
+};
+const API_GAS = "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/";
+const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+const OSRM = "https://router.project-osrm.org/route/v1/driving/";
+const NOMINATIM = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=";
+const CACHE_KEY = "gasolineras_cache_v1";
+
+/* ============ Estado ============ */
+let estaciones = [];          // todas las estaciones
+let userPos = null;           // LatLng de origen
+let ruta = null;              // array de [lat, lon]
+let capaEstaciones = null, capaRuta = null, marcadorUsuario = null;
+let prefs = JSON.parse(localStorage.getItem("gasolineras_prefs") || "{}");
+
+/* ============ Mapa ============ */
+const mapa = L.map("mapa").setView([40.4168, -3.7038], 6);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19, attribution: "© OpenStreetMap · Precios: MITECO"
+}).addTo(mapa);
+capaEstaciones = L.layerGroup().addTo(mapa);
+capaRuta = L.layerGroup().addTo(mapa);
+
+/* ============ Preferencias (localStorage) ============ */
+const selCarb = document.getElementById("carburante");
+for (const [k, f] of Object.entries(FUELS)) {
+  const o = document.createElement("option");
+  o.value = k; o.textContent = f.label;
+  selCarb.appendChild(o);
+}
+selCarb.value = prefs.fuel || "GASOLINA_95";
+document.getElementById("radio").value = prefs.radius || 3;
+document.getElementById("radioVal").textContent = prefs.radius || 3;
+document.getElementById("soloRuta").checked = !!prefs.soloRuta;
+let marcasSel = new Set(prefs.brands || []);
+
+function guardarPrefs() {
+  prefs = { fuel: selCarb.value, radius: +document.getElementById("radio").value,
+            soloRuta: document.getElementById("soloRuta").checked, brands: [...marcasSel] };
+  localStorage.setItem("gasolineras_prefs", JSON.stringify(prefs));
+}
+
+/* ============ Utilidades ============ */
+const numEs = v => parseFloat(String(v ?? "").replace(",", "."));
+const distKm = (a, b) => {
+  const kx = 111.32 * Math.cos(a[0] * Math.PI / 180);
+  return Math.hypot((a[1] - b[1]) * kx, (a[0] - b[0]) * 111.32);
+};
+function distPuntoSegmentoKm(p, a, b) {
+  const kx = 111.32 * Math.cos(p[0] * Math.PI / 180);
+  const [px, py] = [p[1] * kx, p[0] * 111.32];
+  const [ax, ay] = [a[1] * kx, a[0] * 111.32];
+  const [bx, by] = [b[1] * kx, b[0] * 111.32];
+  const dx = bx - ax, dy = by - ay;
+  const l2 = dx * dx + dy * dy;
+  const t = l2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+function distARutaKm(p, ruta) {
+  if (!ruta || ruta.length === 0) return Infinity;
+  if (ruta.length === 1) return distKm(p, ruta[0]);
+  let min = Infinity;
+  for (let i = 0; i < ruta.length - 1; i++)
+    min = Math.min(min, distPuntoSegmentoKm(p, ruta[i], ruta[i + 1]));
+  return min;
+}
+function estado(msg) { document.getElementById("estado").textContent = msg; }
+
+/* ============ Carga de gasolineras (con cache) ============ */
+async function cargarDatos(forzar = false) {
+  const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+  if (!forzar && cache && cache.fecha === new Date().toISOString().slice(0, 10)) {
+    estaciones = cache.datos;
+    estado(`Datos del ${cache.fecha} · ${estaciones.length} estaciones (cache)`);
+    construirFiltroMarcas();
+    pintar();
+    return;
+  }
+  estado("Descargando precios del Ministerio…");
+  try {
+    const resp = await fetch(CORS_PROXY + encodeURIComponent(API_GAS));
+    const json = await resp.json();
+    estaciones = (json.ListaEESSPrecio || []).map(e => ({
+      rotulo: e["Rótulo"] || "Sin nombre",
+      direccion: [e["Dirección"], e["Localidad"], e["Provincia"]].filter(Boolean).join(", "),
+      lat: numEs(e["Latitud"]), lon: numEs(e["Longitud (WGS84)"]),
+      horario: e["Horario"] || "",
+      precios: Object.fromEntries(Object.entries(FUELS).map(([k, f]) => [k, numEs(e[f.campo])]))
+    })).filter(e => isFinite(e.lat) && isFinite(e.lon));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      fecha: new Date().toISOString().slice(0, 10), datos: estaciones }));
+    estado(`Datos actualizados · ${estaciones.length} estaciones`);
+    construirFiltroMarcas();
+    pintar();
+  } catch (err) {
+    estado("Error descargando datos: " + err.message);
+  }
+}
+
+function construirFiltroMarcas() {
+  const cont = document.getElementById("marcas");
+  cont.innerHTML = "";
+  const marcas = [...new Set(estaciones.map(e => e.rotulo))].sort();
+  const todas = document.createElement("label");
+  todas.innerHTML = `<input type="checkbox" id="chkTodas" ${marcasSel.size === 0 ? "checked" : ""}> Todas (${marcas.length})`;
+  cont.appendChild(todas);
+  todas.querySelector("input").onchange = e => {
+    marcasSel = e.target.checked ? new Set() : new Set(marcas);
+    guardarPrefs(); construirFiltroMarcas(); pintar();
+  };
+  for (const m of marcas) {
+    const lb = document.createElement("label");
+    lb.innerHTML = `<input type="checkbox" ${marcasSel.has(m) ? "checked" : ""}> ${m}`;
+    lb.querySelector("input").onchange = ev => {
+      ev.target.checked ? marcasSel.add(m) : marcasSel.delete(m);
+      guardarPrefs(); pintar();
+    };
+    cont.appendChild(lb);
+  }
+}
+
+/* ============ Pintar mapa ============ */
+function pintar() {
+  guardarPrefs();
+  capaEstaciones.clearLayers();
+  const fuel = selCarb.value;
+  const limite = document.getElementById("soloRuta").checked ? 0.15 : +document.getElementById("radio").value;
+
+  const filtradas = estaciones.filter(e =>
+    (marcasSel.size === 0 || marcasSel.has(e.rotulo)) &&
+    e.precios[fuel] != null &&
+    (ruta ? distARutaKm([e.lat, e.lon], ruta) <= limite
+          : (userPos ? distKm([e.lat, e.lon], userPos) <= 15 : false))
+  );
+
+  for (const e of filtradas) {
+    const precio = e.precios[fuel];
+    L.marker([e.lat, e.lon]).bindPopup(
+      `<b>${e.rotulo}</b><br><small>${e.direccion}</small><br>` +
+      `<span class="precio">${FUELS[fuel].label}: ${precio.toFixed(3)} €/l</span>` +
+      (e.horario ? `<br><small>${e.horario}</small>` : "")
+    ).addTo(capaEstaciones);
+  }
+  estado(`${filtradas.length} gasolineras visibles · ${FUELS[fuel].label}` +
+         (ruta ? " · ruta activa" : ""));
+}
+
+/* ============ Ubicación ============ */
+function fijarOrigen(lat, lon, zoom = 12) {
+  userPos = [lat, lon];
+  if (marcadorUsuario) mapa.removeLayer(marcadorUsuario);
+  marcadorUsuario = L.marker([lat, lon]).addTo(mapa)
+    .bindPopup("<b>Origen</b>").openPopup();
+  mapa.setView([lat, lon], zoom);
+  pintar();
+}
+document.getElementById("btnGps").onclick = () => {
+  estado("Obteniendo ubicación…");
+  navigator.geolocation.getCurrentPosition(
+    pos => { fijarOrigen(pos.coords.latitude, pos.coords.longitude); },
+    err => estado("No se pudo obtener la ubicación: " + err.message + ". Introduce una dirección.")
+  );
+};
+document.getElementById("btnDir").onclick = async () => {
+  const q = document.getElementById("direccion").value.trim();
+  if (!q) return;
+  estado("Buscando dirección…");
+  try {
+    const r = await fetch(NOMINATIM + encodeURIComponent(q));
+    const res = await r.json();
+    if (res.length === 0) { estado("Dirección no encontrada"); return; }
+    fijarOrigen(+res[0].lat, +res[0].lon);
+  } catch (e) { estado("Error: " + e.message); }
+};
+
+/* ============ Rutas (OSRM, sin API key) ============ */
+document.getElementById("btnRuta").onclick = async () => {
+  const q = document.getElementById("destino").value.trim();
+  if (!q) return;
+  if (!userPos) { estado("Primero indica el origen (GPS o dirección)"); return; }
+  estado("Calculando ruta…");
+  try {
+    const r = await fetch(NOMINATIM + encodeURIComponent(q));
+    const res = await r.json();
+    if (res.length === 0) { estado("Destino no encontrado"); return; }
+    const dest = [+res[0].lat, +res[0].lon];
+    const url = `${OSRM}${userPos[1]},${userPos[0]};${dest[1]},${dest[0]}?overview=full&geometries=geojson`;
+    const rr = await fetch(url);
+    const rjson = await rr.json();
+    if (rjson.code !== "Ok") { estado("No se pudo calcular la ruta"); return; }
+    ruta = rjson.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+    capaRuta.clearLayers();
+    L.polyline(ruta, { color: "#1565C0", weight: 6 }).addTo(capaRuta);
+    mapa.fitBounds(L.latLngBounds(ruta));
+    pintar();
+  } catch (e) { estado("Error de ruta: " + e.message); }
+};
+document.getElementById("btnQuitarRuta").onclick = () => {
+  ruta = null;
+  capaRuta.clearLayers();
+  pintar();
+};
+
+/* ============ Eventos de preferencias ============ */
+selCarb.onchange = pintar;
+document.getElementById("soloRuta").onchange = pintar;
+document.getElementById("radio").oninput = e => {
+  document.getElementById("radioVal").textContent = e.target.value;
+  pintar();
+};
+document.getElementById("btnActualizar").onclick = () => cargarDatos(true);
+
+/* ============ Arranque ============ */
+cargarDatos();
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    pos => fijarOrigen(pos.coords.latitude, pos.coords.longitude),
+    () => estado("Introduce una dirección o pulsa «Usar mi ubicación».")
+  );
+}
+</script>
+</body>
+</html>
