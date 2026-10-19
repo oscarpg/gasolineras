@@ -49,6 +49,12 @@
   .item-gasolinera .nombre { font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .item-gasolinera .meta { font-size: .75rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .item-gasolinera .importe { font-size: .95rem; font-weight: 700; color: var(--verde); white-space: nowrap; }
+  
+  .icono-gasolinera {
+    background: transparent;
+    border: none;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+  }
 </style>
 </head>
 <body>
@@ -406,6 +412,30 @@ function construirFiltroMarcas() {
   }
 }
 
+/* Calcula un color progresivo entre verde (120º), amarillo (60º) y rojo (0º) */
+function colorPorPrecio(precio, min, max) {
+  const ratio = max > min ? (precio - min) / (max - min) : 0;
+  const hue = Math.round((1 - ratio) * 120);
+  return `hsl(${hue}, 82%, 40%)`;
+}
+
+/* Genera un marcador SVG con el color correspondiente al precio */
+function crearIconoGasolinera(color) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="38" viewBox="0 0 26 38">
+      <path d="M13 1C6.37 1 1 6.37 1 13c0 8.8 12 23.5 12 23.5S25 21.8 25 13c0-6.63-5.37-12-12-12z"
+            fill="${color}" stroke="#ffffff" stroke-width="2"/>
+      <circle cx="13" cy="13" r="4.5" fill="#ffffff"/>
+    </svg>`;
+  return L.divIcon({
+    className: "icono-gasolinera",
+    html: svg,
+    iconSize: [26, 38],
+    iconAnchor: [13, 37],
+    popupAnchor: [0, -34]
+  });
+}
+
 /* ============ Pintar en el mapa ============ */
 function pintar() {
   guardarPrefs();
@@ -423,10 +453,16 @@ function pintar() {
   // Ordenar de menor a mayor precio
   filtradas.sort((a, b) => a.precios[fuel] - b.precios[fuel]);
 
+  // Precios extremo inferior y superior para la escala de color
+  const minPrecio = filtradas.length ? filtradas[0].precios[fuel] : 0;
+  const maxPrecio = filtradas.length ? filtradas[filtradas.length - 1].precios[fuel] : 0;
+
   const marcadoresPorId = new Map();
 
   for (const e of filtradas) {
     const precio = e.precios[fuel];
+    const color = colorPorPrecio(precio, minPrecio, maxPrecio);
+
     const distTexto = (!ruta && userPos)
       ? `<br><small>📍 A ${distKm([e.lat, e.lon], userPos).toFixed(1)} km de tu ubicación</small>`
       : "";
@@ -435,9 +471,9 @@ function pintar() {
       ? `<br><button class="sec" style="margin-top:6px;padding:4px 6px;font-size:.78rem" onclick="verEvolucion('${e.ideess}', '${e.codProvincia}', '${e.id}')">📈 Ver evolución (7 días)</button><div id="grafica-${e.ideess}"></div>`
       : "";
 
-    const marker = L.marker([e.lat, e.lon]).bindPopup(
+    const marker = L.marker([e.lat, e.lon], { icon: crearIconoGasolinera(color) }).bindPopup(
       `<b>${e.rotulo}</b><br><small>${e.direccion}</small><br>` +
-      `<span class="precio">${FUELS[fuel].label}: ${precio.toFixed(3)} €/l</span>` +
+      `<span class="precio" style="color:${color}">${FUELS[fuel].label}: ${precio.toFixed(3)} €/l</span>` +
       distTexto +
       (e.horario ? `<br><small>${e.horario}</small>` : "") +
       btnHist
@@ -454,6 +490,8 @@ function pintar() {
     contLista.innerHTML = `<em style="font-size:.8rem; color:#666">Ninguna gasolinera cumple el filtro.</em>`;
   } else {
     for (const [idx, e] of filtradas.slice(0, 20).entries()) {
+      const precio = e.precios[fuel];
+      const color = colorPorPrecio(precio, minPrecio, maxPrecio);
       const card = document.createElement("div");
       card.className = "item-gasolinera";
 
@@ -467,7 +505,7 @@ function pintar() {
           <div class="nombre">${idx + 1}. ${e.rotulo}</div>
           <div class="meta">${textoDistancia}${e.direccion}</div>
         </div>
-        <div class="importe">${e.precios[fuel].toFixed(3)} €</div>
+        <div class="importe" style="color:${color}">${precio.toFixed(3)} €</div>
       `;
 
       card.onclick = () => {
