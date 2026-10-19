@@ -76,6 +76,15 @@
     <label for="destino">Destino:</label>
     <input type="text" id="destino" placeholder="Dirección de destino…">
     <button id="btnRuta">Calcular ruta</button>
+	
+	<label for="radio">Radio de desvío: <span id="radioVal">3</span> km</label>
+    <input type="range" id="radio" min="1" max="10" step="0.5" value="3">
+
+    <div class="fila">
+      <input type="checkbox" id="soloRuta">
+      <label for="soloRuta" style="margin:0">Solo gasolineras en la ruta (sin desvíos)</label>
+    </div>
+	
     <button class="sec" id="btnQuitarRuta">Quitar ruta</button>
   </fieldset>
 
@@ -83,14 +92,6 @@
     <legend>Preferencias</legend>
     <label for="carburante">Carburante:</label>
     <select id="carburante"></select>
-
-    <label for="radio">Radio de desvío: <span id="radioVal">3</span> km</label>
-    <input type="range" id="radio" min="1" max="10" step="0.5" value="3">
-
-    <div class="fila">
-      <input type="checkbox" id="soloRuta">
-      <label for="soloRuta" style="margin:0">Solo gasolineras en la ruta (sin desvíos)</label>
-    </div>
 
     <label>Marcas:</label>
     <div id="marcas"><em style="font-size:.8rem">Esperando ubicación…</em></div>
