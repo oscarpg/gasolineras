@@ -692,7 +692,7 @@ async function obtenerHistoricoDiaProvincia(codProvincia, fechaStr) {
   return mapaDia;
 }
 
-/* Carga los últimos 7 días y dibuja la gráfica SVG dentro del popup */
+/* Carga los últimos 7 días sin arrastrar ni inventar precios en días sin reporte o sin cambios */
 async function verEvolucion(ideess, codProvincia, idEstacion) {
   const cont = document.getElementById(`grafica-${ideess}`);
   if (!cont) return;
@@ -700,69 +700,97 @@ async function verEvolucion(ideess, codProvincia, idEstacion) {
   cont.innerHTML = `<small style="color:#666">Cargando histórico de 7 días…</small>`;
 
   try {
-    const puntos = [];
     const hoy = new Date();
-
-    // De hace 6 días hasta ayer (en paralelo) + el precio de hoy ya en memoria
     const fechas = [];
     for (let i = 6; i >= 1; i--) {
       const d = new Date(hoy);
       d.setDate(hoy.getDate() - i);
-      fechas.push({ etiqueta: `${d.getDate()}/${d.getMonth() + 1}`, fechaMiteco: formatearFechaMiteco(d) });
+      fechas.push({
+        etiqueta: `${d.getDate()}/${d.getMonth() + 1}`,
+        fechaMiteco: formatearFechaMiteco(d)
+      });
     }
 
     const resultados = await Promise.all(
-      fechas.map(f => obtenerHistoricoDiaProvincia(codProvincia, f.fechaMiteco).catch(() => ({})))
+      fechas.map(f => obtenerHistoricoDiaProvincia(codProvincia, f.fechaMiteco).catch(() => null))
     );
 
-    fechas.forEach((f, idx) => {
-      const precio = resultados[idx]?.[ideess]?.[fuel] ?? null;
-      if (precio !== null) puntos.push({ etiqueta: f.etiqueta, precio });
+    // Construimos la serie de 7 días (índices 0 a 6). Si un día no hay dato, queda en null.
+    const serie = fechas.map((f, idx) => ({
+      idx,
+      etiqueta: f.etiqueta,
+      precio: resultados[idx]?.[ideess]?.[fuel] ?? null
+    }));
+
+    const estHoy = estaciones.find(e => e.id === idEstacion);
+    serie.push({
+      idx: 6,
+      etiqueta: "Hoy",
+      precio: estHoy?.precios?.[fuel] ?? null
     });
 
-    // Añadir el precio de hoy desde las estaciones cargadas
-    const estHoy = estaciones.find(e => e.id === idEstacion);
-    if (estHoy && estHoy.precios[fuel] != null) {
-      puntos.push({ etiqueta: "Hoy", precio: estHoy.precios[fuel] });
+    // Filtrar solo los días donde realmente hubo dato y cambio de precio (más el inicio y Hoy)
+    const puntosReales = [];
+    let ultimoPrecioConocido = null;
+
+    for (let i = 0; i < serie.length; i++) {
+      const item = serie[i];
+      if (item.precio === null) continue; // Si ese día no hay dato, NO se usa el del día anterior
+
+      const esPrimero = ultimoPrecioConocido === null;
+      const esHoy = i === serie.length - 1;
+      const huboCambio = !esPrimero && Math.abs(item.precio - ultimoPrecioConocido) >= 0.0005;
+
+      if (esPrimero || huboCambio || esHoy) {
+        puntosReales.push(item);
+        ultimoPrecioConocido = item.precio;
+      }
     }
 
-    if (puntos.length < 2) {
-      cont.innerHTML = `<small style="color:#c62828">No hay suficientes datos históricos.</small>`;
+    if (puntosReales.length === 0) {
+      cont.innerHTML = `<small style="color:#c62828">Sin datos históricos disponibles.</small>`;
       return;
     }
 
-    cont.innerHTML = generarSvgGrafica(puntos);
+    cont.innerHTML = generarSvgGrafica(serie, puntosReales);
   } catch (e) {
     cont.innerHTML = `<small style="color:#c62828">Error al cargar histórico.</small>`;
   }
 }
 
-/* Genera un gráfico SVG limpio con la evolución del precio */
-function generarSvgGrafica(puntos) {
-  const w = 230, h = 110, padX = 28, padY = 22;
-  const precios = puntos.map(p => p.precio);
+/* Dibuja la gráfica respetando los huecos y marcando solo los cambios reales de precio */
+function generarSvgGrafica(serieCompleta, puntosReales) {
+  const w = 240, h = 115, padX = 28, padY = 24;
+  const precios = puntosReales.map(p => p.precio);
   let min = Math.min(...precios), max = Math.max(...precios);
-  if (min === max) { min -= 0.02; max += 0.02; }
+  const sinCambios = Math.abs(max - min) < 0.0005;
+  if (sinCambios) { min -= 0.02; max += 0.02; }
 
-  const coords = puntos.map((p, i) => {
-    const x = padX + (i / (puntos.length - 1)) * (w - padX * 2);
-    const y = padY + (1 - (p.precio - min) / (max - min)) * (h - padY * 2);
-    return { x, y, ...p };
-  });
+  const xPos = idx => padX + (idx / (serieCompleta.length - 1)) * (w - padX * 2);
+  const yPos = precio => padY + (1 - (precio - min) / (max - min)) * (h - padY * 2);
+
+  const coords = puntosReales.map(p => ({
+    x: xPos(p.idx),
+    y: yPos(p.precio),
+    ...p
+  }));
 
   const polilinea = coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ");
 
   return `
     <svg width="${w}" height="${h}" style="margin-top:6px;background:#f8f9fa;border:1px solid #ddd;border-radius:6px;display:block">
-      <polyline fill="none" stroke="#1565C0" stroke-width="2" points="${polilinea}" />
-      ${coords.map((c, i) => `
+      ${coords.length > 1
+        ? `<polyline fill="none" stroke="#1565C0" stroke-width="2" stroke-dasharray="${sinCambios ? "4,3" : "none"}" points="${polilinea}" />`
+        : ""}
+      ${coords.map(c => `
         <circle cx="${c.x}" cy="${c.y}" r="3.5" fill="#2E7D32" />
-        ${(i === 0 || i === coords.length - 1 || c.precio === Math.min(...precios) || c.precio === Math.max(...precios))
-          ? `<text x="${c.x}" y="${c.y - 6}" font-size="9" text-anchor="middle" fill="#222" font-weight="600">${c.precio.toFixed(3)}</text>`
-          : ""}
-        <text x="${c.x}" y="${h - 5}" font-size="8.5" text-anchor="middle" fill="#666">${c.etiqueta}</text>
+        <text x="${c.x}" y="${c.y - 7}" font-size="9" text-anchor="middle" fill="#222" font-weight="600">${c.precio.toFixed(3)}</text>
+      `).join("")}
+      ${serieCompleta.map(s => `
+        <text x="${xPos(s.idx)}" y="${h - 6}" font-size="8" text-anchor="middle" fill="${s.precio !== null ? "#555" : "#bbb"}">${s.etiqueta}</text>
       `).join("")}
     </svg>
+    ${sinCambios ? `<small style="color:#666;display:block;margin-top:2px;font-size:.72rem">Sin variaciones de precio en los días consultados.</small>` : ""}
   `;
 }
 
