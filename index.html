@@ -116,6 +116,38 @@ const PROVINCIAS_MAP = {
   "valladolid":"47","bizkaia":"48","vizcaya":"48","zamora":"49","zaragoza":"50","ceuta":"51","melilla":"52"
 };
 
+const MARCAS_CONOCIDAS = [
+  "REPSOL", "MOEVE", "CEPSA", "CARBUGAL", "GALP", "BP", "SHELL",
+  "PLENOIL", "PLENERGY", "BALLENOIL", "PETROPRIX", "SBC", "ORTIGAL",
+  "STAROIL", "VALCARCE", "GALURESA", "EROSKI", "CARREFOUR", "ALCAMPO",
+  "BONAREA", "BONÀREA", "AVIA", "Q8", "PETRONOR", "CAMPSA", "DISA",
+  "MEROIL", "BEROIL", "AUTONETOIL", "EASYGAS", "GAS EXPRESS", "GASEXPRESS",
+  "OILPRIX", "COSTCO", "MAKRO", "LECLERC", "HAFESA", "AGLA", "MAXOIL",
+  "FARRUCO", "IDS", "AS24", "DYNEFF", "TAMOIL", "AN ENERGETICOS"
+];
+
+function normalizarMarca(rotulo = "") {
+  let limpio = rotulo.toUpperCase().trim()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  // 1. Buscar si contiene alguna marca comercial conocida
+  for (const marca of MARCAS_CONOCIDAS) {
+    const marcaNorm = marca.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const regex = new RegExp(`(^|[^A-Z0-9])${marcaNorm}([^A-Z0-9]|$)`);
+    if (regex.test(limpio)) {
+      return marca === "BONÀREA" ? "BONAREA" : marca;
+    }
+  }
+
+  // 2. Si es otra estación, quitar prefijos genéricos ("E.S.", "ESTACION DE SERVICIO", etc.)
+  limpio = limpio
+    .replace(/^(E\.?\s*S\.?|ESTACION\s+DE\s+SERVICIO|GASOLINERA|AREA\s+DE\s+SERVICIO)\s+/i, "")
+    .split(/\s+[-/,]\s+/)[0]
+    .trim();
+
+  return limpio || "SIN MARCA";
+}
+
 const iconoUsuario = L.divIcon({
   className: "marcador-usuario",
   iconSize: [18, 18],
@@ -308,10 +340,15 @@ function incorporarEstaciones(lista) {
   const ids = new Set(estaciones.map(e => e.id));
   for (const item of lista) {
     if (!ids.has(item.id)) {
+      item.marca = normalizarMarca(item.rotulo);
       estaciones.push(item);
       ids.add(item.id);
     }
   }
+  // Limpiar de marcasSel posibles nombres antiguos que no coincidan con marcas actuales
+  const marcasValidas = new Set(estaciones.map(e => e.marca));
+  marcasSel = new Set([...marcasSel].map(normalizarMarca).filter(m => marcasValidas.has(m)));
+
   construirFiltroMarcas();
   pintar();
 }
@@ -319,7 +356,14 @@ function incorporarEstaciones(lista) {
 function construirFiltroMarcas() {
   const cont = document.getElementById("marcas");
   cont.innerHTML = "";
-  const marcas = [...new Set(estaciones.map(e => e.rotulo))].sort();
+
+  // Contar cuántas estaciones hay de cada marca
+  const conteo = new Map();
+  for (const e of estaciones) {
+    conteo.set(e.marca, (conteo.get(e.marca) || 0) + 1);
+  }
+  const marcas = [...conteo.keys()].sort((a, b) => a.localeCompare(b, "es"));
+
   if (marcas.length === 0) {
     cont.innerHTML = `<em style="font-size:.8rem">Sin gasolineras</em>`;
     return;
@@ -333,7 +377,7 @@ function construirFiltroMarcas() {
   };
   for (const m of marcas) {
     const lb = document.createElement("label");
-    lb.innerHTML = `<input type="checkbox" ${marcasSel.has(m) ? "checked" : ""}> ${m}`;
+    lb.innerHTML = `<input type="checkbox" ${marcasSel.has(m) ? "checked" : ""}> ${m} (${conteo.get(m)})`;
     lb.querySelector("input").onchange = ev => {
       ev.target.checked ? marcasSel.add(m) : marcasSel.delete(m);
       guardarPrefs(); pintar();
@@ -350,7 +394,7 @@ function pintar() {
   const limite = document.getElementById("soloRuta").checked ? 0.15 : +document.getElementById("radio").value;
 
   const filtradas = estaciones.filter(e =>
-    (marcasSel.size === 0 || marcasSel.has(e.rotulo)) &&
+    (marcasSel.size === 0 || marcasSel.has(e.marca)) &&
     e.precios[fuel] != null &&
     (ruta ? distARutaKm([e.lat, e.lon], ruta) <= limite
           : (userPos ? distKm([e.lat, e.lon], userPos) <= 15 : false))
