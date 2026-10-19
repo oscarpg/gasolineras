@@ -70,7 +70,7 @@
     </div>
 
     <label>Marcas:</label>
-    <div id="marcas"><em style="font-size:.8rem">Cargando…</em></div>
+    <div id="marcas"><em style="font-size:.8rem">Esperando ubicación…</em></div>
   </fieldset>
 
   <button class="sec" id="btnActualizar">Actualizar precios</button>
@@ -89,28 +89,45 @@ const FUELS = {
   GNC:            { label:"GNC",             campo:"Precio Gas natural comprimido" },
   GNL:            { label:"GNL",             campo:"Precio Gas natural licuado" }
 };
-const API_GAS = "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/";
-const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+
+const API_PROVINCIA = "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/FiltroProvincia/";
 const OSRM = "https://router.project-osrm.org/route/v1/driving/";
-const NOMINATIM = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=";
-const CACHE_KEY = "gasolineras_cache_v1";
+const NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=";
+const NOMINATIM_REVERSE = "https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1";
+
+/* Diccionario de respaldo de provincias españolas */
+const PROVINCIAS_MAP = {
+  "alava":"01","araba":"01","albacete":"02","alicante":"03","alacant":"03","almeria":"04",
+  "avila":"05","badajoz":"06","balears":"07","baleares":"07","barcelona":"08","burgos":"09",
+  "caceres":"10","cadiz":"11","castellon":"12","castello":"12","ciudad real":"13","cordoba":"14",
+  "coruña":"15","a coruña":"15","la coruña":"15","cuenca":"16","girona":"17","gerona":"17",
+  "granada":"18","guadalajara":"19","gipuzkoa":"20","guipuzcoa":"20","huelva":"21","huesca":"22",
+  "jaen":"23","leon":"24","lleida":"25","lerida":"25","rioja":"26","lugo":"27","madrid":"28",
+  "malaga":"29","murcia":"30","navarra":"31","nafarroa":"31","ourense":"32","orense":"32",
+  "asturias":"33","palencia":"34","palmas":"35","las palmas":"35","pontevedra":"36","salamanca":"37",
+  "santa cruz de tenerife":"38","tenerife":"38","cantabria":"39","segovia":"40","sevilla":"41",
+  "soria":"42","tarragona":"43","teruel":"44","toledo":"45","valencia":"46","valencia/valencia":"46",
+  "valladolid":"47","bizkaia":"48","vizcaya":"48","zamora":"49","zaragoza":"50","ceuta":"51","melilla":"52"
+};
 
 /* ============ Estado ============ */
-let estaciones = [];          // todas las estaciones
-let userPos = null;           // LatLng de origen
-let ruta = null;              // array de [lat, lon]
+let estaciones = [];          // Estaciones cargadas en memoria
+let provinciasCargadas = new Set();
+let userPos = null;           // [lat, lon]
+let ruta = null;              // [[lat, lon], ...]
 let capaEstaciones = null, capaRuta = null, marcadorUsuario = null;
 let prefs = JSON.parse(localStorage.getItem("gasolineras_prefs") || "{}");
 
 /* ============ Mapa ============ */
 const mapa = L.map("mapa").setView([40.4168, -3.7038], 6);
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19, attribution: "© OpenStreetMap · Precios: MITECO"
+  maxZoom: 19,
+  attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> · Precios: MITECO"
 }).addTo(mapa);
 capaEstaciones = L.layerGroup().addTo(mapa);
 capaRuta = L.layerGroup().addTo(mapa);
 
-/* ============ Preferencias (localStorage) ============ */
+/* ============ Preferencias ============ */
 const selCarb = document.getElementById("carburante");
 for (const [k, f] of Object.entries(FUELS)) {
   const o = document.createElement("option");
@@ -131,10 +148,13 @@ function guardarPrefs() {
 
 /* ============ Utilidades ============ */
 const numEs = v => parseFloat(String(v ?? "").replace(",", "."));
+function estado(msg) { document.getElementById("estado").textContent = msg; }
+
 const distKm = (a, b) => {
   const kx = 111.32 * Math.cos(a[0] * Math.PI / 180);
   return Math.hypot((a[1] - b[1]) * kx, (a[0] - b[0]) * 111.32);
 };
+
 function distPuntoSegmentoKm(p, a, b) {
   const kx = 111.32 * Math.cos(p[0] * Math.PI / 180);
   const [px, py] = [p[1] * kx, p[0] * 111.32];
@@ -145,6 +165,7 @@ function distPuntoSegmentoKm(p, a, b) {
   const t = l2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2));
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
+
 function distARutaKm(p, ruta) {
   if (!ruta || ruta.length === 0) return Infinity;
   if (ruta.length === 1) return distKm(p, ruta[0]);
@@ -153,43 +174,129 @@ function distARutaKm(p, ruta) {
     min = Math.min(min, distPuntoSegmentoKm(p, ruta[i], ruta[i + 1]));
   return min;
 }
-function estado(msg) { document.getElementById("estado").textContent = msg; }
 
-/* ============ Carga de gasolineras (con cache) ============ */
-async function cargarDatos(forzar = false) {
-  const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-  if (!forzar && cache && cache.fecha === new Date().toISOString().slice(0, 10)) {
-    estaciones = cache.datos;
-    estado(`Datos del ${cache.fecha} · ${estaciones.length} estaciones (cache)`);
-    construirFiltroMarcas();
-    pintar();
+/* Identifica el código de provincia a través del código postal o nombre */
+function extraerCodProvincia(address = {}) {
+  if (address.postcode) {
+    const cp = String(address.postcode).trim().padStart(5, "0");
+    const cod = cp.slice(0, 2);
+    if (+cod >= 1 && +cod <= 52) return cod;
+  }
+  const clave = (address.province || address.state || "").toLowerCase().trim();
+  for (const [nom, cod] of Object.entries(PROVINCIAS_MAP)) {
+    if (clave.includes(nom)) return cod;
+  }
+  return null;
+}
+
+/* ============ Descarga con proxy resiliente ============ */
+/* El endpoint FiltroProvincia devuelve XML por defecto (solo devuelve JSON si
+   se envía la cabecera Accept: application/json, que un proxy CORS no permite
+   inyectar). Por eso detectamos el formato y parseamos XML cuando toque. */
+async function fetchConProxy(url) {
+  const proxies = [
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+    u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`
+  ];
+  for (const makeProxy of proxies) {
+    try {
+      estado("Descargando datos (intentando proxy)…");
+      const resp = await fetch(makeProxy(url));
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const texto = (await resp.text()).trim();
+      if (texto.startsWith("<")) {
+        return xmlAEstaciones(texto);   // respuesta XML del MITECO
+      }
+      return JSON.parse(texto);          // respuesta JSON
+    } catch (e) {
+      console.warn("Proxy falló:", e.message);
+    }
+  }
+  throw new Error("No se pudo descargar la información de las gasolineras (los proxies CORS han fallado).");
+}
+
+/* Decodifica etiquetas .NET: Precio_x0020_Gasoleo_x0020_A -> "Precio Gasoleo A" */
+function decodificarTag(tag) {
+  return tag.replace(/_x([0-9A-Fa-f]{4})_/g,
+    (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
+
+/* Convierte el XML del servicio FiltroProvincia al mismo formato que el JSON:
+   { ListaEESSPrecio: [ { "Rótulo": ..., "Latitud": ..., ... }, ... ] } */
+function xmlAEstaciones(texto) {
+  const doc = new DOMParser().parseFromString(texto, "application/xml");
+  if (doc.querySelector("parsererror")) throw new Error("XML mal formado");
+  const items = [...doc.querySelectorAll("EESSPrecio")];
+  if (items.length === 0) throw new Error("El XML no contiene estaciones");
+  return {
+    ListaEESSPrecio: items.map(el => {
+      const obj = {};
+      for (const child of el.children) {
+        obj[decodificarTag(child.tagName)] = child.textContent;
+      }
+      return obj;
+    })
+  };
+}
+
+/* ============ Carga de gasolineras por provincia ============ */
+async function cargarProvincia(codProvincia, forzar = false) {
+  if (!codProvincia) return;
+  if (!forzar && provinciasCargadas.has(codProvincia)) return;
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const cacheKey = `gasolineras_prov_${codProvincia}`;
+  const cache = JSON.parse(localStorage.getItem(cacheKey) || "null");
+
+  if (!forzar && cache && cache.fecha === hoy) {
+    incorporarEstaciones(cache.datos);
+    provinciasCargadas.add(codProvincia);
     return;
   }
-  estado("Descargando precios del Ministerio…");
+
+  estado(`Descargando datos de la provincia (${codProvincia})…`);
   try {
-    const resp = await fetch(CORS_PROXY + encodeURIComponent(API_GAS));
-    const json = await resp.json();
-    estaciones = (json.ListaEESSPrecio || []).map(e => ({
+    const url = `${API_PROVINCIA}${codProvincia}`;
+    const json = await fetchConProxy(url);
+    const nuevas = (json.ListaEESSPrecio || []).map(e => ({
+      id: `${e["IDEESS"] || e["Rótulo"]}-${e["Latitud"]}-${e["Longitud (WGS84)"]}`,
       rotulo: e["Rótulo"] || "Sin nombre",
       direccion: [e["Dirección"], e["Localidad"], e["Provincia"]].filter(Boolean).join(", "),
-      lat: numEs(e["Latitud"]), lon: numEs(e["Longitud (WGS84)"]),
+      lat: numEs(e["Latitud"]),
+      lon: numEs(e["Longitud (WGS84)"]),
       horario: e["Horario"] || "",
       precios: Object.fromEntries(Object.entries(FUELS).map(([k, f]) => [k, numEs(e[f.campo])]))
     })).filter(e => isFinite(e.lat) && isFinite(e.lon));
-    localStorage.setItem(CACHE_KEY, JSON.stringify({
-      fecha: new Date().toISOString().slice(0, 10), datos: estaciones }));
-    estado(`Datos actualizados · ${estaciones.length} estaciones`);
-    construirFiltroMarcas();
-    pintar();
+
+    localStorage.setItem(cacheKey, JSON.stringify({ fecha: hoy, datos: nuevas }));
+    incorporarEstaciones(nuevas);
+    provinciasCargadas.add(codProvincia);
   } catch (err) {
-    estado("Error descargando datos: " + err.message);
+    estado("Error cargando provincia: " + err.message);
   }
+}
+
+function incorporarEstaciones(lista) {
+  const ids = new Set(estaciones.map(e => e.id));
+  for (const item of lista) {
+    if (!ids.has(item.id)) {
+      estaciones.push(item);
+      ids.add(item.id);
+    }
+  }
+  construirFiltroMarcas();
+  pintar();
 }
 
 function construirFiltroMarcas() {
   const cont = document.getElementById("marcas");
   cont.innerHTML = "";
   const marcas = [...new Set(estaciones.map(e => e.rotulo))].sort();
+  if (marcas.length === 0) {
+    cont.innerHTML = `<em style="font-size:.8rem">Sin gasolineras</em>`;
+    return;
+  }
   const todas = document.createElement("label");
   todas.innerHTML = `<input type="checkbox" id="chkTodas" ${marcasSel.size === 0 ? "checked" : ""}> Todas (${marcas.length})`;
   cont.appendChild(todas);
@@ -208,7 +315,7 @@ function construirFiltroMarcas() {
   }
 }
 
-/* ============ Pintar mapa ============ */
+/* ============ Pintar en el mapa ============ */
 function pintar() {
   guardarPrefs();
   capaEstaciones.clearLayers();
@@ -234,49 +341,74 @@ function pintar() {
          (ruta ? " · ruta activa" : ""));
 }
 
-/* ============ Ubicación ============ */
-function fijarOrigen(lat, lon, zoom = 12) {
+/* ============ Fijar Origen y Ubicación ============ */
+async function fijarOrigenConCoords(lat, lon, zoom = 13, codProvincia = null) {
   userPos = [lat, lon];
   if (marcadorUsuario) mapa.removeLayer(marcadorUsuario);
   marcadorUsuario = L.marker([lat, lon]).addTo(mapa)
-    .bindPopup("<b>Origen</b>").openPopup();
+    .bindPopup("<b>Tu ubicación / Origen</b>").openPopup();
   mapa.setView([lat, lon], zoom);
+
+  if (!codProvincia) {
+    estado("Determinando provincia…");
+    try {
+      const resp = await fetch(`${NOMINATIM_REVERSE}&lat=${lat}&lon=${lon}`);
+      const data = await resp.json();
+      codProvincia = extraerCodProvincia(data.address);
+    } catch (_) {}
+  }
+
+  if (codProvincia) {
+    await cargarProvincia(codProvincia);
+  } else {
+    estado("No se pudo determinar la provincia correspondiente.");
+  }
   pintar();
 }
+
 document.getElementById("btnGps").onclick = () => {
-  estado("Obteniendo ubicación…");
+  estado("Obteniendo ubicación GPS…");
   navigator.geolocation.getCurrentPosition(
-    pos => { fijarOrigen(pos.coords.latitude, pos.coords.longitude); },
-    err => estado("No se pudo obtener la ubicación: " + err.message + ". Introduce una dirección.")
+    pos => fijarOrigenConCoords(pos.coords.latitude, pos.coords.longitude),
+    err => estado("Error GPS: " + err.message + ". Introduce una dirección.")
   );
 };
+
 document.getElementById("btnDir").onclick = async () => {
   const q = document.getElementById("direccion").value.trim();
   if (!q) return;
   estado("Buscando dirección…");
   try {
-    const r = await fetch(NOMINATIM + encodeURIComponent(q));
+    const r = await fetch(NOMINATIM_SEARCH + encodeURIComponent(q));
     const res = await r.json();
     if (res.length === 0) { estado("Dirección no encontrada"); return; }
-    fijarOrigen(+res[0].lat, +res[0].lon);
+    const cod = extraerCodProvincia(res[0].address);
+    fijarOrigenConCoords(+res[0].lat, +res[0].lon, 13, cod);
   } catch (e) { estado("Error: " + e.message); }
 };
 
-/* ============ Rutas (OSRM, sin API key) ============ */
+/* ============ Rutas ============ */
 document.getElementById("btnRuta").onclick = async () => {
   const q = document.getElementById("destino").value.trim();
   if (!q) return;
-  if (!userPos) { estado("Primero indica el origen (GPS o dirección)"); return; }
+  if (!userPos) { estado("Indica primero tu ubicación de origen"); return; }
   estado("Calculando ruta…");
   try {
-    const r = await fetch(NOMINATIM + encodeURIComponent(q));
+    const r = await fetch(NOMINATIM_SEARCH + encodeURIComponent(q));
     const res = await r.json();
     if (res.length === 0) { estado("Destino no encontrado"); return; }
+    
+    const codDest = extraerCodProvincia(res[0].address);
+    if (codDest && !provinciasCargadas.has(codDest)) {
+      await cargarProvincia(codDest);
+    }
+
     const dest = [+res[0].lat, +res[0].lon];
     const url = `${OSRM}${userPos[1]},${userPos[0]};${dest[1]},${dest[0]}?overview=full&geometries=geojson`;
     const rr = await fetch(url);
     const rjson = await rr.json();
     if (rjson.code !== "Ok") { estado("No se pudo calcular la ruta"); return; }
+
     ruta = rjson.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
     capaRuta.clearLayers();
     L.polyline(ruta, { color: "#1565C0", weight: 6 }).addTo(capaRuta);
@@ -284,28 +416,35 @@ document.getElementById("btnRuta").onclick = async () => {
     pintar();
   } catch (e) { estado("Error de ruta: " + e.message); }
 };
+
 document.getElementById("btnQuitarRuta").onclick = () => {
   ruta = null;
   capaRuta.clearLayers();
   pintar();
 };
 
-/* ============ Eventos de preferencias ============ */
+/* ============ Controles de Preferencias ============ */
 selCarb.onchange = pintar;
 document.getElementById("soloRuta").onchange = pintar;
 document.getElementById("radio").oninput = e => {
   document.getElementById("radioVal").textContent = e.target.value;
   pintar();
 };
-document.getElementById("btnActualizar").onclick = () => cargarDatos(true);
+document.getElementById("btnActualizar").onclick = async () => {
+  for (const cod of [...provinciasCargadas]) {
+    await cargarProvincia(cod, true);
+  }
+};
 
-/* ============ Arranque ============ */
-cargarDatos();
+/* ============ Inicio automático ============ */
 if (navigator.geolocation) {
+  estado("Obteniendo tu ubicación…");
   navigator.geolocation.getCurrentPosition(
-    pos => fijarOrigen(pos.coords.latitude, pos.coords.longitude),
+    pos => fijarOrigenConCoords(pos.coords.latitude, pos.coords.longitude),
     () => estado("Introduce una dirección o pulsa «Usar mi ubicación».")
   );
+} else {
+  estado("Introduce una dirección para buscar gasolineras.");
 }
 </script>
 </body>
