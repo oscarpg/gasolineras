@@ -95,6 +95,17 @@
     <label>Marcas:</label>
     <div id="marcas"><em style="font-size:.8rem">Esperando ubicación…</em></div>
   </fieldset>
+  <fieldset>
+	  <label for="antiguedad">Actualización del precio:</label>
+		<select id="antiguedad">
+		  <option value="TODAS">Todas las gasolineras</option>
+		  <option value="0">Actualizadas hoy (0 días)</option>
+		  <option value="1">Máximo 1 día sin actualizar</option>
+		  <option value="2">Máximo 2 días sin actualizar</option>
+		  <option value="3">Máximo 3 días sin actualizar</option>
+		  <option value="MAS_3">Más de 3 días sin actualizar</option>
+		</select>
+  </fieldset>
   
   <fieldset>
     <legend>Más baratas (según filtro)</legend>
@@ -314,6 +325,7 @@ function xmlAEstaciones(texto) {
   const items = [...doc.querySelectorAll("EESSPrecio")];
   if (items.length === 0) throw new Error("El XML no contiene estaciones");
   return {
+    Fecha: doc.querySelector("Fecha")?.textContent || "",
     ListaEESSPrecio: items.map(el => {
       const obj = {};
       for (const child of el.children) {
@@ -336,6 +348,7 @@ async function cargarProvincia(codProvincia, forzar = false) {
   if (!forzar && cache && cache.fecha === hoy) {
     incorporarEstaciones(cache.datos);
     provinciasCargadas.add(codProvincia);
+    calcularAntiguedadPrecios(codProvincia);
     return;
   }
 
@@ -343,10 +356,13 @@ async function cargarProvincia(codProvincia, forzar = false) {
   try {
     const url = `${API_PROVINCIA}${codProvincia}`;
     const json = await fetchConProxy(url);
+    const fechaMiteco = (json.Fecha || "").split(" ")[0] || hoy;
+
     const nuevas = (json.ListaEESSPrecio || []).map(e => ({
       id: `${e["IDEESS"] || e["Rótulo"]}-${e["Latitud"]}-${e["Longitud (WGS84)"]}`,
       ideess: e["IDEESS"] || "",
-       codProvincia,
+      codProvincia,
+      fechaMiteco,
       rotulo: e["Rótulo"] || "Sin nombre",
       direccion: [e["Dirección"], e["Localidad"], e["Provincia"]].filter(Boolean).join(", "),
       lat: numEs(e["Latitud"]),
@@ -358,6 +374,7 @@ async function cargarProvincia(codProvincia, forzar = false) {
     localStorage.setItem(cacheKey, JSON.stringify({ fecha: hoy, datos: nuevas }));
     incorporarEstaciones(nuevas);
     provinciasCargadas.add(codProvincia);
+    calcularAntiguedadPrecios(codProvincia);
   } catch (err) {
     estado("Error cargando provincia: " + err.message);
   }
@@ -443,13 +460,15 @@ function pintar() {
   capaEstaciones.clearLayers();
   const fuel = selCarb.value;
   const limite = document.getElementById("soloRuta").checked ? 0.15 : +document.getElementById("radio").value;
-
+  const filtroAnt = document.getElementById("antiguedad").value;
+  
   const filtradas = estaciones.filter(e =>
     (marcasSel.size === 0 || marcasSel.has(e.marca)) &&
     e.precios[fuel] != null &&
+    cumpleFiltroAntiguedad(e, fuel, filtroAnt) &&
     (ruta ? distARutaKm([e.lat, e.lon], ruta) <= limite
-          : (userPos ? distKm([e.lat, e.lon], userPos) <= 15 : false))
-  );
+        : (userPos ? distKm([e.lat, e.lon], userPos) <= 15 : false))
+);
 
   // Ordenar de menor a mayor precio
   filtradas.sort((a, b) => a.precios[fuel] - b.precios[fuel]);
@@ -472,13 +491,14 @@ function pintar() {
       ? `<br><button class="sec" style="margin-top:6px;padding:4px 6px;font-size:.78rem" onclick="verEvolucion('${e.ideess}', '${e.codProvincia}', '${e.id}')">📈 Ver evolución (7 días)</button><div id="grafica-${e.ideess}"></div>`
       : "";
 
-    const marker = L.marker([e.lat, e.lon], { icon: crearIconoGasolinera(color) }).bindPopup(
-      `<b>${e.rotulo}</b><br><small>${e.direccion}</small><br>` +
-      `<span class="precio" style="color:${color}">${FUELS[fuel].label}: ${precio.toFixed(3)} €/l</span>` +
-      distTexto +
-      (e.horario ? `<br><small>${e.horario}</small>` : "") +
-      btnHist
-    ).addTo(capaEstaciones);
+	const marker = L.marker([e.lat, e.lon], { icon: crearIconoGasolinera(color) }).bindPopup(
+	  `<b>${e.rotulo}</b><br><small>${e.direccion}</small><br>` +
+	  `<span class="precio" style="color:${color}">${FUELS[fuel].label}: ${precio.toFixed(3)} €/l</span>` +
+	  `<br><small>${textoAntiguedad(e, fuel)}</small>` +
+	  distTexto +
+	  (e.horario ? `<br><small>${e.horario}</small>` : "") +
+	  btnHist
+	).addTo(capaEstaciones);
 
     marcadoresPorId.set(e.id, marker);
   }
@@ -501,13 +521,14 @@ function pintar() {
         ? `📍 ${distKm([e.lat, e.lon], userPos).toFixed(1)} km · `
         : "";
 
-      card.innerHTML = `
-        <div class="info">
-          <div class="nombre">${idx + 1}. ${e.rotulo}</div>
-          <div class="meta">${textoDistancia}${e.direccion}</div>
-        </div>
-        <div class="importe" style="color:${color}">${precio.toFixed(3)} €</div>
-      `;
+	  card.innerHTML = `
+	    <div class="info">
+  	      <div class="nombre">${idx + 1}. ${e.rotulo}</div>
+		  <div class="meta">${textoDistancia}${e.direccion}</div>
+		  <div class="meta">${textoAntiguedad(e, fuel)}</div>
+	    </div>
+	    <div class="importe" style="color:${color}">${precio.toFixed(3)} €</div>
+	`;
 
       card.onclick = () => {
         mapa.setView([e.lat, e.lon], 15);
@@ -616,6 +637,7 @@ document.getElementById("btnActualizar").onclick = async () => {
     await cargarProvincia(cod, true);
   }
 };
+document.getElementById("antiguedad").onchange = pintar;
 
 /* ============ Inicio automático ============ */
 if (navigator.geolocation) {
@@ -742,6 +764,81 @@ function generarSvgGrafica(puntos) {
       `).join("")}
     </svg>
   `;
+}
+
+/* Calcula cuántos días lleva sin cambiar el precio de cada gasolinera de la provincia */
+async function calcularAntiguedadPrecios(codProvincia) {
+  const hoy = new Date();
+  const diasAtras = [1, 2, 3, 4].map(d => {
+    const fecha = new Date(hoy);
+    fecha.setDate(hoy.getDate() - d);
+    return { dias: d, fechaStr: formatearFechaMiteco(fecha) };
+  });
+
+  try {
+    const historicos = await Promise.all(
+      diasAtras.map(d => obtenerHistoricoDiaProvincia(codProvincia, d.fechaStr).catch(() => ({})))
+    );
+
+    const fechaHoyStr = formatearFechaMiteco(hoy);
+
+    for (const e of estaciones) {
+      if (e.codProvincia !== codProvincia || !e.ideess) continue;
+      e.antiguedad = {};
+
+      for (const fuel of Object.keys(FUELS)) {
+        const precioHoy = e.precios[fuel];
+        if (precioHoy == null) continue;
+
+        let diasSinActualizar = 0;
+        let fechaPrecio = e.fechaMiteco || fechaHoyStr;
+
+        for (let i = 0; i < diasAtras.length; i++) {
+          const precioPasado = historicos[i]?.[e.ideess]?.[fuel];
+          if (precioPasado != null && Math.abs(precioPasado - precioHoy) < 0.0005) {
+            diasSinActualizar = diasAtras[i].dias;
+            fechaPrecio = diasAtras[i].fechaStr;
+          } else {
+            break; // El precio cambió respecto a este día
+          }
+        }
+
+        e.antiguedad[fuel] = { dias: diasSinActualizar, fecha: fechaPrecio };
+      }
+    }
+    pintar();
+  } catch (err) {
+    console.warn("No se pudo calcular la antigüedad de precios:", err);
+  }
+}
+
+/* Formatea el texto de antigüedad y fecha del precio */
+function textoAntiguedad(estacion, fuel) {
+  const info = estacion.antiguedad?.[fuel];
+  if (!info) {
+    return estacion.fechaMiteco ? `📅 Fecha MITECO: ${estacion.fechaMiteco}` : "📅 Calculando antigüedad…";
+  }
+  if (info.dias === 0) return `🟢 Actualizado hoy (${info.fecha})`;
+  if (info.dias === 1) return `🕒 1 día sin cambios (desde ${info.fecha})`;
+  if (info.dias === 2) return `🕒 2 días sin cambios (desde ${info.fecha})`;
+  if (info.dias === 3) return `⚠️ 3 días sin cambios (desde ${info.fecha})`;
+  return `⚠️ +3 días sin actualizar (≤ ${info.fecha})`;
+}
+
+/* Comprueba si una estación cumple el filtro de antigüedad seleccionado */
+function cumpleFiltroAntiguedad(estacion, fuel, filtro) {
+  if (filtro === "TODAS") return true;
+  const info = estacion.antiguedad?.[fuel];
+  if (!info) return true; // Mientras termina de cargar el histórico no las oculta
+
+  if (filtro === "0") return info.dias === 0;
+  if (filtro === "1") return info.dias <= 1;
+  if (filtro === "2") return info.dias <= 2;
+  if (filtro === "3") return info.dias <= 3;
+  if (filtro === "EXACTO_1") return info.dias === 1;
+  if (filtro === "EXACTO_2") return info.dias === 2;
+  if (filtro === "MAS_3") return info.dias > 3;
+  return true;
 }
 </script>
 </body>
