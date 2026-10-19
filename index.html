@@ -147,7 +147,10 @@ function guardarPrefs() {
 }
 
 /* ============ Utilidades ============ */
-const numEs = v => parseFloat(String(v ?? "").replace(",", "."));
+const numEs = v => {
+  const n = parseFloat(String(v ?? "").replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+};
 function estado(msg) { document.getElementById("estado").textContent = msg; }
 
 const distKm = (a, b) => {
@@ -189,31 +192,42 @@ function extraerCodProvincia(address = {}) {
   return null;
 }
 
-/* ============ Descarga con proxy resiliente ============ */
-/* El endpoint FiltroProvincia devuelve XML por defecto (solo devuelve JSON si
-   se envía la cabecera Accept: application/json, que un proxy CORS no permite
-   inyectar). Por eso detectamos el formato y parseamos XML cuando toque. */
 async function fetchConProxy(url) {
-  const proxies = [
-    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-    u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`
+  const intentos = [
+    // 1º Petición directa al MITECO: Accept es CORS-safelisted (no lanza preflight OPTIONS)
+    () => fetch(url, {
+      headers: { "Accept": "application/json" }
+    }),
+    // 2º Petición directa sin cabeceras (devuelve XML o JSON según navegador)
+    () => fetch(url),
+    // 3º Respaldo con AllOrigins modo JSON (/get suele dar menos errores de cabeceras que /raw)
+    async () => {
+      const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const data = await r.json();
+      return new Response(data.contents);
+    },
+    // 4º Respaldo con CodeTabs
+    () => fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`)
   ];
-  for (const makeProxy of proxies) {
+
+  for (const ejecutarFetch of intentos) {
     try {
-      estado("Descargando datos (intentando proxy)…");
-      const resp = await fetch(makeProxy(url));
+      estado("Descargando datos de gasolineras…");
+      const resp = await ejecutarFetch();
       if (!resp.ok) throw new Error("HTTP " + resp.status);
       const texto = (await resp.text()).trim();
+      if (!texto) throw new Error("Respuesta vacía");
+
       if (texto.startsWith("<")) {
-        return xmlAEstaciones(texto);   // respuesta XML del MITECO
+        return xmlAEstaciones(texto);   // Respuesta XML del MITECO
       }
-      return JSON.parse(texto);          // respuesta JSON
+      return JSON.parse(texto);          // Respuesta JSON del MITECO
     } catch (e) {
-      console.warn("Proxy falló:", e.message);
+      console.warn("Intento de descarga falló:", e.message);
     }
   }
-  throw new Error("No se pudo descargar la información de las gasolineras (los proxies CORS han fallado).");
+  throw new Error("No se pudo descargar la información de las gasolineras.");
 }
 
 /* Decodifica etiquetas .NET: Precio_x0020_Gasoleo_x0020_A -> "Precio Gasoleo A" */
