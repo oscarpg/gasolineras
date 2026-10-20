@@ -10,50 +10,71 @@
   :root { --azul:#1565C0; --verde:#2E7D32; --borde:#ddd; }
   * { box-sizing: border-box; }
   body { margin:0; font-family: system-ui, Arial, sans-serif; display:flex; height:100vh; }
-  #panel { width:330px; min-width:280px; padding:14px; overflow-y:auto; border-right:1px solid var(--borde); background:#fafafa; }
+  #panel { width:340px; min-width:290px; padding:14px; overflow-y:auto; border-right:1px solid var(--borde); background:#fafafa; }
   h1 { font-size:1.15rem; margin:0 0 10px; color:var(--azul); }
   fieldset { border:1px solid var(--borde); border-radius:8px; margin:0 0 12px; padding:8px 10px; background:#fff; }
   legend { font-size:.85rem; font-weight:600; color:#555; padding:0 4px; }
   label { display:block; font-size:.85rem; margin:6px 0 2px; }
-  select, input[type=text] { width:100%; padding:6px; border:1px solid var(--borde); border-radius:6px; font-size:.9rem; }
+  select, input[type=text], input[type=number] { width:100%; padding:6px; border:1px solid var(--borde); border-radius:6px; font-size:.9rem; }
   input[type=range] { width:100%; }
   .fila { display:flex; gap:8px; align-items:center; margin-top:6px; }
   button { cursor:pointer; border:none; border-radius:6px; padding:8px 10px; font-size:.9rem; background:var(--azul); color:#fff; width:100%; margin-top:6px; }
   button.sec { background:#fff; color:var(--azul); border:1px solid var(--azul); }
   button:hover { opacity:.9; }
-  #marcas { max-height:150px; overflow-y:auto; border:1px solid var(--borde); border-radius:6px; padding:4px; background:#fff; }
+  #marcas { max-height:140px; overflow-y:auto; border:1px solid var(--borde); border-radius:6px; padding:4px; background:#fff; }
   #marcas label { margin:2px 0; font-size:.85rem; display:flex; gap:6px; align-items:center; }
   #mapa { flex:1; }
   #estado { font-size:.8rem; color:#666; margin-top:8px; }
   .precio { font-weight:700; color:var(--verde); }
   .popup small { color:#666; }
-  @media (max-width: 700px) {
-    body { flex-direction:column; }
-    #panel { width:100%; height:45%; border-right:none; border-bottom:1px solid var(--borde); }
-    #mapa { height:55%; }
-  }
+
   .marcador-usuario {
     background-color: #D32F2F;
     border: 3px solid #FFFFFF;
     border-radius: 50%;
     box-shadow: 0 0 0 5px rgba(211, 47, 47, 0.35), 0 2px 6px rgba(0, 0, 0, 0.45);
   }
-  #listaBaratas { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .icono-gasolinera {
+    background: transparent;
+    border: none;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+  }
+
+  #listaBaratas { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
   .item-gasolinera {
     border: 1px solid var(--borde); border-radius: 6px; padding: 6px 8px;
     background: #fff; cursor: pointer; display: flex; justify-content: space-between;
     align-items: center; gap: 8px; transition: background 0.15s, border-color 0.15s;
   }
   .item-gasolinera:hover { background: #f0f6ff; border-color: var(--azul); }
-  .item-gasolinera .info { overflow: hidden; }
+  .item-gasolinera .info { overflow: hidden; flex: 1; }
   .item-gasolinera .nombre { font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .item-gasolinera .meta { font-size: .75rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-gasolinera .meta { font-size: .74rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .item-gasolinera .importe { font-size: .95rem; font-weight: 700; color: var(--verde); white-space: nowrap; }
-  
-  .icono-gasolinera {
-    background: transparent;
-    border: none;
-    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+
+  .desc-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #eef6ff; border: 1px solid #b3d4fc; border-radius: 6px;
+    padding: 4px 8px; font-size: .8rem; margin-top: 4px;
+  }
+  .desc-item button {
+    width: auto; margin: 0; padding: 2px 6px; background: transparent;
+    color: #c62828; font-weight: 700; font-size: .85rem;
+  }
+  .precio-tachado {
+    text-decoration: line-through; color: #888; font-size: .76rem;
+    font-weight: 400; margin-left: 4px;
+  }
+  .badge-desc {
+    background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7;
+    border-radius: 4px; padding: 1px 4px; font-size: .68rem; font-weight: 600;
+    margin-left: 4px; vertical-align: middle;
+  }
+
+  @media (max-width: 700px) {
+    body { flex-direction:column; }
+    #panel { width:100%; height:48%; border-right:none; border-bottom:1px solid var(--borde); }
+    #mapa { height:52%; }
   }
 </style>
 </head>
@@ -93,27 +114,44 @@
     <label for="carburante">Carburante:</label>
     <select id="carburante"></select>
 
+    <label for="antiguedad">Variación del precio:</label>
+    <select id="antiguedad">
+      <option value="TODAS">Todas las gasolineras</option>
+      <option value="0">Cambiado hoy (0 días)</option>
+      <option value="1">Sin cambios ≤ 1 día</option>
+      <option value="2">Sin cambios ≤ 2 días</option>
+      <option value="3">Sin cambios ≤ 3 días</option>
+      <option value="EXACTO_1">Exactamente 1 día sin cambios</option>
+      <option value="EXACTO_2">Exactamente 2 días sin cambios</option>
+      <option value="MAS_3">Más de 3 días sin cambios</option>
+    </select>
+
     <label>Marcas:</label>
     <div id="marcas"><em style="font-size:.8rem">Esperando ubicación…</em></div>
   </fieldset>
+
   <fieldset>
-	  <label for="antiguedad">Actualización del precio:</label>
-		<select id="antiguedad">
-		  <option value="TODAS">Todas las gasolineras</option>
-		  <option value="0">Actualizadas hoy (0 días)</option>
-		  <option value="1">Máximo 1 día sin actualizar</option>
-		  <option value="2">Máximo 2 días sin actualizar</option>
-		  <option value="3">Máximo 3 días sin actualizar</option>
-		  <option value="MAS_3">Más de 3 días sin actualizar</option>
-		</select>
+    <legend>Descuentos por marca</legend>
+    <label for="descMarca">Marca:</label>
+    <select id="descMarca">
+      <option value="">Selecciona una marca…</option>
+    </select>
+    <div class="fila">
+      <input type="number" id="descValor" placeholder="Ej: 5" min="0" step="0.5" style="width:45%">
+      <select id="descTipo" style="width:55%">
+        <option value="CTS">cts/litro (ej. 5 cts)</option>
+        <option value="PCT">% porcentaje (ej. 3%)</option>
+      </select>
+    </div>
+    <button class="sec" id="btnAddDesc">Añadir / Actualizar descuento</button>
+    <div id="listaDescuentos" style="margin-top:6px"></div>
   </fieldset>
-  
+
   <fieldset>
     <legend>Más baratas (según filtro)</legend>
     <div id="listaBaratas">
       <em style="font-size:.8rem; color:#666">Sin datos para mostrar…</em>
     </div>
-  
   </fieldset>
 
   <button class="sec" id="btnActualizar">Actualizar precios</button>
@@ -134,6 +172,7 @@ const FUELS = {
 };
 
 const API_PROVINCIA = "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/FiltroProvincia/";
+const API_HIST_PROVINCIA = "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/FiltroProvincia/";
 const OSRM = "https://router.project-osrm.org/route/v1/driving/";
 const NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=";
 const NOMINATIM_REVERSE = "https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1";
@@ -167,7 +206,6 @@ function normalizarMarca(rotulo = "") {
   let limpio = rotulo.toUpperCase().trim()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-  // 1. Buscar si contiene alguna marca comercial conocida
   for (const marca of MARCAS_CONOCIDAS) {
     const marcaNorm = marca.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const regex = new RegExp(`(^|[^A-Z0-9])${marcaNorm}([^A-Z0-9]|$)`);
@@ -176,7 +214,6 @@ function normalizarMarca(rotulo = "") {
     }
   }
 
-  // 2. Si es otra estación, quitar prefijos genéricos ("E.S.", "ESTACION DE SERVICIO", etc.)
   limpio = limpio
     .replace(/^(E\.?\s*S\.?|ESTACION\s+DE\s+SERVICIO|GASOLINERA|AREA\s+DE\s+SERVICIO)\s+/i, "")
     .split(/\s+[-/,]\s+/)[0]
@@ -191,6 +228,30 @@ const iconoUsuario = L.divIcon({
   iconAnchor: [9, 9],
   popupAnchor: [0, -10]
 });
+
+/* Calcula un color progresivo entre verde (120º), amarillo (60º) y rojo (0º) */
+function colorPorPrecio(precio, min, max) {
+  const ratio = max > min ? (precio - min) / (max - min) : 0;
+  const hue = Math.round((1 - ratio) * 120);
+  return `hsl(${hue}, 82%, 40%)`;
+}
+
+/* Genera un marcador SVG con el color correspondiente al precio */
+function crearIconoGasolinera(color) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="38" viewBox="0 0 26 38">
+      <path d="M13 1C6.37 1 1 6.37 1 13c0 8.8 12 23.5 12 23.5S25 21.8 25 13c0-6.63-5.37-12-12-12z"
+            fill="${color}" stroke="#ffffff" stroke-width="2"/>
+      <circle cx="13" cy="13" r="4.5" fill="#ffffff"/>
+    </svg>`;
+  return L.divIcon({
+    className: "icono-gasolinera",
+    html: svg,
+    iconSize: [26, 38],
+    iconAnchor: [13, 37],
+    popupAnchor: [0, -34]
+  });
+}
 
 /* ============ Estado ============ */
 let estaciones = [];          // Estaciones cargadas en memoria
@@ -209,7 +270,7 @@ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
 capaEstaciones = L.layerGroup().addTo(mapa);
 capaRuta = L.layerGroup().addTo(mapa);
 
-/* ============ Preferencias ============ */
+/* ============ Preferencias y Descuentos ============ */
 const selCarb = document.getElementById("carburante");
 for (const [k, f] of Object.entries(FUELS)) {
   const o = document.createElement("option");
@@ -221,12 +282,88 @@ document.getElementById("radio").value = prefs.radius || 3;
 document.getElementById("radioVal").textContent = prefs.radius || 3;
 document.getElementById("soloRuta").checked = !!prefs.soloRuta;
 let marcasSel = new Set(prefs.brands || []);
+let descuentos = prefs.discounts || {};
 
 function guardarPrefs() {
-  prefs = { fuel: selCarb.value, radius: +document.getElementById("radio").value,
-            soloRuta: document.getElementById("soloRuta").checked, brands: [...marcasSel] };
+  prefs = {
+    fuel: selCarb.value,
+    radius: +document.getElementById("radio").value,
+    soloRuta: document.getElementById("soloRuta").checked,
+    brands: [...marcasSel],
+    discounts: descuentos
+  };
   localStorage.setItem("gasolineras_prefs", JSON.stringify(prefs));
 }
+
+function obtenerPrecioEfectivo(estacion, fuel) {
+  const base = estacion.precios?.[fuel];
+  if (base == null) return null;
+  const d = descuentos[estacion.marca];
+  if (!d || !d.valor || d.valor <= 0) return base;
+
+  const rebaja = d.tipo === "PCT" ? base * (d.valor / 100) : d.valor / 100;
+  return Math.max(0, +(base - rebaja).toFixed(3));
+}
+
+function etiquetaDescuento(marca) {
+  const d = descuentos[marca];
+  if (!d || !d.valor) return "";
+  return d.tipo === "PCT" ? `-${d.valor}%` : `-${d.valor} cts/l`;
+}
+
+function actualizarUIDescuentos() {
+  const sel = document.getElementById("descMarca");
+  const valorActual = sel.value;
+
+  const todasMarcas = new Set([...MARCAS_CONOCIDAS.map(normalizarMarca), ...estaciones.map(e => e.marca)]);
+  const ordenadas = [...todasMarcas].sort((a, b) => a.localeCompare(b, "es"));
+
+  sel.innerHTML = `<option value="">Selecciona una marca…</option>`;
+  for (const m of ordenadas) {
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m;
+    sel.appendChild(opt);
+  }
+  if (todasMarcas.has(valorActual)) sel.value = valorActual;
+
+  const cont = document.getElementById("listaDescuentos");
+  cont.innerHTML = "";
+  const entradas = Object.entries(descuentos);
+  if (entradas.length === 0) {
+    cont.innerHTML = `<small style="color:#666">Sin descuentos configurados.</small>`;
+    return;
+  }
+
+  for (const [marca] of entradas) {
+    const div = document.createElement("div");
+    div.className = "desc-item";
+    div.innerHTML = `
+      <span><b>${marca}</b>: ${etiquetaDescuento(marca)}</span>
+      <button title="Eliminar descuento">✕</button>
+    `;
+    div.querySelector("button").onclick = () => {
+      delete descuentos[marca];
+      guardarPrefs();
+      actualizarUIDescuentos();
+      pintar();
+    };
+    cont.appendChild(div);
+  }
+}
+
+document.getElementById("btnAddDesc").onclick = () => {
+  const marca = document.getElementById("descMarca").value;
+  const valor = parseFloat(document.getElementById("descValor").value);
+  const tipo = document.getElementById("descTipo").value;
+  if (!marca || !Number.isFinite(valor) || valor <= 0) return;
+
+  descuentos[marca] = { tipo, valor };
+  document.getElementById("descValor").value = "";
+  guardarPrefs();
+  actualizarUIDescuentos();
+  pintar();
+};
 
 /* ============ Utilidades ============ */
 const numEs = v => {
@@ -260,7 +397,6 @@ function distARutaKm(p, ruta) {
   return min;
 }
 
-/* Identifica el código de provincia a través del código postal o nombre */
 function extraerCodProvincia(address = {}) {
   if (address.postcode) {
     const cp = String(address.postcode).trim().padStart(5, "0");
@@ -274,37 +410,31 @@ function extraerCodProvincia(address = {}) {
   return null;
 }
 
+/* ============ Descarga directa + proxies de respaldo ============ */
 async function fetchConProxy(url) {
   const intentos = [
-    // 1º Petición directa al MITECO: Accept es CORS-safelisted (no lanza preflight OPTIONS)
-    () => fetch(url, {
-      headers: { "Accept": "application/json" }
-    }),
-    // 2º Petición directa sin cabeceras (devuelve XML o JSON según navegador)
+    () => fetch(url, { headers: { "Accept": "application/json" } }),
     () => fetch(url),
-    // 3º Respaldo con AllOrigins modo JSON (/get suele dar menos errores de cabeceras que /raw)
     async () => {
       const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
       if (!r.ok) throw new Error("HTTP " + r.status);
       const data = await r.json();
       return new Response(data.contents);
     },
-    // 4º Respaldo con CodeTabs
     () => fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`)
   ];
 
   for (const ejecutarFetch of intentos) {
     try {
-      estado("Descargando datos de gasolineras…");
       const resp = await ejecutarFetch();
       if (!resp.ok) throw new Error("HTTP " + resp.status);
       const texto = (await resp.text()).trim();
       if (!texto) throw new Error("Respuesta vacía");
 
       if (texto.startsWith("<")) {
-        return xmlAEstaciones(texto);   // Respuesta XML del MITECO
+        return xmlAEstaciones(texto);
       }
-      return JSON.parse(texto);          // Respuesta JSON del MITECO
+      return JSON.parse(texto);
     } catch (e) {
       console.warn("Intento de descarga falló:", e.message);
     }
@@ -312,14 +442,11 @@ async function fetchConProxy(url) {
   throw new Error("No se pudo descargar la información de las gasolineras.");
 }
 
-/* Decodifica etiquetas .NET: Precio_x0020_Gasoleo_x0020_A -> "Precio Gasoleo A" */
 function decodificarTag(tag) {
   return tag.replace(/_x([0-9A-Fa-f]{4})_/g,
     (_, h) => String.fromCharCode(parseInt(h, 16)));
 }
 
-/* Convierte el XML del servicio FiltroProvincia al mismo formato que el JSON:
-   { ListaEESSPrecio: [ { "Rótulo": ..., "Latitud": ..., ... }, ... ] } */
 function xmlAEstaciones(texto) {
   const doc = new DOMParser().parseFromString(texto, "application/xml");
   if (doc.querySelector("parsererror")) throw new Error("XML mal formado");
@@ -346,7 +473,7 @@ async function cargarProvincia(codProvincia, forzar = false) {
   const cacheKey = `gasolineras_prov_${codProvincia}`;
   const cache = JSON.parse(localStorage.getItem(cacheKey) || "null");
 
-  if (!forzar && cache && cache.fecha === hoy) {
+  if (!forzar && cache && cache.fecha === hoy && cache.datos?.[0]?.ideess !== undefined) {
     incorporarEstaciones(cache.datos);
     provinciasCargadas.add(codProvincia);
     calcularAntiguedadPrecios(codProvincia);
@@ -357,7 +484,7 @@ async function cargarProvincia(codProvincia, forzar = false) {
   try {
     const url = `${API_PROVINCIA}${codProvincia}`;
     const json = await fetchConProxy(url);
-    const fechaMiteco = (json.Fecha || "").split(" ")[0] || hoy;
+    const fechaMiteco = (json.Fecha || "").split(" ")[0] || formatearFechaMiteco(new Date());
 
     const nuevas = (json.ListaEESSPrecio || []).map(e => ({
       id: `${e["IDEESS"] || e["Rótulo"]}-${e["Latitud"]}-${e["Longitud (WGS84)"]}`,
@@ -390,11 +517,11 @@ function incorporarEstaciones(lista) {
       ids.add(item.id);
     }
   }
-  // Limpiar de marcasSel posibles nombres antiguos que no coincidan con marcas actuales
   const marcasValidas = new Set(estaciones.map(e => e.marca));
   marcasSel = new Set([...marcasSel].map(normalizarMarca).filter(m => marcasValidas.has(m)));
 
   construirFiltroMarcas();
+  actualizarUIDescuentos();
   pintar();
 }
 
@@ -402,7 +529,6 @@ function construirFiltroMarcas() {
   const cont = document.getElementById("marcas");
   cont.innerHTML = "";
 
-  // Contar cuántas estaciones hay de cada marca
   const conteo = new Map();
   for (const e of estaciones) {
     conteo.set(e.marca, (conteo.get(e.marca) || 0) + 1);
@@ -431,58 +557,35 @@ function construirFiltroMarcas() {
   }
 }
 
-/* Calcula un color progresivo entre verde (120º), amarillo (60º) y rojo (0º) */
-function colorPorPrecio(precio, min, max) {
-  const ratio = max > min ? (precio - min) / (max - min) : 0;
-  const hue = Math.round((1 - ratio) * 120);
-  return `hsl(${hue}, 82%, 40%)`;
-}
-
-/* Genera un marcador SVG con el color correspondiente al precio */
-function crearIconoGasolinera(color) {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="38" viewBox="0 0 26 38">
-      <path d="M13 1C6.37 1 1 6.37 1 13c0 8.8 12 23.5 12 23.5S25 21.8 25 13c0-6.63-5.37-12-12-12z"
-            fill="${color}" stroke="#ffffff" stroke-width="2"/>
-      <circle cx="13" cy="13" r="4.5" fill="#ffffff"/>
-    </svg>`;
-  return L.divIcon({
-    className: "icono-gasolinera",
-    html: svg,
-    iconSize: [26, 38],
-    iconAnchor: [13, 37],
-    popupAnchor: [0, -34]
-  });
-}
-
-/* ============ Pintar en el mapa ============ */
+/* ============ Pintar en el mapa y lista ============ */
 function pintar() {
   guardarPrefs();
   capaEstaciones.clearLayers();
   const fuel = selCarb.value;
-  const limite = document.getElementById("soloRuta").checked ? 0.15 : +document.getElementById("radio").value;
   const filtroAnt = document.getElementById("antiguedad").value;
-  
+  const limite = document.getElementById("soloRuta").checked ? 0.15 : +document.getElementById("radio").value;
+
   const filtradas = estaciones.filter(e =>
     (marcasSel.size === 0 || marcasSel.has(e.marca)) &&
     e.precios[fuel] != null &&
     cumpleFiltroAntiguedad(e, fuel, filtroAnt) &&
     (ruta ? distARutaKm([e.lat, e.lon], ruta) <= limite
-        : (userPos ? distKm([e.lat, e.lon], userPos) <= 15 : false))
-);
+          : (userPos ? distKm([e.lat, e.lon], userPos) <= 15 : false))
+  );
 
-  // Ordenar de menor a mayor precio
-  filtradas.sort((a, b) => a.precios[fuel] - b.precios[fuel]);
+  // Ordenar de menor a mayor según precio efectivo (con descuento si aplica)
+  filtradas.sort((a, b) => obtenerPrecioEfectivo(a, fuel) - obtenerPrecioEfectivo(b, fuel));
 
-  // Precios extremo inferior y superior para la escala de color
-  const minPrecio = filtradas.length ? filtradas[0].precios[fuel] : 0;
-  const maxPrecio = filtradas.length ? filtradas[filtradas.length - 1].precios[fuel] : 0;
+  const minPrecio = filtradas.length ? obtenerPrecioEfectivo(filtradas[0], fuel) : 0;
+  const maxPrecio = filtradas.length ? obtenerPrecioEfectivo(filtradas[filtradas.length - 1], fuel) : 0;
 
   const marcadoresPorId = new Map();
 
   for (const e of filtradas) {
-    const precio = e.precios[fuel];
-    const color = colorPorPrecio(precio, minPrecio, maxPrecio);
+    const precioBase = e.precios[fuel];
+    const precioFinal = obtenerPrecioEfectivo(e, fuel);
+    const tieneDesc = precioFinal < precioBase;
+    const color = colorPorPrecio(precioFinal, minPrecio, maxPrecio);
 
     const distTexto = (!ruta && userPos)
       ? `<br><small>📍 A ${distKm([e.lat, e.lon], userPos).toFixed(1)} km de tu ubicación</small>`
@@ -492,14 +595,20 @@ function pintar() {
       ? `<br><button class="sec" style="margin-top:6px;padding:4px 6px;font-size:.78rem" onclick="verEvolucion('${e.ideess}', '${e.codProvincia}', '${e.id}')">📈 Ver evolución (7 días)</button><div id="grafica-${e.ideess}"></div>`
       : "";
 
-	const marker = L.marker([e.lat, e.lon], { icon: crearIconoGasolinera(color) }).bindPopup(
-	  `<b>${e.rotulo}</b><br><small>${e.direccion}</small><br>` +
-	  `<span class="precio" style="color:${color}">${FUELS[fuel].label}: ${precio.toFixed(3)} €/l</span>` +
-	  `<br><small>${textoAntiguedad(e, fuel)}</small>` +
-	  distTexto +
-	  (e.horario ? `<br><small>${e.horario}</small>` : "") +
-	  btnHist
-	).addTo(capaEstaciones);
+    const htmlPrecioPopup = tieneDesc
+      ? `<span class="precio" style="color:${color}">${FUELS[fuel].label}: ${precioFinal.toFixed(3)} €/l</span>` +
+        `<span class="precio-tachado">${precioBase.toFixed(3)} €/l</span>` +
+        `<span class="badge-desc">${etiquetaDescuento(e.marca)}</span>`
+      : `<span class="precio" style="color:${color}">${FUELS[fuel].label}: ${precioFinal.toFixed(3)} €/l</span>`;
+
+    const marker = L.marker([e.lat, e.lon], { icon: crearIconoGasolinera(color) }).bindPopup(
+      `<b>${e.rotulo}</b><br><small>${e.direccion}</small><br>` +
+      htmlPrecioPopup +
+      `<br><small>${textoAntiguedad(e, fuel)}</small>` +
+      distTexto +
+      (e.horario ? `<br><small>${e.horario}</small>` : "") +
+      btnHist
+    ).addTo(capaEstaciones);
 
     marcadoresPorId.set(e.id, marker);
   }
@@ -512,24 +621,32 @@ function pintar() {
     contLista.innerHTML = `<em style="font-size:.8rem; color:#666">Ninguna gasolinera cumple el filtro.</em>`;
   } else {
     for (const [idx, e] of filtradas.slice(0, 20).entries()) {
-      const precio = e.precios[fuel];
-      const color = colorPorPrecio(precio, minPrecio, maxPrecio);
+      const precioBase = e.precios[fuel];
+      const precioFinal = obtenerPrecioEfectivo(e, fuel);
+      const tieneDesc = precioFinal < precioBase;
+      const color = colorPorPrecio(precioFinal, minPrecio, maxPrecio);
+
       const card = document.createElement("div");
       card.className = "item-gasolinera";
 
-      // Mostrar distancia a la ubicación solo si NO estamos en una ruta
       const textoDistancia = (!ruta && userPos)
         ? `📍 ${distKm([e.lat, e.lon], userPos).toFixed(1)} km · `
         : "";
 
-	  card.innerHTML = `
-	    <div class="info">
-  	      <div class="nombre">${idx + 1}. ${e.rotulo}</div>
-		  <div class="meta">${textoDistancia}${e.direccion}</div>
-		  <div class="meta">${textoAntiguedad(e, fuel)}</div>
-	    </div>
-	    <div class="importe" style="color:${color}">${precio.toFixed(3)} €</div>
-	`;
+      card.innerHTML = `
+        <div class="info">
+          <div class="nombre">
+            ${idx + 1}. ${e.rotulo}
+            ${tieneDesc ? `<span class="badge-desc">${etiquetaDescuento(e.marca)}</span>` : ""}
+          </div>
+          <div class="meta">${textoDistancia}${e.direccion}</div>
+          <div class="meta">${textoAntiguedad(e, fuel)}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="importe" style="color:${color}">${precioFinal.toFixed(3)} €</div>
+          ${tieneDesc ? `<div class="precio-tachado" style="margin-left:0">${precioBase.toFixed(3)} €</div>` : ""}
+        </div>
+      `;
 
       card.onclick = () => {
         mapa.setView([e.lat, e.lon], 15);
@@ -628,6 +745,7 @@ document.getElementById("btnQuitarRuta").onclick = () => {
 
 /* ============ Controles de Preferencias ============ */
 selCarb.onchange = pintar;
+document.getElementById("antiguedad").onchange = pintar;
 document.getElementById("soloRuta").onchange = pintar;
 document.getElementById("radio").oninput = e => {
   document.getElementById("radioVal").textContent = e.target.value;
@@ -638,22 +756,8 @@ document.getElementById("btnActualizar").onclick = async () => {
     await cargarProvincia(cod, true);
   }
 };
-document.getElementById("antiguedad").onchange = pintar;
 
-/* ============ Inicio automático ============ */
-if (navigator.geolocation) {
-  estado("Obteniendo tu ubicación…");
-  navigator.geolocation.getCurrentPosition(
-    pos => fijarOrigenConCoords(pos.coords.latitude, pos.coords.longitude),
-    () => estado("Introduce una dirección o pulsa «Usar mi ubicación».")
-  );
-} else {
-  estado("Introduce una dirección para buscar gasolineras.");
-}
-
-const API_HIST_PROVINCIA = "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/FiltroProvincia/";
-
-/* Formatea un objeto Date a DD-MM-YYYY para el endpoint histórico del MITECO */
+/* ============ Histórico, Antigüedad y Gráfica ============ */
 function formatearFechaMiteco(date) {
   const d = String(date.getDate()).padStart(2, "0");
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -661,7 +765,6 @@ function formatearFechaMiteco(date) {
   return `${d}-${m}-${y}`;
 }
 
-/* Obtiene (o recupera de caché) los precios históricos de una provincia en una fecha DD-MM-YYYY */
 async function obtenerHistoricoDiaProvincia(codProvincia, fechaStr) {
   const cacheKey = `gas_hist_${codProvincia}_${fechaStr}`;
   const cacheado = localStorage.getItem(cacheKey);
@@ -684,13 +787,86 @@ async function obtenerHistoricoDiaProvincia(codProvincia, fechaStr) {
   try {
     localStorage.setItem(cacheKey, JSON.stringify(mapaDia));
   } catch (_) {
-    // Si localStorage se llena, borra históricos antiguos
     Object.keys(localStorage)
       .filter(k => k.startsWith("gas_hist_"))
       .slice(0, 5)
       .forEach(k => localStorage.removeItem(k));
   }
   return mapaDia;
+}
+
+async function calcularAntiguedadPrecios(codProvincia) {
+  const hoy = new Date();
+  const diasAtras = [1, 2, 3, 4].map(d => {
+    const fecha = new Date(hoy);
+    fecha.setDate(hoy.getDate() - d);
+    return { dias: d, fechaStr: formatearFechaMiteco(fecha) };
+  });
+
+  try {
+    const historicos = await Promise.all(
+      diasAtras.map(d => obtenerHistoricoDiaProvincia(codProvincia, d.fechaStr).catch(() => null))
+    );
+
+    const fechaHoyStr = formatearFechaMiteco(hoy);
+
+    for (const e of estaciones) {
+      if (e.codProvincia !== codProvincia || !e.ideess) continue;
+      e.antiguedad = {};
+
+      for (const fuel of Object.keys(FUELS)) {
+        const precioHoy = e.precios[fuel];
+        if (precioHoy == null) continue;
+
+        let diasSinCambios = 0;
+        let fechaPrecio = e.fechaMiteco || fechaHoyStr;
+
+        for (let i = 0; i < diasAtras.length; i++) {
+          const histDia = historicos[i];
+          if (!histDia) break; // Si no hay boletín ese día, no inventamos comparación
+          const precioPasado = histDia[e.ideess]?.[fuel];
+          if (precioPasado != null && Math.abs(precioPasado - precioHoy) < 0.0005) {
+            diasSinCambios = diasAtras[i].dias;
+            fechaPrecio = diasAtras[i].fechaStr;
+          } else {
+            break;
+          }
+        }
+
+        e.antiguedad[fuel] = { dias: diasSinCambios, fecha: fechaPrecio };
+      }
+    }
+    pintar();
+  } catch (err) {
+    console.warn("No se pudo calcular la antigüedad de precios:", err);
+  }
+}
+
+function textoAntiguedad(estacion, fuel) {
+  const info = estacion.antiguedad?.[fuel];
+  if (!info) {
+    return estacion.fechaMiteco ? `📅 Boletín MITECO: ${estacion.fechaMiteco}` : "📅 Comprobando histórico…";
+  }
+  if (info.dias === 0) return `🟢 Cambiado hoy (${info.fecha})`;
+  if (info.dias === 1) return `🕒 1 día con este precio (desde ${info.fecha})`;
+  if (info.dias === 2) return `🕒 2 días con este precio (desde ${info.fecha})`;
+  if (info.dias === 3) return `⚠️ 3 días con este precio (desde ${info.fecha})`;
+  return `⚠️ +3 días sin variación (≤ ${info.fecha})`;
+}
+
+function cumpleFiltroAntiguedad(estacion, fuel, filtro) {
+  if (filtro === "TODAS") return true;
+  const info = estacion.antiguedad?.[fuel];
+  if (!info) return true;
+
+  if (filtro === "0") return info.dias === 0;
+  if (filtro === "1") return info.dias <= 1;
+  if (filtro === "2") return info.dias <= 2;
+  if (filtro === "3") return info.dias <= 3;
+  if (filtro === "EXACTO_1") return info.dias === 1;
+  if (filtro === "EXACTO_2") return info.dias === 2;
+  if (filtro === "MAS_3") return info.dias > 3;
+  return true;
 }
 
 /* Carga los últimos 7 días sin arrastrar ni inventar precios en días sin reporte o sin cambios */
@@ -716,7 +892,6 @@ async function verEvolucion(ideess, codProvincia, idEstacion) {
       fechas.map(f => obtenerHistoricoDiaProvincia(codProvincia, f.fechaMiteco).catch(() => null))
     );
 
-    // Construimos la serie de 7 días (índices 0 a 6). Si un día no hay dato, queda en null.
     const serie = fechas.map((f, idx) => ({
       idx,
       etiqueta: f.etiqueta,
@@ -730,13 +905,12 @@ async function verEvolucion(ideess, codProvincia, idEstacion) {
       precio: estHoy?.precios?.[fuel] ?? null
     });
 
-    // Filtrar solo los días donde realmente hubo dato y cambio de precio (más el inicio y Hoy)
     const puntosReales = [];
     let ultimoPrecioConocido = null;
 
     for (let i = 0; i < serie.length; i++) {
       const item = serie[i];
-      if (item.precio === null) continue; // Si ese día no hay dato, NO se usa el del día anterior
+      if (item.precio === null) continue;
 
       const esPrimero = ultimoPrecioConocido === null;
       const esHoy = i === serie.length - 1;
@@ -759,7 +933,6 @@ async function verEvolucion(ideess, codProvincia, idEstacion) {
   }
 }
 
-/* Dibuja la gráfica respetando los huecos y marcando solo los cambios reales de precio */
 function generarSvgGrafica(serieCompleta, puntosReales) {
   const w = 240, h = 115, padX = 28, padY = 24;
   const precios = puntosReales.map(p => p.precio);
@@ -795,79 +968,17 @@ function generarSvgGrafica(serieCompleta, puntosReales) {
   `;
 }
 
-/* Calcula cuántos días lleva sin cambiar el precio de cada gasolinera de la provincia */
-async function calcularAntiguedadPrecios(codProvincia) {
-  const hoy = new Date();
-  const diasAtras = [1, 2, 3, 4].map(d => {
-    const fecha = new Date(hoy);
-    fecha.setDate(hoy.getDate() - d);
-    return { dias: d, fechaStr: formatearFechaMiteco(fecha) };
-  });
+/* ============ Inicio automático ============ */
+actualizarUIDescuentos();
 
-  try {
-    const historicos = await Promise.all(
-      diasAtras.map(d => obtenerHistoricoDiaProvincia(codProvincia, d.fechaStr).catch(() => ({})))
-    );
-
-    const fechaHoyStr = formatearFechaMiteco(hoy);
-
-    for (const e of estaciones) {
-      if (e.codProvincia !== codProvincia || !e.ideess) continue;
-      e.antiguedad = {};
-
-      for (const fuel of Object.keys(FUELS)) {
-        const precioHoy = e.precios[fuel];
-        if (precioHoy == null) continue;
-
-        let diasSinActualizar = 0;
-        let fechaPrecio = e.fechaMiteco || fechaHoyStr;
-
-        for (let i = 0; i < diasAtras.length; i++) {
-          const precioPasado = historicos[i]?.[e.ideess]?.[fuel];
-          if (precioPasado != null && Math.abs(precioPasado - precioHoy) < 0.0005) {
-            diasSinActualizar = diasAtras[i].dias;
-            fechaPrecio = diasAtras[i].fechaStr;
-          } else {
-            break; // El precio cambió respecto a este día
-          }
-        }
-
-        e.antiguedad[fuel] = { dias: diasSinActualizar, fecha: fechaPrecio };
-      }
-    }
-    pintar();
-  } catch (err) {
-    console.warn("No se pudo calcular la antigüedad de precios:", err);
-  }
-}
-
-/* Formatea el texto de antigüedad y fecha del precio */
-function textoAntiguedad(estacion, fuel) {
-  const info = estacion.antiguedad?.[fuel];
-  if (!info) {
-    return estacion.fechaMiteco ? `📅 Fecha MITECO: ${estacion.fechaMiteco}` : "📅 Calculando antigüedad…";
-  }
-  if (info.dias === 0) return `🟢 Actualizado hoy (${info.fecha})`;
-  if (info.dias === 1) return `🕒 1 día sin cambios (desde ${info.fecha})`;
-  if (info.dias === 2) return `🕒 2 días sin cambios (desde ${info.fecha})`;
-  if (info.dias === 3) return `⚠️ 3 días sin cambios (desde ${info.fecha})`;
-  return `⚠️ +3 días sin actualizar (≤ ${info.fecha})`;
-}
-
-/* Comprueba si una estación cumple el filtro de antigüedad seleccionado */
-function cumpleFiltroAntiguedad(estacion, fuel, filtro) {
-  if (filtro === "TODAS") return true;
-  const info = estacion.antiguedad?.[fuel];
-  if (!info) return true; // Mientras termina de cargar el histórico no las oculta
-
-  if (filtro === "0") return info.dias === 0;
-  if (filtro === "1") return info.dias <= 1;
-  if (filtro === "2") return info.dias <= 2;
-  if (filtro === "3") return info.dias <= 3;
-  if (filtro === "EXACTO_1") return info.dias === 1;
-  if (filtro === "EXACTO_2") return info.dias === 2;
-  if (filtro === "MAS_3") return info.dias > 3;
-  return true;
+if (navigator.geolocation) {
+  estado("Obteniendo tu ubicación…");
+  navigator.geolocation.getCurrentPosition(
+    pos => fijarOrigenConCoords(pos.coords.latitude, pos.coords.longitude),
+    () => estado("Introduce una dirección o pulsa «Usar mi ubicación».")
+  );
+} else {
+  estado("Introduce una dirección para buscar gasolineras.");
 }
 </script>
 </body>
