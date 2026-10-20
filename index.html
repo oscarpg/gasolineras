@@ -163,16 +163,16 @@
     <label for="carburante">Carburante:</label>
     <select id="carburante"></select>
 
-    <label for="antiguedad">Variación del precio:</label>
+    <label for="antiguedad">Actualización del precio:</label>
     <select id="antiguedad">
       <option value="TODAS">Todas las gasolineras</option>
-      <option value="0">Cambiado hoy (0 días)</option>
-      <option value="1">Sin cambios ≤ 1 día</option>
-      <option value="2">Sin cambios ≤ 2 días</option>
-      <option value="3">Sin cambios ≤ 3 días</option>
-      <option value="EXACTO_1">Exactamente 1 día sin cambios</option>
-      <option value="EXACTO_2">Exactamente 2 días sin cambios</option>
-      <option value="MAS_3">Más de 3 días sin cambios</option>
+      <option value="0">Actualizado hoy (0 días)</option>
+      <option value="1">Sin actualizar ≤ 1 día</option>
+      <option value="2">Sin actualizar ≤ 2 días</option>
+      <option value="3">Sin actualizar ≤ 3 días</option>
+      <option value="EXACTO_1">Exactamente 1 día sin actualizar</option>
+      <option value="EXACTO_2">Exactamente 2 días sin actualizar</option>
+      <option value="MAS_3">Más de 3 días sin actualizar</option>
     </select>
 
     <label>Marcas:</label>
@@ -896,11 +896,11 @@ function textoAntiguedad(estacion, fuel) {
   if (!info) {
     return estacion.fechaMiteco ? `📅 Boletín MITECO: ${estacion.fechaMiteco}` : "📅 Comprobando histórico…";
   }
-  if (info.dias === 0) return `🟢 Cambiado hoy (${info.fecha})`;
-  if (info.dias === 1) return `🕒 1 día con este precio (desde ${info.fecha})`;
-  if (info.dias === 2) return `🕒 2 días con este precio (desde ${info.fecha})`;
-  if (info.dias === 3) return `⚠️ 3 días con este precio (desde ${info.fecha})`;
-  return `⚠️ +3 días sin variación (≤ ${info.fecha})`;
+  if (info.dias === 0) return `🟢 Actualizado hoy (${info.fecha})`;
+  if (info.dias === 1) return `🕒 1 día sin actualizar (desde ${info.fecha})`;
+  if (info.dias === 2) return `🕒 2 días sin actualizar (desde ${info.fecha})`;
+  if (info.dias === 3) return `⚠️ 3 días sin actualizar (desde ${info.fecha})`;
+  return `⚠️ +3 días sin actualizar (≤ ${info.fecha})`;
 }
 
 function cumpleFiltroAntiguedad(estacion, fuel, filtro) {
