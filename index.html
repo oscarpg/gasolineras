@@ -12,7 +12,15 @@
   body { margin:0; font-family: system-ui, Arial, sans-serif; display:flex; height:100vh; }
   #panel { width:340px; min-width:290px; padding:14px; overflow-y:auto; border-right:1px solid var(--borde); background:#fafafa; }
   h1 { font-size:1.15rem; margin:0 0 10px; color:var(--azul); }
-  fieldset { border:1px solid var(--borde); border-radius:8px; margin:0 0 12px; padding:8px 10px; background:#fff; }
+  fieldset {
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    margin: 0 0 12px;
+    padding: 8px 10px;
+    background: #fff;
+    min-width: 0;       /* Evita que el fieldset se estire más allá del panel */
+    max-width: 100%;
+  }
   legend { font-size:.85rem; font-weight:600; color:#555; padding:0 4px; }
   label { display:block; font-size:.85rem; margin:6px 0 2px; }
   select, input[type=text], input[type=number] { width:100%; padding:6px; border:1px solid var(--borde); border-radius:6px; font-size:.9rem; }
@@ -40,17 +48,58 @@
     filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
   }
 
-  #listaBaratas { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  #listaBaratas {
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden; /* Impide desbordamiento horizontal */
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+    padding-right: 2px;
+  }
   .item-gasolinera {
-    border: 1px solid var(--borde); border-radius: 6px; padding: 6px 8px;
-    background: #fff; cursor: pointer; display: flex; justify-content: space-between;
-    align-items: center; gap: 8px; transition: background 0.15s, border-color 0.15s;
+    border: 1px solid var(--borde);
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    transition: background 0.15s, border-color 0.15s;
   }
   .item-gasolinera:hover { background: #f0f6ff; border-color: var(--azul); }
-  .item-gasolinera .info { overflow: hidden; flex: 1; }
-  .item-gasolinera .nombre { font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .item-gasolinera .meta { font-size: .74rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .item-gasolinera .importe { font-size: .95rem; font-weight: 700; color: var(--verde); white-space: nowrap; }
+
+  .item-gasolinera .info {
+    flex: 1 1 0%;
+    min-width: 0;       /* Clave en Flexbox para que text-overflow: ellipsis funcione */
+    overflow: hidden;
+  }
+  .item-gasolinera .nombre {
+    font-size: .82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .item-gasolinera .meta {
+    font-size: .74rem;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .item-gasolinera .importe {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--verde);
+    white-space: nowrap;
+    flex-shrink: 0;     /* Garantiza que el precio nunca quede empujado fuera */
+  }
 
   .desc-item {
     display: flex; justify-content: space-between; align-items: center;
@@ -642,9 +691,9 @@ function pintar() {
           <div class="meta">${textoDistancia}${e.direccion}</div>
           <div class="meta">${textoAntiguedad(e, fuel)}</div>
         </div>
-        <div style="text-align:right">
-          <div class="importe" style="color:${color}">${precioFinal.toFixed(3)} €</div>
-          ${tieneDesc ? `<div class="precio-tachado" style="margin-left:0">${precioBase.toFixed(3)} €</div>` : ""}
+        <div style="text-align:right; flex-shrink:0">
+          <div class="importe" style="color:${color}">${precioFinal.toFixed(3)} €</div>${tieneDesc ? `
+			<div class="precio-tachado" style="margin-left:0">${precioBase.toFixed(3)} €</div>` : ""}
         </div>
       `;
 
