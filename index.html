@@ -162,6 +162,9 @@
     <legend>Preferencias</legend>
     <label for="carburante">Carburante:</label>
     <select id="carburante"></select>
+	
+	<label for="radioUbicacion">Máxima distancia: <span id="radioUbicacionVal">15</span> km</label>
+    <input type="range" id="radioUbicacion" min="1" max="50" step="1" value="15">
 
     <label for="antiguedad">Actualización del precio:</label>
     <select id="antiguedad">
@@ -327,6 +330,8 @@ for (const [k, f] of Object.entries(FUELS)) {
   selCarb.appendChild(o);
 }
 selCarb.value = prefs.fuel || "GASOLINA_95";
+document.getElementById("radioUbicacion").value = prefs.searchRadius || 15;
+document.getElementById("radioUbicacionVal").textContent = prefs.searchRadius || 15;
 document.getElementById("radio").value = prefs.radius || 3;
 document.getElementById("radioVal").textContent = prefs.radius || 3;
 document.getElementById("soloRuta").checked = !!prefs.soloRuta;
@@ -336,6 +341,7 @@ let descuentos = prefs.discounts || {};
 function guardarPrefs() {
   prefs = {
     fuel: selCarb.value,
+    searchRadius: +document.getElementById("radioUbicacion").value,
     radius: +document.getElementById("radio").value,
     soloRuta: document.getElementById("soloRuta").checked,
     brands: [...marcasSel],
@@ -613,13 +619,14 @@ function pintar() {
   const fuel = selCarb.value;
   const filtroAnt = document.getElementById("antiguedad").value;
   const limite = document.getElementById("soloRuta").checked ? 0.15 : +document.getElementById("radio").value;
+  const radioUbicacion = +document.getElementById("radioUbicacion").value;
 
   const filtradas = estaciones.filter(e =>
     (marcasSel.size === 0 || marcasSel.has(e.marca)) &&
     e.precios[fuel] != null &&
     cumpleFiltroAntiguedad(e, fuel, filtroAnt) &&
     (ruta ? distARutaKm([e.lat, e.lon], ruta) <= limite
-          : (userPos ? distKm([e.lat, e.lon], userPos) <= 15 : false))
+          : (userPos ? distKm([e.lat, e.lon], userPos) <= radioUbicacion : false))
   );
 
   // Ordenar de menor a mayor según precio efectivo (con descuento si aplica)
@@ -707,7 +714,7 @@ function pintar() {
   }
 
   estado(`${filtradas.length} gasolineras visibles · ${FUELS[fuel].label}` +
-         (ruta ? " · ruta activa" : ""));
+         (ruta ? " · ruta activa" : ` · radio ${radioUbicacion} km`));
 }
 
 /* ============ Fijar Origen y Ubicación ============ */
@@ -796,6 +803,10 @@ document.getElementById("btnQuitarRuta").onclick = () => {
 selCarb.onchange = pintar;
 document.getElementById("antiguedad").onchange = pintar;
 document.getElementById("soloRuta").onchange = pintar;
+document.getElementById("radioUbicacion").oninput = e => {
+  document.getElementById("radioUbicacionVal").textContent = e.target.value;
+  pintar();
+};
 document.getElementById("radio").oninput = e => {
   document.getElementById("radioVal").textContent = e.target.value;
   pintar();
