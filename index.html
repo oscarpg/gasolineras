@@ -34,6 +34,7 @@
     border: 1px solid var(--borde);
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     padding: 6px 10px;
     gap: 8px;
   }
@@ -44,8 +45,11 @@
   .icono-movil { display: none; font-size: 1.15rem; line-height: 1; }
   .icono-web { display: inline; }
 
-  #selCocheTop {
-    width: auto; min-width: 150px; max-width: 240px; padding: 6px 8px; margin: 0; font-size: .85rem;
+  #selCocheTop, #selAntiguedadTop {
+    width: auto; min-width: 140px; max-width: 220px; padding: 6px 8px; margin: 0; font-size: .83rem;
+  }
+  #inpDiasTop {
+    width: 58px; padding: 5px 6px; margin: 0; font-size: .83rem; text-align: center;
   }
   #btnGpsRapido {
     width: auto; margin: 0; padding: 7px 10px;
@@ -286,7 +290,7 @@
       bottom: 12px;
       max-height: 42vh;
     }
-    #selCocheTop { min-width: 120px; max-width: 175px; }
+    #selCocheTop, #selAntiguedadTop { min-width: 110px; max-width: 145px; font-size: .78rem; }
   }
 </style>
 </head>
@@ -300,6 +304,19 @@
       <span class="icono-web">⚙️ Preferencias</span>
     </button>
     <select id="selCocheTop" title="Seleccionar coche activo"></select>
+    <select id="selAntiguedadTop" title="Filtrar por antigüedad de actualización del precio">
+      <option value="TODAS">🕒 Todas (cualquier fecha)</option>
+      <option value="0">🟢 Actualizado hoy (0 días)</option>
+      <option value="1">🕒 Sin actualizar ≤ 1 día</option>
+      <option value="2">🕒 Sin actualizar ≤ 2 días</option>
+      <option value="3">🕒 Sin actualizar ≤ 3 días</option>
+      <option value="MAX_X">🕒 Sin actualizar ≤ X días…</option>
+      <option value="EXACTO_1">🕒 Exactamente 1 día sin act.</option>
+      <option value="EXACTO_2">🕒 Exactamente 2 días sin act.</option>
+      <option value="MAS_3">⚠️ Más de 3 días sin act.</option>
+      <option value="MAS_X">⚠️ Más de X días sin act…</option>
+    </select>
+    <input type="number" id="inpDiasTop" min="1" max="10" step="1" value="3" title="Número de días X" style="display:none">
     <button class="sec" id="btnGpsRapido" title="Usar mi ubicación GPS">📍</button>
   </div>
 </div>
@@ -397,19 +414,27 @@
       <label for="carburante">Carburante a mostrar:</label>
       <select id="carburante"></select>
 
-      <label for="antiguedad">Días sin actualizar precio:</label>
+      <label for="antiguedad">Filtro por días sin actualizar el precio:</label>
       <select id="antiguedad">
         <option value="TODAS">Todas las gasolineras</option>
         <option value="0">Actualizado hoy (0 días)</option>
-        <option value="1">Sin actualizar ≤ 1 día</option>
-        <option value="2">Sin actualizar ≤ 2 días</option>
-        <option value="3">Sin actualizar ≤ 3 días</option>
+        <option value="1">Sin actualizar ≤ 1 día (ocultar &gt; 1 día)</option>
+        <option value="2">Sin actualizar ≤ 2 días (ocultar &gt; 2 días)</option>
+        <option value="3">Sin actualizar ≤ 3 días (ocultar &gt; 3 días)</option>
+        <option value="MAX_X">Sin actualizar ≤ X días (personalizado)…</option>
         <option value="EXACTO_1">Exactamente 1 día sin actualizar</option>
         <option value="EXACTO_2">Exactamente 2 días sin actualizar</option>
         <option value="MAS_3">Más de 3 días sin actualizar</option>
+        <option value="MAS_X">Más de X días sin actualizar (personalizado)…</option>
       </select>
 
-      <label>Marcas permitidas:</label>
+      <div id="filaDiasCustom" class="fila" style="display:none; margin-top:6px">
+        <label for="diasAntiguedadVal" style="margin:0; flex:1">Número de días (X):</label>
+        <input type="number" id="diasAntiguedadVal" min="1" max="10" step="1" value="3" style="width:80px">
+      </div>
+      <div id="infoEstadoAntiguedad" style="font-size:.74rem; color:#666; margin-top:4px"></div>
+
+      <label style="margin-top:8px">Marcas permitidas:</label>
       <div id="marcas"><em style="font-size:.8rem">Esperando ubicación…</em></div>
     </fieldset>
 
@@ -552,6 +577,8 @@ document.getElementById("toggleBaratas").onclick = () => {
 /* ============ Estado y Mapa ============ */
 let estaciones = [];
 let provinciasCargadas = new Set();
+let maxDiasCalculadosPorProv = new Map();
+let calculandoAntiguedad = false;
 let userPos = null;
 let ruta = null;
 let capaEstaciones = null, capaRuta = null, marcadorUsuario = null;
@@ -579,19 +606,40 @@ for (const [k, f] of Object.entries(FUELS)) {
 }
 
 /* ============ Carga de Preferencias ============ */
+const OPCIONES_ANTIGUEDAD_VALIDAS = new Set(["TODAS", "0", "1", "2", "3", "MAX_X", "EXACTO_1", "EXACTO_2", "MAS_3", "MAS_X"]);
+const selAntiguedad = document.getElementById("antiguedad");
+const selAntiguedadTop = document.getElementById("selAntiguedadTop");
+const inpDiasDrawer = document.getElementById("diasAntiguedadVal");
+const inpDiasTop = document.getElementById("inpDiasTop");
+
 let coches = prefs.cars || [];
 let cocheActivoId = prefs.activeCarId || (coches[0]?.id ?? "");
 let marcasSel = new Set(prefs.brands || []);
 let descuentos = prefs.discounts || {};
 
-selCarb.value = prefs.fuel || "GASOLINA_95";
-document.getElementById("antiguedad").value = prefs.antiguedad || "TODAS";
+selCarb.value = FUELS[prefs.fuel] ? prefs.fuel : "GASOLINA_95";
+const antGuardada = OPCIONES_ANTIGUEDAD_VALIDAS.has(prefs.antiguedad) ? prefs.antiguedad : "TODAS";
+selAntiguedad.value = antGuardada;
+selAntiguedadTop.value = antGuardada;
+
+const diasCustomGuardados = Math.min(10, Math.max(1, parseInt(prefs.antiguedadDias, 10) || 3));
+inpDiasDrawer.value = diasCustomGuardados;
+inpDiasTop.value = diasCustomGuardados;
+
 document.getElementById("radioUbicacion").value = prefs.searchRadius || 15;
 document.getElementById("radioUbicacionVal").textContent = prefs.searchRadius || 15;
 document.getElementById("radio").value = prefs.radius || 3;
 document.getElementById("radioVal").textContent = prefs.radius || 3;
 document.getElementById("soloRuta").checked = !!prefs.soloRuta;
 document.getElementById("chkOrdenCosteReal").checked = !!prefs.sortByRealCost;
+
+function actualizarVisibilidadDiasCustom() {
+  const val = selAntiguedad.value;
+  const usaCustom = val === "MAX_X" || val === "MAS_X";
+  document.getElementById("filaDiasCustom").style.display = usaCustom ? "flex" : "none";
+  inpDiasTop.style.display = usaCustom ? "inline-block" : "none";
+}
+actualizarVisibilidadDiasCustom();
 
 function obtenerCocheActivo() {
   return coches.find(c => c.id === cocheActivoId) || null;
@@ -605,7 +653,8 @@ if (cocheInicial) {
 function guardarPrefs() {
   prefs = {
     fuel: selCarb.value,
-    antiguedad: document.getElementById("antiguedad").value,
+    antiguedad: selAntiguedad.value,
+    antiguedadDias: +inpDiasDrawer.value || 3,
     searchRadius: +document.getElementById("radioUbicacion").value,
     radius: +document.getElementById("radio").value,
     soloRuta: document.getElementById("soloRuta").checked,
@@ -762,13 +811,11 @@ function obtenerPrecioEfectivo(estacion, fuel) {
   return Math.max(0, +(base - rebaja).toFixed(3));
 }
 
-/* Calcula el desglose completo para una estación y el coche activo */
 function calcularDesgloseCoche(estacion, fuel, coche) {
   const precioFinal = obtenerPrecioEfectivo(estacion, fuel);
   const distUbicacion = userPos ? distKm([estacion.lat, estacion.lon], userPos) : null;
   const distDesvioRuta = ruta ? distARutaKm([estacion.lat, estacion.lon], ruta) : null;
 
-  // Distancia de referencia para el trayecto hacia la gasolinera (en ruta es el desvío; sin ruta es la distancia desde origen)
   const distBaseKm = ruta ? distDesvioRuta : distUbicacion;
 
   if (!coche || precioFinal == null) {
@@ -962,6 +1009,14 @@ function xmlAEstaciones(texto) {
 }
 
 /* ============ Carga de gasolineras por provincia ============ */
+function diasHistoricoRequeridos() {
+  const f = selAntiguedad.value;
+  if (f === "MAX_X" || f === "MAS_X") {
+    return Math.max(4, Math.min(10, (+inpDiasDrawer.value || 3) + 1));
+  }
+  return 4;
+}
+
 async function cargarProvincia(codProvincia, forzar = false) {
   if (!codProvincia) return;
   if (!forzar && provinciasCargadas.has(codProvincia)) return;
@@ -973,7 +1028,7 @@ async function cargarProvincia(codProvincia, forzar = false) {
   if (!forzar && cache && cache.fecha === hoy && cache.datos?.[0]?.ideess !== undefined) {
     incorporarEstaciones(cache.datos);
     provinciasCargadas.add(codProvincia);
-    calcularAntiguedadPrecios(codProvincia);
+    calcularAntiguedadPrecios(codProvincia, diasHistoricoRequeridos());
     return;
   }
 
@@ -999,7 +1054,7 @@ async function cargarProvincia(codProvincia, forzar = false) {
     localStorage.setItem(cacheKey, JSON.stringify({ fecha: hoy, datos: nuevas }));
     incorporarEstaciones(nuevas);
     provinciasCargadas.add(codProvincia);
-    calcularAntiguedadPrecios(codProvincia);
+    calcularAntiguedadPrecios(codProvincia, diasHistoricoRequeridos());
   } catch (err) {
     estado("Error cargando provincia: " + err.message);
   }
@@ -1055,31 +1110,44 @@ function construirFiltroMarcas() {
 }
 
 /* ============ Pintar en el mapa y lista ============ */
+function etiquetaResumenAntiguedad(filtro, diasX) {
+  if (filtro === "TODAS") return "";
+  if (filtro === "0") return " · act. hoy";
+  if (filtro === "1") return " · ≤ 1d sin act.";
+  if (filtro === "2") return " · ≤ 2d sin act.";
+  if (filtro === "3") return " · ≤ 3d sin act.";
+  if (filtro === "MAX_X") return ` · ≤ ${diasX}d sin act.`;
+  if (filtro === "EXACTO_1") return " · 1d sin act.";
+  if (filtro === "EXACTO_2") return " · 2d sin act.";
+  if (filtro === "MAS_3") return " · > 3d sin act.";
+  if (filtro === "MAS_X") return ` · > ${diasX}d sin act.`;
+  return "";
+}
+
 function pintar() {
   guardarPrefs();
   capaEstaciones.clearLayers();
   const fuel = selCarb.value;
   const coche = obtenerCocheActivo();
   const ordenarPorCosteReal = !!(coche && document.getElementById("chkOrdenCosteReal").checked);
-  const filtroAnt = document.getElementById("antiguedad").value;
+  const filtroAnt = selAntiguedad.value || "TODAS";
+  const diasX = Math.max(1, +inpDiasDrawer.value || 3);
   const limiteRuta = document.getElementById("soloRuta").checked ? 0.15 : +document.getElementById("radio").value;
   const radioUbicacion = +document.getElementById("radioUbicacion").value;
 
   const filtradas = estaciones.filter(e =>
     (marcasSel.size === 0 || marcasSel.has(e.marca)) &&
     e.precios[fuel] != null &&
-    cumpleFiltroAntiguedad(e, fuel, filtroAnt) &&
+    cumpleFiltroAntiguedad(e, fuel, filtroAnt, diasX) &&
     (ruta ? distARutaKm([e.lat, e.lon], ruta) <= limiteRuta
           : (userPos ? distKm([e.lat, e.lon], userPos) <= radioUbicacion : false))
   );
 
-  // Precalcular desglose para cada estación filtrada
   const desgloses = new Map();
   for (const e of filtradas) {
     desgloses.set(e.id, calcularDesgloseCoche(e, fuel, coche));
   }
 
-  // Ordenar según el checkbox (por coste total real o por precio €/litro)
   filtradas.sort((a, b) => {
     const da = desgloses.get(a.id);
     const db = desgloses.get(b.id);
@@ -1144,7 +1212,6 @@ function pintar() {
     marcadoresPorId.set(e.id, marker);
   }
 
-  // Renderizar listado flotante de las más baratas
   const contLista = document.getElementById("listaBaratas");
   contLista.innerHTML = "";
 
@@ -1216,10 +1283,14 @@ function pintar() {
     }
   }
 
-  estado(`${filtradas.length} gasolineras · ${FUELS[fuel].label}` +
-         (coche ? ` · ${coche.nombre}` : "") +
-         (ordenarPorCosteReal ? " · orden: coste total" : " · orden: €/l") +
-         (ruta ? " · en ruta" : ` · máx. ${radioUbicacion} km`));
+  estado(
+    `${filtradas.length} gasolineras · ${FUELS[fuel].label}` +
+    (coche ? ` · ${coche.nombre}` : "") +
+    etiquetaResumenAntiguedad(filtroAnt, diasX) +
+    (calculandoAntiguedad ? " · ⏳ comprobando histórico…" : "") +
+    (ordenarPorCosteReal ? " · orden: coste total" : " · orden: €/l") +
+    (ruta ? " · en ruta" : ` · máx. ${radioUbicacion} km`)
+  );
 }
 
 /* ============ Fijar Origen y Ubicación ============ */
@@ -1309,7 +1380,38 @@ document.getElementById("btnQuitarRuta").onclick = () => {
   pintar();
 };
 
-/* ============ Eventos de Preferencias ============ */
+/* ============ Eventos de Preferencias y Sincronización de Antigüedad ============ */
+async function asegurarHistoricoParaFiltro() {
+  const req = diasHistoricoRequeridos();
+  for (const cod of provinciasCargadas) {
+    const calc = maxDiasCalculadosPorProv.get(cod) || 0;
+    if (req > calc) {
+      await calcularAntiguedadPrecios(cod, req);
+    }
+  }
+}
+
+function sincronizarCambioAntiguedad(nuevoValor) {
+  selAntiguedad.value = nuevoValor;
+  selAntiguedadTop.value = nuevoValor;
+  actualizarVisibilidadDiasCustom();
+  asegurarHistoricoParaFiltro();
+  pintar();
+}
+
+function sincronizarDiasCustom(nuevoDias) {
+  const n = Math.min(10, Math.max(1, parseInt(nuevoDias, 10) || 3));
+  inpDiasDrawer.value = n;
+  inpDiasTop.value = n;
+  asegurarHistoricoParaFiltro();
+  pintar();
+}
+
+selAntiguedad.onchange = e => sincronizarCambioAntiguedad(e.target.value);
+selAntiguedadTop.onchange = e => sincronizarCambioAntiguedad(e.target.value);
+inpDiasDrawer.onchange = e => sincronizarDiasCustom(e.target.value);
+inpDiasTop.onchange = e => sincronizarDiasCustom(e.target.value);
+
 selCarb.onchange = () => {
   const coche = obtenerCocheActivo();
   if (coche && coche.fuel !== selCarb.value) {
@@ -1318,7 +1420,6 @@ selCarb.onchange = () => {
   actualizarUICoches();
   pintar();
 };
-document.getElementById("antiguedad").onchange = pintar;
 document.getElementById("soloRuta").onchange = pintar;
 document.getElementById("radioUbicacion").oninput = e => {
   document.getElementById("radioUbicacionVal").textContent = e.target.value;
@@ -1329,6 +1430,7 @@ document.getElementById("radio").oninput = e => {
   pintar();
 };
 document.getElementById("btnActualizar").onclick = async () => {
+  maxDiasCalculadosPorProv.clear();
   for (const cod of [...provinciasCargadas]) {
     await cargarProvincia(cod, true);
   }
@@ -1372,13 +1474,19 @@ async function obtenerHistoricoDiaProvincia(codProvincia, fechaStr) {
   return mapaDia;
 }
 
-async function calcularAntiguedadPrecios(codProvincia) {
+async function calcularAntiguedadPrecios(codProvincia, maxDias = 4) {
   const hoy = new Date();
-  const diasAtras = [1, 2, 3, 4].map(d => {
+  const listaIndices = Array.from({ length: maxDias }, (_, i) => i + 1);
+  const diasAtras = listaIndices.map(d => {
     const fecha = new Date(hoy);
     fecha.setDate(hoy.getDate() - d);
     return { dias: d, fechaStr: formatearFechaMiteco(fecha) };
   });
+
+  const infoEl = document.getElementById("infoEstadoAntiguedad");
+  calculandoAntiguedad = true;
+  if (infoEl) infoEl.textContent = `⏳ Comprobando histórico de precios (${maxDias} días)…`;
+  pintar();
 
   try {
     const historicos = await Promise.all(
@@ -1410,39 +1518,47 @@ async function calcularAntiguedadPrecios(codProvincia) {
           }
         }
 
-        e.antiguedad[fuel] = { dias: diasSinCambios, fecha: fechaPrecio };
+        e.antiguedad[fuel] = { dias: diasSinCambios, fecha: fechaPrecio, maxComprobado: maxDias - 1 };
       }
     }
-    pintar();
+    maxDiasCalculadosPorProv.set(codProvincia, maxDias);
+    if (infoEl) infoEl.textContent = `✅ Histórico comprobado (${maxDias} días hacia atrás).`;
   } catch (err) {
     console.warn("No se pudo calcular la antigüedad de precios:", err);
+    if (infoEl) infoEl.textContent = `⚠️ No se pudo comprobar todo el histórico.`;
+  } finally {
+    calculandoAntiguedad = false;
+    pintar();
   }
 }
 
 function textoAntiguedad(estacion, fuel) {
   const info = estacion.antiguedad?.[fuel];
   if (!info) {
-    return estacion.fechaMiteco ? `📅 Boletín MITECO: ${estacion.fechaMiteco}` : "📅 Comprobando histórico…";
+    return estacion.fechaMiteco ? `📅 Boletín MITECO: ${estacion.fechaMiteco} (comprobando histórico…)` : "📅 Comprobando histórico…";
   }
+  const tope = info.maxComprobado || 3;
   if (info.dias === 0) return `🟢 Actualizado hoy (${info.fecha})`;
   if (info.dias === 1) return `🕒 1 día sin actualizar (desde ${info.fecha})`;
-  if (info.dias === 2) return `🕒 2 días sin actualizar (desde ${info.fecha})`;
-  if (info.dias === 3) return `⚠️ 3 días sin actualizar (desde ${info.fecha})`;
-  return `⚠️ +3 días sin actualizar (≤ ${info.fecha})`;
+  if (info.dias <= tope) return `🕒 ${info.dias} días sin actualizar (desde ${info.fecha})`;
+  return `⚠️ +${tope} días sin actualizar (≤ ${info.fecha})`;
 }
 
-function cumpleFiltroAntiguedad(estacion, fuel, filtro) {
-  if (filtro === "TODAS") return true;
+function cumpleFiltroAntiguedad(estacion, fuel, filtro, diasX = 3) {
+  if (!filtro || filtro === "TODAS") return true;
   const info = estacion.antiguedad?.[fuel];
+  // Mientras no haya terminado de descargarse el histórico de una estación, la mantenemos visible
   if (!info) return true;
 
   if (filtro === "0") return info.dias === 0;
   if (filtro === "1") return info.dias <= 1;
   if (filtro === "2") return info.dias <= 2;
   if (filtro === "3") return info.dias <= 3;
+  if (filtro === "MAX_X") return info.dias <= diasX;
   if (filtro === "EXACTO_1") return info.dias === 1;
   if (filtro === "EXACTO_2") return info.dias === 2;
   if (filtro === "MAS_3") return info.dias > 3;
+  if (filtro === "MAS_X") return info.dias > diasX;
   return true;
 }
 
