@@ -14,7 +14,7 @@
   /* Mapa a pantalla completa */
   #mapa { width:100%; height:100%; z-index:1; }
 
-  /* Barra superior flotante */
+  /* Barra superior flotante limpia */
   #topbar {
     position: absolute;
     top: 12px;
@@ -22,8 +22,8 @@
     right: 12px;
     z-index: 500;
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 8px;
     pointer-events: none;
   }
   .topbar-card {
@@ -34,25 +34,18 @@
     border: 1px solid var(--borde);
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    padding: 6px 10px;
-    gap: 8px;
+    padding: 4px;
+    gap: 6px;
   }
   #btnAbrirPrefs {
-    width: auto; margin: 0; padding: 8px 12px; font-weight: 600;
+    width: auto; margin: 0; padding: 7px 12px; font-weight: 600; font-size: .85rem;
     display: flex; align-items: center; gap: 6px;
   }
   .icono-movil { display: none; font-size: 1.15rem; line-height: 1; }
   .icono-web { display: inline; }
 
-  #selCocheTop, #selAntiguedadTop {
-    width: auto; min-width: 140px; max-width: 220px; padding: 6px 8px; margin: 0; font-size: .83rem;
-  }
-  #inpDiasTop {
-    width: 58px; padding: 5px 6px; margin: 0; font-size: .83rem; text-align: center;
-  }
   #btnGpsRapido {
-    width: auto; margin: 0; padding: 7px 10px;
+    width: auto; margin: 0; padding: 7px 10px; font-size: 1rem;
   }
 
   /* Tarjeta flotante: Listado de más baratas */
@@ -290,33 +283,20 @@
       bottom: 12px;
       max-height: 42vh;
     }
-    #selCocheTop, #selAntiguedadTop { min-width: 110px; max-width: 145px; font-size: .78rem; }
   }
 </style>
 </head>
 <body>
 
-<!-- Barra superior flotante en pantalla principal -->
+<!-- Barra superior flotante limpia en pantalla principal -->
 <div id="topbar">
   <div class="topbar-card">
     <button id="btnAbrirPrefs" title="Abrir Preferencias">
       <span class="icono-movil">☰</span>
       <span class="icono-web">⚙️ Preferencias</span>
     </button>
-    <select id="selCocheTop" title="Seleccionar coche activo"></select>
-    <select id="selAntiguedadTop" title="Filtrar por antigüedad de actualización del precio">
-      <option value="TODAS">🕒 Todas (cualquier fecha)</option>
-      <option value="0">🟢 Actualizado hoy (0 días)</option>
-      <option value="1">🕒 Sin actualizar ≤ 1 día</option>
-      <option value="2">🕒 Sin actualizar ≤ 2 días</option>
-      <option value="3">🕒 Sin actualizar ≤ 3 días</option>
-      <option value="MAX_X">🕒 Sin actualizar ≤ X días…</option>
-      <option value="EXACTO_1">🕒 Exactamente 1 día sin act.</option>
-      <option value="EXACTO_2">🕒 Exactamente 2 días sin act.</option>
-      <option value="MAS_3">⚠️ Más de 3 días sin act.</option>
-      <option value="MAS_X">⚠️ Más de X días sin act…</option>
-    </select>
-    <input type="number" id="inpDiasTop" min="1" max="10" step="1" value="3" title="Número de días X" style="display:none">
+  </div>
+  <div class="topbar-card">
     <button class="sec" id="btnGpsRapido" title="Usar mi ubicación GPS">📍</button>
   </div>
 </div>
@@ -608,9 +588,7 @@ for (const [k, f] of Object.entries(FUELS)) {
 /* ============ Carga de Preferencias ============ */
 const OPCIONES_ANTIGUEDAD_VALIDAS = new Set(["TODAS", "0", "1", "2", "3", "MAX_X", "EXACTO_1", "EXACTO_2", "MAS_3", "MAS_X"]);
 const selAntiguedad = document.getElementById("antiguedad");
-const selAntiguedadTop = document.getElementById("selAntiguedadTop");
 const inpDiasDrawer = document.getElementById("diasAntiguedadVal");
-const inpDiasTop = document.getElementById("inpDiasTop");
 
 let coches = prefs.cars || [];
 let cocheActivoId = prefs.activeCarId || (coches[0]?.id ?? "");
@@ -620,11 +598,9 @@ let descuentos = prefs.discounts || {};
 selCarb.value = FUELS[prefs.fuel] ? prefs.fuel : "GASOLINA_95";
 const antGuardada = OPCIONES_ANTIGUEDAD_VALIDAS.has(prefs.antiguedad) ? prefs.antiguedad : "TODAS";
 selAntiguedad.value = antGuardada;
-selAntiguedadTop.value = antGuardada;
 
 const diasCustomGuardados = Math.min(10, Math.max(1, parseInt(prefs.antiguedadDias, 10) || 3));
 inpDiasDrawer.value = diasCustomGuardados;
-inpDiasTop.value = diasCustomGuardados;
 
 document.getElementById("radioUbicacion").value = prefs.searchRadius || 15;
 document.getElementById("radioUbicacionVal").textContent = prefs.searchRadius || 15;
@@ -637,7 +613,6 @@ function actualizarVisibilidadDiasCustom() {
   const val = selAntiguedad.value;
   const usaCustom = val === "MAX_X" || val === "MAS_X";
   document.getElementById("filaDiasCustom").style.display = usaCustom ? "flex" : "none";
-  inpDiasTop.style.display = usaCustom ? "inline-block" : "none";
 }
 actualizarVisibilidadDiasCustom();
 
@@ -686,16 +661,6 @@ function actualizarEstadoCheckboxCoste() {
 
 /* ============ Gestión de Coches ============ */
 function actualizarUICoches() {
-  const selTop = document.getElementById("selCocheTop");
-  selTop.innerHTML = `<option value="">🚗 Sin coche (${FUELS[selCarb.value]?.label})</option>`;
-  for (const c of coches) {
-    const opt = document.createElement("option");
-    opt.value = c.id;
-    opt.textContent = `🚗 ${c.nombre} (${FUELS[c.fuel]?.label})`;
-    selTop.appendChild(opt);
-  }
-  selTop.value = cocheActivoId;
-
   actualizarEstadoCheckboxCoste();
 
   const cont = document.getElementById("listaCoches");
@@ -751,10 +716,6 @@ function seleccionarCoche(id) {
   actualizarUICoches();
   pintar();
 }
-
-document.getElementById("selCocheTop").onchange = e => {
-  seleccionarCoche(e.target.value);
-};
 
 document.getElementById("chkOrdenCosteReal").onchange = () => {
   guardarPrefs();
@@ -1391,26 +1352,15 @@ async function asegurarHistoricoParaFiltro() {
   }
 }
 
-function sincronizarCambioAntiguedad(nuevoValor) {
-  selAntiguedad.value = nuevoValor;
-  selAntiguedadTop.value = nuevoValor;
+selAntiguedad.onchange = () => {
   actualizarVisibilidadDiasCustom();
   asegurarHistoricoParaFiltro();
   pintar();
-}
-
-function sincronizarDiasCustom(nuevoDias) {
-  const n = Math.min(10, Math.max(1, parseInt(nuevoDias, 10) || 3));
-  inpDiasDrawer.value = n;
-  inpDiasTop.value = n;
+};
+inpDiasDrawer.onchange = () => {
   asegurarHistoricoParaFiltro();
   pintar();
-}
-
-selAntiguedad.onchange = e => sincronizarCambioAntiguedad(e.target.value);
-selAntiguedadTop.onchange = e => sincronizarCambioAntiguedad(e.target.value);
-inpDiasDrawer.onchange = e => sincronizarDiasCustom(e.target.value);
-inpDiasTop.onchange = e => sincronizarDiasCustom(e.target.value);
+};
 
 selCarb.onchange = () => {
   const coche = obtenerCocheActivo();
@@ -1547,7 +1497,6 @@ function textoAntiguedad(estacion, fuel) {
 function cumpleFiltroAntiguedad(estacion, fuel, filtro, diasX = 3) {
   if (!filtro || filtro === "TODAS") return true;
   const info = estacion.antiguedad?.[fuel];
-  // Mientras no haya terminado de descargarse el histórico de una estación, la mantenemos visible
   if (!info) return true;
 
   if (filtro === "0") return info.dias === 0;
