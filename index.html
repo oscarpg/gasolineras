@@ -666,7 +666,7 @@ function actualizarUICoches() {
   const cont = document.getElementById("listaCoches");
   cont.innerHTML = "";
   if (coches.length === 0) {
-    cont.innerHTML = `<small style="color:#666">No has añadido ningún coche todavía.</small>`;
+    cont.innerHTML = `<small style="color:#666">No hay coches configurados.</small>`;
     return;
   }
 
@@ -1175,6 +1175,13 @@ function pintar() {
 
   const contLista = document.getElementById("listaBaratas");
   contLista.innerHTML = "";
+
+  // Asegurar que el panel se despliegue automáticamente si hay datos
+  if (filtradas.length > 0) {
+    const panelBaratas = document.getElementById("panelBaratas");
+    panelBaratas.classList.remove("minimizado");
+    document.getElementById("iconoToggleBaratas").textContent = "▼";
+  }
 
   if (filtradas.length === 0) {
     contLista.innerHTML = `<em style="font-size:.8rem; color:#666">Ninguna gasolinera cumple el filtro.</em>`;
