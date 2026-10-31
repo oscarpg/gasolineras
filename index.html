@@ -27,7 +27,7 @@
     pointer-events: none;
   }
   .topbar-card {
-     pointer-events: auto;
+    pointer-events: auto;
     background: #fff;
     border-radius: 8px;
     box-shadow: var(--sombra);
@@ -56,9 +56,9 @@
     position: absolute;
     bottom: 20px;
     left: 12px;
-    width: 350px;
+    width: 370px;
     max-width: calc(100vw - 24px);
-    max-height: 44vh;
+    max-height: 48vh;
     background: #fff;
     border-radius: 10px;
     box-shadow: var(--sombra);
@@ -70,7 +70,7 @@
     transition: max-height 0.25s ease;
   }
   #panelBaratas.minimizado {
-    max-height: 42px;
+    max-height: 40px;
   }
   .cabecera-baratas {
     padding: 10px 12px;
@@ -83,13 +83,44 @@
     align-items: center;
     cursor: pointer;
     user-select: none;
+    flex-shrink: 0;
+  }
+  .opciones-baratas {
+    padding: 6px 10px;
+    background: #eef6ff;
+    border-bottom: 1px solid #b3d4fc;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .78rem;
+    color: #1565C0;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .opciones-baratas.deshabilitado {
+    background: #f5f5f5;
+    border-bottom-color: var(--borde);
+    color: #888;
+    font-weight: 400;
+  }
+  .opciones-baratas input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+  }
+  .opciones-baratas label {
+    margin: 0;
+    cursor: pointer;
+    font-size: .78rem;
+    color: inherit;
+    user-select: none;
   }
   #estado {
-    font-size: .75rem;
+    font-size: .74rem;
     color: #555;
     padding: 5px 10px;
     background: #f5f7fa;
     border-bottom: 1px solid var(--borde);
+    flex-shrink: 0;
   }
   #listaBaratas {
     overflow-y: auto;
@@ -229,10 +260,14 @@
     font-size: .73rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .item-gasolinera .meta-coche {
-    font-size: .73rem; color: #1565C0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: .72rem; color: #1565C0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 1px;
   }
   .item-gasolinera .importe {
     font-size: .95rem; font-weight: 700; color: var(--verde); white-space: nowrap; flex-shrink: 0;
+  }
+  .item-gasolinera .sub-importe {
+    font-size: .72rem; color: #1565C0; font-weight: 600; white-space: nowrap;
   }
   .precio-tachado {
     text-decoration: line-through; color: #888; font-size: .75rem; font-weight: 400; margin-left: 4px;
@@ -249,7 +284,7 @@
     #panelBaratas {
       width: calc(100vw - 24px);
       bottom: 12px;
-      max-height: 38vh;
+      max-height: 42vh;
     }
     #selCocheTop { min-width: 120px; max-width: 175px; }
   }
@@ -277,6 +312,10 @@
   <div class="cabecera-baratas" id="toggleBaratas">
     <span>⛽ Gasolineras más baratas</span>
     <span id="iconoToggleBaratas">▼</span>
+  </div>
+  <div class="opciones-baratas" id="contenedorChkCoste">
+    <input type="checkbox" id="chkOrdenCosteReal">
+    <label for="chkOrdenCosteReal" id="lblOrdenCosteReal">Ordenar por coste total (depósito + ida y vuelta)</label>
   </div>
   <div id="estado">Esperando ubicación…</div>
   <div id="listaBaratas">
@@ -465,8 +504,8 @@ const iconoUsuario = L.divIcon({
   popupAnchor: [0, -10]
 });
 
-function colorPorPrecio(precio, min, max) {
-  const ratio = max > min ? (precio - min) / (max - min) : 0;
+function colorPorValor(valor, min, max) {
+  const ratio = max > min ? (valor - min) / (max - min) : 0;
   const hue = Math.round((1 - ratio) * 120);
   return `hsl(${hue}, 82%, 40%)`;
 }
@@ -552,12 +591,12 @@ document.getElementById("radioUbicacionVal").textContent = prefs.searchRadius ||
 document.getElementById("radio").value = prefs.radius || 3;
 document.getElementById("radioVal").textContent = prefs.radius || 3;
 document.getElementById("soloRuta").checked = !!prefs.soloRuta;
+document.getElementById("chkOrdenCosteReal").checked = !!prefs.sortByRealCost;
 
 function obtenerCocheActivo() {
   return coches.find(c => c.id === cocheActivoId) || null;
 }
 
-// Si hay coche activo al arrancar, sincronizar su combustible
 const cocheInicial = obtenerCocheActivo();
 if (cocheInicial) {
   selCarb.value = cocheInicial.fuel;
@@ -570,12 +609,30 @@ function guardarPrefs() {
     searchRadius: +document.getElementById("radioUbicacion").value,
     radius: +document.getElementById("radio").value,
     soloRuta: document.getElementById("soloRuta").checked,
+    sortByRealCost: document.getElementById("chkOrdenCosteReal").checked,
     brands: [...marcasSel],
     discounts: descuentos,
     cars: coches,
     activeCarId: cocheActivoId
   };
   localStorage.setItem("gasolineras_prefs", JSON.stringify(prefs));
+}
+
+function actualizarEstadoCheckboxCoste() {
+  const coche = obtenerCocheActivo();
+  const chk = document.getElementById("chkOrdenCosteReal");
+  const cont = document.getElementById("contenedorChkCoste");
+  const lbl = document.getElementById("lblOrdenCosteReal");
+
+  if (!coche) {
+    chk.disabled = true;
+    cont.classList.add("deshabilitado");
+    lbl.textContent = "Selecciona un coche para ordenar por coste total (depósito + viaje)";
+  } else {
+    chk.disabled = false;
+    cont.classList.remove("deshabilitado");
+    lbl.textContent = `Ordenar por coste total con ${coche.nombre} (depósito + ida y vuelta)`;
+  }
 }
 
 /* ============ Gestión de Coches ============ */
@@ -589,6 +646,8 @@ function actualizarUICoches() {
     selTop.appendChild(opt);
   }
   selTop.value = cocheActivoId;
+
+  actualizarEstadoCheckboxCoste();
 
   const cont = document.getElementById("listaCoches");
   cont.innerHTML = "";
@@ -648,6 +707,11 @@ document.getElementById("selCocheTop").onchange = e => {
   seleccionarCoche(e.target.value);
 };
 
+document.getElementById("chkOrdenCosteReal").onchange = () => {
+  guardarPrefs();
+  pintar();
+};
+
 document.getElementById("btnGuardarCoche").onclick = () => {
   const nombre = document.getElementById("cocheNombre").value.trim();
   const fuel = selCocheFuel.value;
@@ -687,7 +751,7 @@ document.getElementById("btnGuardarCoche").onclick = () => {
   pintar();
 };
 
-/* ============ Descuentos ============ */
+/* ============ Descuentos y Costes ============ */
 function obtenerPrecioEfectivo(estacion, fuel) {
   const base = estacion.precios?.[fuel];
   if (base == null) return null;
@@ -696,6 +760,46 @@ function obtenerPrecioEfectivo(estacion, fuel) {
 
   const rebaja = d.tipo === "PCT" ? base * (d.valor / 100) : d.valor / 100;
   return Math.max(0, +(base - rebaja).toFixed(3));
+}
+
+/* Calcula el desglose completo para una estación y el coche activo */
+function calcularDesgloseCoche(estacion, fuel, coche) {
+  const precioFinal = obtenerPrecioEfectivo(estacion, fuel);
+  const distUbicacion = userPos ? distKm([estacion.lat, estacion.lon], userPos) : null;
+  const distDesvioRuta = ruta ? distARutaKm([estacion.lat, estacion.lon], ruta) : null;
+
+  // Distancia de referencia para el trayecto hacia la gasolinera (en ruta es el desvío; sin ruta es la distancia desde origen)
+  const distBaseKm = ruta ? distDesvioRuta : distUbicacion;
+
+  if (!coche || precioFinal == null) {
+    return {
+      precioFinal,
+      distUbicacion,
+      distDesvioRuta,
+      distIdaVueltaKm: distBaseKm != null ? distBaseKm * 2 : null,
+      costeDeposito: null,
+      litrosViaje: null,
+      costeViaje: null,
+      costeTotal: null
+    };
+  }
+
+  const costeDeposito = coche.deposito * precioFinal;
+  const distIdaVueltaKm = distBaseKm != null ? distBaseKm * 2 : 0;
+  const litrosViaje = (distIdaVueltaKm * coche.consumo) / 100;
+  const costeViaje = litrosViaje * precioFinal;
+  const costeTotal = costeDeposito + costeViaje;
+
+  return {
+    precioFinal,
+    distUbicacion,
+    distDesvioRuta,
+    distIdaVueltaKm,
+    costeDeposito,
+    litrosViaje,
+    costeViaje,
+    costeTotal
+  };
 }
 
 function etiquetaDescuento(marca) {
@@ -956,6 +1060,7 @@ function pintar() {
   capaEstaciones.clearLayers();
   const fuel = selCarb.value;
   const coche = obtenerCocheActivo();
+  const ordenarPorCosteReal = !!(coche && document.getElementById("chkOrdenCosteReal").checked);
   const filtroAnt = document.getElementById("antiguedad").value;
   const limiteRuta = document.getElementById("soloRuta").checked ? 0.15 : +document.getElementById("radio").value;
   const radioUbicacion = +document.getElementById("radioUbicacion").value;
@@ -968,31 +1073,52 @@ function pintar() {
           : (userPos ? distKm([e.lat, e.lon], userPos) <= radioUbicacion : false))
   );
 
-  filtradas.sort((a, b) => obtenerPrecioEfectivo(a, fuel) - obtenerPrecioEfectivo(b, fuel));
+  // Precalcular desglose para cada estación filtrada
+  const desgloses = new Map();
+  for (const e of filtradas) {
+    desgloses.set(e.id, calcularDesgloseCoche(e, fuel, coche));
+  }
 
-  const minPrecio = filtradas.length ? obtenerPrecioEfectivo(filtradas[0], fuel) : 0;
-  const maxPrecio = filtradas.length ? obtenerPrecioEfectivo(filtradas[filtradas.length - 1], fuel) : 0;
+  // Ordenar según el checkbox (por coste total real o por precio €/litro)
+  filtradas.sort((a, b) => {
+    const da = desgloses.get(a.id);
+    const db = desgloses.get(b.id);
+    if (ordenarPorCosteReal && da.costeTotal != null && db.costeTotal != null) {
+      return da.costeTotal - db.costeTotal;
+    }
+    return da.precioFinal - db.precioFinal;
+  });
+
+  const valorMetrica = e => {
+    const d = desgloses.get(e.id);
+    return (ordenarPorCosteReal && d.costeTotal != null) ? d.costeTotal : d.precioFinal;
+  };
+
+  const minVal = filtradas.length ? valorMetrica(filtradas[0]) : 0;
+  const maxVal = filtradas.length ? valorMetrica(filtradas[filtradas.length - 1]) : 0;
 
   const marcadoresPorId = new Map();
 
   for (const e of filtradas) {
     const precioBase = e.precios[fuel];
-    const precioFinal = obtenerPrecioEfectivo(e, fuel);
+    const d = desgloses.get(e.id);
+    const precioFinal = d.precioFinal;
     const tieneDesc = precioFinal < precioBase;
-    const color = colorPorPrecio(precioFinal, minPrecio, maxPrecio);
-    const distancia = userPos ? distKm([e.lat, e.lon], userPos) : null;
+    const color = colorPorValor(valorMetrica(e), minVal, maxVal);
 
-    const distTexto = (!ruta && distancia !== null)
-      ? `<br><small>📍 A ${distancia.toFixed(1)} km de tu ubicación</small>`
-      : "";
+    const distTexto = ruta
+      ? `<br><small>🛣️ Desvío de ruta: ${d.distDesvioRuta.toFixed(1)} km (${d.distIdaVueltaKm.toFixed(1)} km i/v)</small>`
+      : (d.distUbicacion !== null ? `<br><small>📍 A ${d.distUbicacion.toFixed(1)} km (${d.distIdaVueltaKm.toFixed(1)} km i/v)</small>` : "");
 
     let infoCochePopup = "";
-    if (coche) {
-      const costeDeposito = (coche.deposito * precioFinal).toFixed(2);
-      const costeViaje = distancia !== null
-        ? ` · Ir: ${((distancia * coche.consumo / 100) * precioFinal).toFixed(2)} €`
-        : "";
-      infoCochePopup = `<br><small style="color:#1565C0;font-weight:600">🚗 ${coche.nombre}: Llenar (${coche.deposito}L) = ${costeDeposito} €${costeViaje}</small>`;
+    if (coche && d.costeTotal != null) {
+      infoCochePopup =
+        `<br><small style="color:#1565C0;font-weight:600">` +
+        `🚗 <b>${coche.nombre}</b> (${coche.deposito}L):<br>` +
+        `• Depósito: ${d.costeDeposito.toFixed(2)} €<br>` +
+        `• Desplazamiento i/v (${d.distIdaVueltaKm.toFixed(1)} km · ${d.litrosViaje.toFixed(2)}L): +${d.costeViaje.toFixed(2)} €<br>` +
+        `• <b>Total real: ${d.costeTotal.toFixed(2)} €</b>` +
+        `</small>`;
     }
 
     const btnHist = e.ideess
@@ -1027,25 +1153,43 @@ function pintar() {
   } else {
     for (const [idx, e] of filtradas.slice(0, 20).entries()) {
       const precioBase = e.precios[fuel];
-      const precioFinal = obtenerPrecioEfectivo(e, fuel);
+      const d = desgloses.get(e.id);
+      const precioFinal = d.precioFinal;
       const tieneDesc = precioFinal < precioBase;
-      const color = colorPorPrecio(precioFinal, minPrecio, maxPrecio);
-      const distancia = userPos ? distKm([e.lat, e.lon], userPos) : null;
+      const color = colorPorValor(valorMetrica(e), minVal, maxVal);
 
       const card = document.createElement("div");
       card.className = "item-gasolinera";
 
-      const textoDistancia = (!ruta && distancia !== null)
-        ? `📍 ${distancia.toFixed(1)} km · `
-        : "";
+      const textoDistancia = ruta
+        ? `🛣️ Desvío ${d.distDesvioRuta.toFixed(1)} km · `
+        : (d.distUbicacion !== null ? `📍 ${d.distUbicacion.toFixed(1)} km · ` : "");
 
       let lineaCoche = "";
-      if (coche) {
-        const costeDeposito = (coche.deposito * precioFinal).toFixed(2);
-        const costeDesplazamiento = (!ruta && distancia !== null)
-          ? ` · Desplaz.: ${((distancia * coche.consumo / 100) * precioFinal).toFixed(2)} €`
-          : "";
-        lineaCoche = `<div class="meta-coche">🚗 Depósito (${coche.deposito}L): ${costeDeposito} €${costeDesplazamiento}</div>`;
+      let bloqueDerecho = `
+        <div class="importe" style="color:${color}">${precioFinal.toFixed(3)} €/l</div>
+        ${tieneDesc ? `<div class="precio-tachado" style="margin-left:0">${precioBase.toFixed(3)} €/l</div>` : ""}
+      `;
+
+      if (coche && d.costeTotal != null) {
+        lineaCoche = `
+          <div class="meta-coche">
+            🚗 Depósito: ${d.costeDeposito.toFixed(2)} € + Viaje i/v: ${d.costeViaje.toFixed(2)} € = <b>${d.costeTotal.toFixed(2)} €</b>
+          </div>
+        `;
+        if (ordenarPorCosteReal) {
+          bloqueDerecho = `
+            <div class="importe" style="color:${color}">${d.costeTotal.toFixed(2)} €</div>
+            <div class="sub-importe">${precioFinal.toFixed(3)} €/l</div>
+            ${tieneDesc ? `<div class="precio-tachado" style="margin-left:0">${precioBase.toFixed(3)} €/l</div>` : ""}
+          `;
+        } else {
+          bloqueDerecho = `
+            <div class="importe" style="color:${color}">${precioFinal.toFixed(3)} €/l</div>
+            ${tieneDesc ? `<div class="precio-tachado" style="margin-left:0">${precioBase.toFixed(3)} €/l</div>` : ""}
+            <div class="sub-importe">Total: ${d.costeTotal.toFixed(2)} €</div>
+          `;
+        }
       }
 
       card.innerHTML = `
@@ -1059,8 +1203,7 @@ function pintar() {
           <div class="meta">${textoAntiguedad(e, fuel)}</div>
         </div>
         <div style="text-align:right; flex-shrink:0">
-          <div class="importe" style="color:${color}">${precioFinal.toFixed(3)} €</div>${tieneDesc ? `
-          <div class="precio-tachado" style="margin-left:0">${precioBase.toFixed(3)} €</div>` : ""}
+          ${bloqueDerecho}
         </div>
       `;
 
@@ -1074,8 +1217,9 @@ function pintar() {
   }
 
   estado(`${filtradas.length} gasolineras · ${FUELS[fuel].label}` +
-         (coche ? ` (${coche.nombre})` : "") +
-         (ruta ? " · ruta activa" : ` · máx. ${radioUbicacion} km`));
+         (coche ? ` · ${coche.nombre}` : "") +
+         (ordenarPorCosteReal ? " · orden: coste total" : " · orden: €/l") +
+         (ruta ? " · en ruta" : ` · máx. ${radioUbicacion} km`));
 }
 
 /* ============ Fijar Origen y Ubicación ============ */
