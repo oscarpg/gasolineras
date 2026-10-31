@@ -67,7 +67,7 @@
     transition: max-height 0.25s ease;
   }
   #panelBaratas.minimizado {
-    max-height: 40px;
+    max-height: 42px !important;
   }
   .cabecera-baratas {
     padding: 10px 12px;
@@ -81,6 +81,7 @@
     cursor: pointer;
     user-select: none;
     flex-shrink: 0;
+    min-height: 42px;
   }
   .opciones-baratas {
     padding: 6px 10px;
@@ -126,6 +127,7 @@
     flex-direction: column;
     gap: 6px;
     padding: 8px;
+    flex: 1;
   }
 
   /* Drawer lateral de Preferencias */
@@ -1175,13 +1177,6 @@ function pintar() {
 
   const contLista = document.getElementById("listaBaratas");
   contLista.innerHTML = "";
-
-  // Asegurar que el panel se despliegue automáticamente si hay datos
-  if (filtradas.length > 0) {
-    const panelBaratas = document.getElementById("panelBaratas");
-    panelBaratas.classList.remove("minimizado");
-    document.getElementById("iconoToggleBaratas").textContent = "▼";
-  }
 
   if (filtradas.length === 0) {
     contLista.innerHTML = `<em style="font-size:.8rem; color:#666">Ninguna gasolinera cumple el filtro.</em>`;
