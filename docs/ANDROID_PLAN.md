@@ -152,15 +152,25 @@ so clustering is optional rather than required.
   `parseFloat`-style number parsing, stable sort.
 - CI runs `:core:test`; each push publishes the debug APK to the `android-test-build` pre-release.
 
-### Phase 2 — Data layer (3–4 days)
+### Phase 2 — Data layer ✅ done 2026-11-21
 
-- `MitecoRepository`: current prices + history day, JSON parsing (ask for
-  `Accept: application/json`), XML fallback parser (`_xHHHH_` tag decoding), Spanish
-  decimal parsing, in-flight request de-duplication (`Mutex`/shared `Deferred`), daily cache (2-day TTL, history 15 days).
-- `FileCache` with TTL and size cap; `PreferencesRepository` on DataStore with schema v3, defaults and validation (clamp radius 1–50, detour 1–10, custom days 1–10).
-- `GeocoderRepository`, `OsrmRouter`, `LocationRepository`.
-- Tests with MockWebServer + the shared fixtures.
-- **Done when:** repositories return correct `Station`s from fixtures; offline returns cached data.
+- `:data` module, pure Kotlin/JVM (tested locally and in CI):
+  - `OkHttpHttpClient` (timeouts → `AppError` TIMEOUT, non-2xx → `HttpError`), `fetchWithFallback`.
+  - `MitecoRepository`: JSON first, then MITECO's default XML; daily cache (2-day TTL),
+    history days cached 15 days, concurrent callers share one download. No CORS relays needed.
+  - `Cache` with the web entry format (`v`/`e`/`w`), TTL and oldest-first eviction, on
+    `FileStorage` (one atomic file per key, size cap) — 30 MB in `cacheDir`.
+  - `PreferencesCodec` (web schema v3, same validation and v1/v2 migrations) and `PreferencesStore`
+    (`StateFlow`, saved to a JSON file in `filesDir`). Decision: a JSON file via `FileStorage`
+    instead of DataStore — same guarantees here, fewer dependencies, testable on the JVM.
+  - `NominatimGeocoder` (1 req/s `RateLimiter`, session cache, failures not cached),
+    `FallbackGeocoder` (phone first), `OsrmRouter`.
+- App: `AndroidGeocoder` (platform `Geocoder`, async API on 33+), `LocationRepository`
+  (fused provider, last-known fallback), `AppContainer` + `GasolinerasApp` (manual DI until Phase 3).
+- 52 JUnit tests ported from the web suites with the shared fixtures; real XML and JSON MITECO
+  files give identical stations (also checked on Android's runtime by an instrumented test).
+- Diagnostics "Datos (prueba completa)": position → province → stations (download + cache) →
+  history → staleness → visible stations, plus search, route and preferences save, all live.
 
 ### Phase 3 — State & ViewModel (2 days)
 
