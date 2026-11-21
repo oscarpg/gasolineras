@@ -2,7 +2,7 @@ import type { LatLng } from '../../domain/types';
 import { escapeHtml } from '../dom';
 import { i18n } from '../i18nContext';
 import { userIcon } from './icons';
-import { getLeaflet, type LeafletLayerGroup, type LeafletMarker, type LeafletStatic } from './leaflet';
+import type { LeafletLayerGroup, LeafletMarker, LeafletStatic } from './leaflet';
 
 const SPAIN_CENTER: LatLng = [40.4168, -3.7038];
 const ROUTE_COLOR = '#1565C0';
@@ -18,7 +18,8 @@ export interface MapView {
   focus(position: LatLng, zoom: number): void;
 }
 
-export function createMapView(elementId: string, L: LeafletStatic = getLeaflet()): MapView {
+/** The Leaflet map. `L` is passed in (main.ts gives the real library, tests a fake). */
+export function createMapView(elementId: string, L: LeafletStatic): MapView {
   const map = L.map(elementId).setView(SPAIN_CENTER, 6);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,

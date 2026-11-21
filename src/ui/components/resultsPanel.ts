@@ -121,7 +121,9 @@ export function createResultsPanel(
         )}`,
     );
     if (focused)
-      list.querySelector<HTMLElement>(`.station-card[data-station="${CSS.escape(focused)}"]`)?.focus();
+      [...list.querySelectorAll<HTMLElement>('.station-card')]
+        .find((c) => c.dataset.station === focused)
+        ?.focus();
   }
 
   return {

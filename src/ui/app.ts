@@ -24,6 +24,7 @@ import { createLocationRouteSections } from './components/prefsDrawer/locationRo
 import { createResultsPanel } from './components/resultsPanel';
 import { i18n, setI18n, translateStaticText } from './i18nContext';
 import { createLocationController } from './locationController';
+import type { LeafletStatic } from './map/leaflet';
 import { createMapView } from './map/mapView';
 import { createStationMarkers } from './map/stationMarkers';
 import { createToaster } from './toast';
@@ -35,6 +36,8 @@ export interface AppContext {
   geocoder: Geocoder;
   router: Router;
   gps: GeoProvider;
+  /** The map library (main.ts passes Leaflet; tests pass a fake). */
+  leaflet: LeafletStatic;
   /** Browser language preferences, used when the user hasn't chosen a language. */
   browserLanguages?: readonly string[];
 }
@@ -49,6 +52,7 @@ export function startApp({
   geocoder,
   router,
   gps,
+  leaflet,
   browserLanguages = navigator.languages ?? [navigator.language],
 }: AppContext): void {
   /** Switches the translator when the chosen (or browser) language changes. Returns true if it changed. */
@@ -63,7 +67,7 @@ export function startApp({
 
   const selectVisible = createVisibleStationsSelector();
   const toast = createToaster();
-  const mapView = createMapView('map');
+  const mapView = createMapView('map', leaflet);
   const markers = createStationMarkers(mapView.L, mapView.stationsLayer);
   const drawer = createDrawer();
 

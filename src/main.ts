@@ -18,6 +18,7 @@ import { localStorageAdapter } from './storage/adapter';
 import { createCache, removeKeysWithPrefix } from './storage/cache';
 import { loadPreferences, savePreferences } from './storage/preferences';
 import { startApp } from './ui/app';
+import { getLeaflet } from './ui/map/leaflet';
 
 /** Bump the version to invalidate every cached download after a format change. */
 const CACHE_NAMESPACE = 'gasolineras.cache.v2:';
@@ -47,4 +48,4 @@ const persistence = persistPreferences(store, (preferences) => savePreferences(s
 window.addEventListener('pagehide', persistence.flush);
 
 // UI
-startApp({ store, effects, miteco, geocoder, router, gps });
+startApp({ store, effects, miteco, geocoder, router, gps, leaflet: getLeaflet() });
