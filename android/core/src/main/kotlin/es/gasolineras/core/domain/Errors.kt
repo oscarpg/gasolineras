@@ -13,7 +13,7 @@ enum class AppErrorCode(val id: String) {
     GEOLOCATION_TIMEOUT("geolocation-timeout"),
 }
 
-class AppError(
+open class AppError(
     val code: AppErrorCode,
     /** Extra values for the message, e.g. `status to 429`. */
     val params: Map<String, Any> = emptyMap(),

@@ -64,6 +64,7 @@ object DiagnosticsReport {
         tiles: HttpProbeResult?,
         location: LocationProbeResult?,
         map: Pair<Int, FrameStats>?,
+        data: DataProbeResult? = null,
     ): String = listOf(
         "Gasolineras diagnostics ${device.appVersion}",
         device(device),
@@ -71,7 +72,10 @@ object DiagnosticsReport {
         tiles?.let(::mapTiles) ?: "OpenFreeMap: not run",
         location?.let(::location) ?: "Location: not run",
         map?.let { (markers, stats) -> map(markers, stats) } ?: "Map: not run",
+        data?.let(::data) ?: "Data: not run",
     ).joinToString("\n")
+
+    fun data(r: DataProbeResult): String = "Data: ${if (r.ok) "OK" else "FAIL"}\n" + r.lines.joinToString("\n") { "  $it" }
 
     private fun size(bytes: Long): String = when {
         bytes >= 1_000_000 -> String.format(Locale.ROOT, "%.1f MB", bytes / 1_000_000.0)

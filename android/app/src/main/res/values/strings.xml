@@ -22,4 +22,6 @@
     <string name="map_test_done">Prueba terminada</string>
     <string name="map_test_markers">Gasolineras en el mapa: %1$d</string>
     <string name="navigate_back">Atrás</string>
+    <string name="diag_data">Datos (prueba completa)</string>
+    <string name="diag_run_data">Probar datos</string>
 </resources>

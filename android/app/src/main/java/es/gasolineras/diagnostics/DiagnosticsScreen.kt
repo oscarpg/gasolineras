@@ -51,6 +51,9 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel, onOpenMapTest: () -> Unit
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { viewModel.runLocation() }
+    val dataPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { viewModel.runData() }
     val copiedMessage = stringResource(R.string.diag_report_copied)
     val notRun = stringResource(R.string.diag_not_run)
     val running = stringResource(R.string.diag_running)
@@ -126,6 +129,25 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel, onOpenMapTest: () -> Unit
                     ok = viewModel.mapResult?.let { it.second.avgFps >= 45 },
                 ) {
                     Button(onClick = onOpenMapTest) { Text(stringResource(R.string.diag_open_map)) }
+                }
+            }
+            item {
+                ResultCard(
+                    title = stringResource(R.string.diag_data),
+                    body = when {
+                        viewModel.dataRunning -> running
+                        else -> viewModel.data?.lines?.joinToString("\n") ?: notRun
+                    },
+                    ok = viewModel.data?.ok,
+                ) {
+                    Button(
+                        onClick = {
+                            dataPermissionLauncher.launch(
+                                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                            )
+                        },
+                        enabled = !viewModel.dataRunning,
+                    ) { Text(stringResource(R.string.diag_run_data)) }
                 }
             }
             item {

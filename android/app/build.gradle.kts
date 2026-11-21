@@ -43,6 +43,7 @@ android {
 
     // Same real MITECO samples as the web app's tests.
     sourceSets["test"].resources.srcDir("../../tests/fixtures")
+    sourceSets["androidTest"].assets.srcDir("../../tests/fixtures")
 
     lint {
         abortOnError = true
@@ -55,6 +56,7 @@ kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
 
 dependencies {
     implementation(project(":core"))
+    implementation(project(":data"))
     implementation(project(":map-maplibre"))
 
     implementation(libs.androidx.core.ktx)

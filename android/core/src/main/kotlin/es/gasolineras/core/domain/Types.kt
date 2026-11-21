@@ -1,5 +1,7 @@
 package es.gasolineras.core.domain
 
+import kotlinx.serialization.Serializable
+
 /** Core domain types. Pure data: no Android, no map SDK, no I/O. Port of src/domain/types.ts. */
 
 /** Latitude, longitude in decimal degrees (WGS84). */
@@ -9,6 +11,7 @@ data class LatLng(val lat: Double, val lon: Double)
  * Supported fuels, in menu order. [mitecoField] is the price field in MITECO responses
  * (matched case-insensitively: MITECO has changed capitalisation before).
  */
+@Serializable
 enum class FuelType(val mitecoField: String) {
     GASOLEO_A("Precio Gasoleo A"),
     GASOLEO_PREMIUM("Precio Gasoleo Premium"),
@@ -80,6 +83,7 @@ sealed interface AgeFilter {
 }
 
 /** A petrol station as reported by MITECO, normalised. */
+@Serializable
 data class Station(
     /** Stable id: MITECO code (or sign) + coordinates. */
     val id: String,

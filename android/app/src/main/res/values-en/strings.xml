@@ -21,4 +21,6 @@
     <string name="map_test_done">Test finished</string>
     <string name="map_test_markers">Stations on the map: %1$d</string>
     <string name="navigate_back">Back</string>
+    <string name="diag_data">Data (end-to-end)</string>
+    <string name="diag_run_data">Test data</string>
 </resources>

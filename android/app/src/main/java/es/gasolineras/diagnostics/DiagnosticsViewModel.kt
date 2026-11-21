@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import es.gasolineras.BuildConfig
+import es.gasolineras.GasolinerasApp
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -15,6 +16,7 @@ import java.util.Locale
 class DiagnosticsViewModel(application: Application) : AndroidViewModel(application) {
     private val network = NetworkProbes()
     private val locationProbe = LocationProbe(application)
+    private val dataProbe = DataProbe((application as GasolinerasApp).container)
 
     val device = DeviceInfo(
         manufacturer = Build.MANUFACTURER,
@@ -37,13 +39,17 @@ class DiagnosticsViewModel(application: Application) : AndroidViewModel(applicat
         private set
     var mapResult by mutableStateOf<Pair<Int, FrameStats>?>(null)
         private set
+    var dataRunning by mutableStateOf(false)
+        private set
+    var data by mutableStateOf<DataProbeResult?>(null)
+        private set
 
     /** Real stations from the MITECO probe, or a synthetic set around Madrid. */
     val mapStations: List<ProbeStation>
         get() = miteco?.stations?.takeIf { it.size >= MIN_REAL_STATIONS } ?: syntheticStations()
 
     val report: String
-        get() = DiagnosticsReport.full(device, miteco, tiles, location, mapResult)
+        get() = DiagnosticsReport.full(device, miteco, tiles, location, mapResult, data)
 
     fun runNetwork() {
         if (networkRunning) return
@@ -63,6 +69,19 @@ class DiagnosticsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             location = locationProbe.run()
             locationRunning = false
+        }
+    }
+
+    fun runData() {
+        if (dataRunning) return
+        dataRunning = true
+        viewModelScope.launch {
+            data = try {
+                dataProbe.run()
+            } catch (e: Exception) {
+                DataProbeResult(false, listOf("Data: FAIL · ${e.javaClass.simpleName}: ${e.message}"))
+            }
+            dataRunning = false
         }
     }
 
