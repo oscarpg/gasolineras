@@ -123,8 +123,8 @@ Each phase ends with a working, tested build; mirrors how the web refactor was d
 
 - Create `android/` Gradle project, version catalog, Compose + M3, Hilt, ktlint/detekt, Android Lint.
 - Spike: fetch `FiltroProvincia/28` from a real device/emulator. **Verify the MITECO TLS
-  chain** (FNMT-issued cert); if the system trust store rejects it, add a
-  `network_security_config.xml` pinning the FNMT root for that host only.
+  chain**. ✅ Done 2026-11-21: MITECO now uses a DigiCert chain (DigiCert Global Root G2),
+  trusted out of the box on API 26 and 36 emulators; no `network_security_config` needed.
 - Spike: MapLibre + OpenFreeMap rendering 1,000+ markers smoothly (GeoJSON symbol layer), light and dark styles.
 - Define the `MapRenderer` interface and `MapStyle` config (§3.1) before any map screen is written.
 - App id `es.gasolineras`, name, adaptive icon (reuse ⛽ identity), splash screen API.
@@ -209,7 +209,7 @@ Each phase ends with a working, tested build; mirrors how the web refactor was d
 
 | Risk                                                                            | Mitigation                                                                                                                                                           |
 | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MITECO cert chain not trusted on some Android versions                          | Verify in Phase 0; host-scoped `network_security_config` with the FNMT root.                                                                                         |
+| MITECO cert chain not trusted on some Android versions                          | ✅ Resolved in Phase 0: DigiCert chain, trusted from API 26 (emulator tests in CI keep checking it).                                                                 |
 | MITECO downtime / slow responses (large XML/JSON per province)                  | Daily file cache, show cached data with "last updated" label, generous timeouts, retry.                                                                              |
 | OSRM and Nominatim public servers have usage policies not meant for app traffic | Identifying User-Agent, rate limiting, platform Geocoder first; plan a fallback (self-hosted OSRM, or Google Directions/OpenRouteService with key) if the app grows. |
 | OSM tile usage policy                                                           | Use OpenFreeMap (or MapTiler/Google Maps), never `tile.openstreetmap.org` directly from the app.                                                                     |
