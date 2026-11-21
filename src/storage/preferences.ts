@@ -1,6 +1,12 @@
-import { DEFAULT_FUEL, isFuelType } from '../config/fuels';
-import { isAgeFilterPreset, type AgeFilterPreset } from '../domain/ageFilter';
-import type { Car, Discount, FuelType } from '../domain/types';
+import { isFuelType } from '../config/fuels';
+import { isAgeFilterPreset } from '../domain/ageFilter';
+import {
+  DEFAULT_PREFERENCES,
+  MAX_CUSTOM_AGE_DAYS,
+  MIN_CUSTOM_AGE_DAYS,
+  type Preferences,
+} from '../domain/preferences';
+import type { Car, Discount } from '../domain/types';
 import type { StorageAdapter } from './adapter';
 
 /** Storage key for the current preferences format. */
@@ -8,48 +14,7 @@ export const PREFERENCES_KEY = 'gasolineras.preferences';
 /** Storage key used by the original single-file app (format v1). Read once to migrate, never written. */
 export const LEGACY_PREFERENCES_KEY = 'gasolineras_prefs';
 
-export type Locale = 'es' | 'en';
-
-export interface Preferences {
-  schemaVersion: 2;
-  fuel: FuelType;
-  /** Value of the age-filter select; reworked in Phase 5. */
-  ageFilterPreset: AgeFilterPreset;
-  /** The "X" days used by the custom age-filter options (1–10). */
-  ageFilterCustomDays: number;
-  /** Max distance from the user's location (1–50 km). */
-  searchRadiusKm: number;
-  /** Max detour from the route (1–10 km). */
-  routeDetourKm: number;
-  /** Only stations right on the route. */
-  routeOnly: boolean;
-  /** Sort by tank + trip cost instead of €/l. */
-  sortByTotalCost: boolean;
-  /** Brands to show; empty = all. */
-  brands: string[];
-  /** Discount per brand. */
-  discounts: Record<string, Discount>;
-  cars: Car[];
-  activeCarId: string | null;
-  /** UI language; `null` = follow the browser (Phase 5). */
-  locale: Locale | null;
-}
-
-export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
-  schemaVersion: 2,
-  fuel: DEFAULT_FUEL,
-  ageFilterPreset: 'TODAS',
-  ageFilterCustomDays: 3,
-  searchRadiusKm: 15,
-  routeDetourKm: 3,
-  routeOnly: false,
-  sortByTotalCost: false,
-  brands: [],
-  discounts: {},
-  cars: [],
-  activeCarId: null,
-  locale: null,
-});
+export { DEFAULT_PREFERENCES, type Locale, type Preferences } from '../domain/preferences';
 
 /* ---------- validation helpers ---------- */
 
@@ -104,7 +69,7 @@ export function sanitizePreferences(raw: unknown): Preferences {
     schemaVersion: 2,
     fuel: isFuelType(p.fuel) ? p.fuel : d.fuel,
     ageFilterPreset: isAgeFilterPreset(p.ageFilterPreset) ? p.ageFilterPreset : d.ageFilterPreset,
-    ageFilterCustomDays: clamp(customDays || d.ageFilterCustomDays, 1, 10),
+    ageFilterCustomDays: clamp(customDays || d.ageFilterCustomDays, MIN_CUSTOM_AGE_DAYS, MAX_CUSTOM_AGE_DAYS),
     searchRadiusKm: clamp(positive(p.searchRadiusKm) ?? d.searchRadiusKm, 1, 50),
     routeDetourKm: clamp(positive(p.routeDetourKm) ?? d.routeDetourKm, 1, 10),
     routeOnly: p.routeOnly === true,

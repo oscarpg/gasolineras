@@ -65,3 +65,17 @@ export interface Station {
 
 /** One day of historical prices for a province: station code → prices it had that day. */
 export type HistoryPrices = Record<string, Partial<FuelPrices>>;
+
+/** A station with its brand worked out from the sign. */
+export interface BrandedStation extends Station {
+  brand: string;
+}
+
+/** Staleness of one station's price for one fuel, plus how far back it was checked. */
+export interface PriceStaleness extends Staleness {
+  /** Number of past days that were compared; `days === windowDays` means "at least that old". */
+  windowDays: number;
+}
+
+/** Staleness per station id, per fuel. */
+export type StalenessIndex = Record<string, Partial<Record<FuelType, PriceStaleness>>>;
