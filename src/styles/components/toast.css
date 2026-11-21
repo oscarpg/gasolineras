@@ -1,0 +1,15 @@
+/* Short message shown at the bottom of the screen (replaces alert()). */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-text);
+  color: var(--color-text-on-primary);
+  font-size: 0.85rem;
+  box-shadow: var(--shadow-card);
+  z-index: var(--z-toast);
+}

@@ -17,5 +17,6 @@
 @import './components/map-markers.css';
 @import './components/popup.css';
 @import './components/price-chart.css';
+@import './components/toast.css';
 
 @import './utilities.css';

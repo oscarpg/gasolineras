@@ -50,6 +50,7 @@
   --z-floating: 500;
   --z-backdrop: 900;
   --z-drawer: 1000;
+  --z-toast: 1100;
 
   /* Breakpoint (reference only; CSS media queries can't read variables): 700px */
 }
