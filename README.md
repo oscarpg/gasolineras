@@ -29,6 +29,7 @@ npm run dev        # http://localhost:5173/gasolineras/
 | `npm test`         | Unit tests (Vitest)                                     |
 | `npm run lint`     | ESLint                                                  |
 | `npm run format`   | Format all files with Prettier                          |
+| `npm run coverage` | Tests with a coverage report (`coverage/index.html`)    |
 | `npm run fixtures` | Download small real API samples into `tests/fixtures/`  |
 
 ## Deployment

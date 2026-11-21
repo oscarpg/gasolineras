@@ -155,9 +155,11 @@ function fakeLeaflet() {
     },
   };
   class FakeMarker {
-    popup = '';
+    content: string | (() => string) = '';
     icon: unknown;
     opened = false;
+    /** HTML Leaflet would show: the content function runs when the popup opens or updates. */
+    shown = '';
     constructor(
       readonly position: readonly [number, number],
       options?: { icon?: unknown },
@@ -165,14 +167,19 @@ function fakeLeaflet() {
       this.icon = options?.icon;
       log.push('create');
     }
-    bindPopup(p: string) {
-      this.popup = p;
+    bindPopup(p: string | (() => string)) {
+      this.content = p;
       return this;
     }
-    setPopupContent(p: string) {
-      this.popup = p;
-      log.push('setPopup');
-      return this;
+    private evaluate() {
+      this.shown = typeof this.content === 'function' ? this.content() : this.content;
+      log.push('buildPopup');
+    }
+    isPopupOpen() {
+      return this.opened;
+    }
+    getPopup() {
+      return { update: () => this.evaluate() };
     }
     setIcon(i: unknown) {
       this.icon = i;
@@ -181,6 +188,7 @@ function fakeLeaflet() {
     }
     openPopup() {
       this.opened = true;
+      this.evaluate();
       return this;
     }
     addTo(target: typeof layer) {
@@ -225,6 +233,27 @@ describe('createStationMarkers', () => {
     const markers = createStationMarkers(L, layer as never);
     markers.update(visible(stations), ctx);
     markers.open('s1');
-    expect([...layer.markers].filter((m) => m.opened)).toHaveLength(1);
+    const opened = [...layer.markers].filter((m) => m.opened);
+    expect(opened).toHaveLength(1);
+    expect(opened[0]!.shown).toContain('Gasolina 95');
+  });
+
+  it('builds popup HTML only when a popup opens, and refreshes an open popup only if it changed', () => {
+    const { L, layer, log } = fakeLeaflet();
+    const markers = createStationMarkers(L, layer as never);
+    markers.update(visible(stations), ctx);
+    expect(log).not.toContain('buildPopup'); // nothing built for closed popups
+
+    markers.open('s0');
+    const marker = [...layer.markers].find((m) => m.opened)!;
+    const before = marker.shown;
+
+    log.length = 0;
+    markers.update(visible(stations), ctx); // same content → no rebuild
+    expect(log).toEqual([]);
+
+    markers.update(visible(stations), { ...ctx, fuel: 'GASOLEO_A' }); // content changes → open popup refreshed
+    expect(log).toContain('buildPopup');
+    expect(marker.shown).not.toBe(before);
   });
 });

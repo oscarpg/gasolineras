@@ -1,3 +1,4 @@
+import { textColorFor } from '../../domain/colorScale';
 import type { StationRow } from '../../domain/filters';
 import type { Car } from '../../domain/types';
 import { html, raw, type SafeHtml } from '../dom';
@@ -19,7 +20,7 @@ export function stationCardHtml(
   const { t } = i18n();
   const s = row.station;
   const c = row.cost;
-  const color = row.color;
+  const color = textColorFor(row.color);
   const hasDiscount = row.finalPrice < row.basePrice;
 
   const distance = hasRoute

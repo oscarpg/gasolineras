@@ -50,8 +50,17 @@ export function createHttpClient({ fetchFn, timeoutMs = 30_000 }: HttpClientOpti
 
   return {
     getText: async (url, options) => (await request(url, options)).text(),
-    getJson: async <T>(url: string, options?: RequestOptions) =>
-      (await request(url, options)).json() as Promise<T>,
+    async getJson<T>(url: string, options?: RequestOptions): Promise<T> {
+      const response = await request(url, options);
+      const body = await response.text();
+      try {
+        return JSON.parse(body) as T;
+      } catch (error) {
+        // With allowHttpErrors, an error page that isn't JSON (a 502 from a proxy, say) is still an HTTP error.
+        if (!response.ok) throw new HttpError(response.status, url);
+        throw error;
+      }
+    },
   };
 }
 

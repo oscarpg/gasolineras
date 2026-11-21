@@ -1,3 +1,4 @@
+import { textColorFor } from '../../domain/colorScale';
 import type { StationRow } from '../../domain/filters';
 import type { Car, FuelType } from '../../domain/types';
 import { html, type SafeHtml } from '../dom';
@@ -19,7 +20,7 @@ export function stationPopupHtml(row: StationRow, { fuel, car, hasRoute }: Popup
   const s = row.station;
   const c = row.cost;
   const hasDiscount = row.finalPrice < row.basePrice;
-  const price = html`<span class="price" style="color:${row.color}">${t('station.price', { fuel: fuelLabel(fuel), price: number(row.finalPrice, 3) })}</span>`;
+  const price = html`<span class="price" style="color:${textColorFor(row.color)}">${t('station.price', { fuel: fuelLabel(fuel), price: number(row.finalPrice, 3) })}</span>`;
 
   const priceBlock = hasDiscount
     ? html`${price}<span class="price-struck">${pricePerLitre(row.basePrice)}</span><span class="badge">${discountLabel(row.discount)}</span>`

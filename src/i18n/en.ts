@@ -8,6 +8,8 @@ export const en: Record<MessageKey, string> = {
   'topbar.openPreferences': 'Open preferences',
   'topbar.useGps': 'Use my GPS location',
 
+  'map.label': 'Petrol station map',
+
   'results.title': '⛽ Cheapest petrol stations',
   'results.waiting': 'Waiting for your location…',
   'results.noData': 'Nothing to show yet…',
@@ -94,6 +96,8 @@ export const en: Record<MessageKey, string> = {
   'discounts.brand': 'Brand:',
   'discounts.chooseBrand': 'Choose a brand…',
   'discounts.valuePlaceholder': 'e.g. 5',
+  'discounts.value': 'Discount amount',
+  'discounts.type': 'Discount type',
   'discounts.typeCents': 'cents/litre (e.g. 5 cents)',
   'discounts.typePercent': '% percentage (e.g. 3%)',
   'discounts.add': 'Add / update discount',
@@ -130,6 +134,7 @@ export const en: Record<MessageKey, string> = {
 
   'unit.pricePerLitre': '{value} €/l',
   'unit.euros': '{value} €',
+  'unit.km': '{value} km',
 
   'staleness.pending': '📅 MITECO bulletin: {date} (checking history…)',
   'staleness.pendingNoDate': '📅 Checking history…',
@@ -163,6 +168,8 @@ export const en: Record<MessageKey, string> = {
   'message.routeNotFound': 'Could not calculate the route',
   'message.routeError': 'Route error: {message}',
   'message.yourLocation': 'Your location / starting point',
+  'message.retry': 'Retry',
+  'message.dismiss': 'Dismiss',
 
   'errors.download-failed': 'Could not download the station data.',
   'errors.timeout': 'the server took too long to respond',

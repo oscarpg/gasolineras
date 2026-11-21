@@ -50,12 +50,14 @@ export function createLocationRouteSections(
   return {
     render(state: AppState) {
       const p = state.preferences;
-      const { decimal } = i18n();
+      const { decimal, t } = i18n();
       syncValue(radius, String(p.searchRadiusKm));
       syncValue(detour, String(p.routeDetourKm));
       syncChecked(routeOnly, p.routeOnly);
       radiusValue.textContent = decimal(p.searchRadiusKm);
       detourValue.textContent = decimal(p.routeDetourKm);
+      radius.setAttribute('aria-valuetext', t('unit.km', { value: decimal(p.searchRadiusKm) }));
+      detour.setAttribute('aria-valuetext', t('unit.km', { value: decimal(p.routeDetourKm) }));
     },
   };
 }

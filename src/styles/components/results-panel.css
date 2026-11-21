@@ -36,6 +36,51 @@
   min-height: 42px;
 }
 
+.results-header:focus-visible {
+  outline-offset: -4px;
+  outline-color: var(--color-text-on-primary);
+}
+
+.results-title {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/* Everything below the header; scrolls inside the panel. */
+.results-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+/* Error message with an optional Retry button (below the status line). */
+.status-error {
+  margin: 6px 10px 0;
+  padding: 6px 8px;
+  border: 1px solid var(--color-danger-soft-border);
+  border-radius: var(--radius);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.status-error-text {
+  flex: 1;
+}
+
+.status-error button {
+  width: auto;
+  margin: 0;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+}
+
 /* "Sort by total cost" option bar */
 .results-options {
   padding: 6px 10px;

@@ -1,10 +1,13 @@
 /**
  * The small part of Leaflet's API the app uses, typed by hand.
  *
- * Leaflet is still loaded from the CDN <script> in index.html as the global `L`.
- * Keeping the surface this small makes it easy to move to the npm package
- * (`leaflet` + `@types/leaflet`) later, or to fake it in tests.
+ * Leaflet comes from the npm package (bundled by Vite). The rest of the app
+ * only sees this narrow interface, so it stays easy to fake in tests and the
+ * map library could be swapped without touching the components.
  */
+import * as LeafletModule from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
 export type LatLngTuple = readonly [number, number];
 
 export interface LeafletIcon {
@@ -19,11 +22,20 @@ export interface LeafletLayer {
   addTo(target: LeafletMap | LeafletLayerGroup): this;
 }
 
+/** Popup content: HTML, or a function Leaflet calls each time the popup opens or updates. */
+export type PopupContent = string | (() => string);
+
+export interface LeafletPopup {
+  /** Re-evaluates the content (calls the content function again). */
+  update(): void;
+}
+
 export interface LeafletMarker extends LeafletLayer {
-  bindPopup(content: string): this;
-  setPopupContent(content: string): this;
+  bindPopup(content: PopupContent): this;
   setIcon(icon: LeafletIcon): this;
   openPopup(): this;
+  isPopupOpen(): boolean;
+  getPopup(): LeafletPopup | undefined;
 }
 
 export interface LeafletLayerGroup extends LeafletLayer {
@@ -55,9 +67,7 @@ export interface LeafletStatic {
   latLngBounds(points: readonly LatLngTuple[]): LeafletBounds;
 }
 
-/** The global Leaflet object loaded by index.html. */
+/** The Leaflet library, seen through the narrow interface above. */
 export function getLeaflet(): LeafletStatic {
-  const leaflet = (globalThis as { L?: LeafletStatic }).L;
-  if (!leaflet) throw new Error('Leaflet is not loaded');
-  return leaflet;
+  return LeafletModule as unknown as LeafletStatic;
 }

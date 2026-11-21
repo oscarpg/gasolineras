@@ -34,7 +34,8 @@ legend {
   padding: 0 4px;
 }
 
-label {
+label,
+.field-label {
   display: block;
   font-size: 0.82rem;
   margin: 6px 0 2px;
@@ -76,4 +77,21 @@ button.btn-secondary {
 
 button:hover {
   opacity: 0.92;
+}
+
+/* Visible focus for keyboard users only (mouse clicks don't show the ring). */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Respect the system "reduce motion" setting. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

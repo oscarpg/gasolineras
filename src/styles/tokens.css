@@ -12,6 +12,8 @@
   --color-success-border: #81c784;
 
   --color-danger: #c62828;
+  --color-danger-soft: #fdecea;
+  --color-danger-soft-border: #f5c2c0;
   --color-user-marker: #d32f2f;
 
   /* Text */
@@ -44,6 +46,10 @@
 
   /* Motion */
   --transition-panel: 0.25s ease;
+
+  /* Keyboard focus ring */
+  --focus-ring: 2px solid #0b57d0;
+  --focus-ring-offset: 2px;
 
   /* Layers (Leaflet panes use 200–700 inside the map container) */
   --z-map: 1;

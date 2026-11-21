@@ -11,6 +11,8 @@ export const es = {
   'topbar.openPreferences': 'Abrir Preferencias',
   'topbar.useGps': 'Usar mi ubicación GPS',
 
+  'map.label': 'Mapa de gasolineras',
+
   'results.title': '⛽ Gasolineras más baratas',
   'results.waiting': 'Esperando ubicación…',
   'results.noData': 'Sin datos para mostrar…',
@@ -97,6 +99,8 @@ export const es = {
   'discounts.brand': 'Marca:',
   'discounts.chooseBrand': 'Selecciona una marca…',
   'discounts.valuePlaceholder': 'Ej: 5',
+  'discounts.value': 'Valor del descuento',
+  'discounts.type': 'Tipo de descuento',
   'discounts.typeCents': 'cts/litro (ej. 5 cts)',
   'discounts.typePercent': '% porcentaje (ej. 3%)',
   'discounts.add': 'Añadir / Actualizar descuento',
@@ -133,6 +137,7 @@ export const es = {
 
   'unit.pricePerLitre': '{value} €/l',
   'unit.euros': '{value} €',
+  'unit.km': '{value} km',
 
   'staleness.pending': '📅 Boletín MITECO: {date} (comprobando histórico…)',
   'staleness.pendingNoDate': '📅 Comprobando histórico…',
@@ -166,6 +171,8 @@ export const es = {
   'message.routeNotFound': 'No se pudo calcular la ruta',
   'message.routeError': 'Error de ruta: {message}',
   'message.yourLocation': 'Tu ubicación / Origen',
+  'message.retry': 'Reintentar',
+  'message.dismiss': 'Cerrar aviso',
 
   'errors.download-failed': 'No se pudo descargar la información de las gasolineras.',
   'errors.timeout': 'el servidor tardó demasiado en responder',

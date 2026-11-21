@@ -11,7 +11,8 @@ export function setI18n(next: I18n): void {
 
 /**
  * Translates the static markup of index.html: elements with `data-i18n` get their
- * text replaced; `data-i18n-placeholder` and `data-i18n-title` set those attributes.
+ * text replaced; `data-i18n-placeholder`, `data-i18n-title` and `data-i18n-aria-label`
+ * set those attributes.
  * Also updates <html lang> and the page title.
  */
 export function translateStaticText(root: ParentNode = document): void {
@@ -23,6 +24,9 @@ export function translateStaticText(root: ParentNode = document): void {
   }
   for (const el of root.querySelectorAll<HTMLElement>('[data-i18n-title]')) {
     el.setAttribute('title', t(el.dataset.i18nTitle as MessageKey));
+  }
+  for (const el of root.querySelectorAll<HTMLElement>('[data-i18n-aria-label]')) {
+    el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel as MessageKey));
   }
   document.documentElement.lang = locale;
   document.title = t('app.title');

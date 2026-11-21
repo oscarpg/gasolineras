@@ -51,7 +51,7 @@ tested too.
 
 ## Map and list
 
-- [ ] Pin colours go from green (cheapest) to red.
+- [ ] Pin colours go from green (cheapest) to red; prices in the list use a darker, readable shade of the same colour.
 - [ ] Clicking a list card zooms to the station and opens its popup.
 - [ ] Popup → "Ver evolución (7 días)" shows the SVG chart.
 - [ ] Results panel collapses/expands from its header.
@@ -62,6 +62,20 @@ tested too.
 - [ ] With the browser in Spanish, everything is in Spanish with decimal commas (`1,459 €/l`, `3,3 km`) and dates as `dd/mm/aaaa`.
 - [ ] Preferences → Idioma → English: the whole UI (drawer, list, status line, popups, chart, placeholders, tab title) switches immediately, with decimal points.
 - [ ] Reload: English is kept. Choose "Automatic (browser)": back to the browser's language.
+
+## Keyboard and screen reader
+
+- [ ] Using only the keyboard: Tab reaches ⚙️ Preferencias, 📍, the panel header and every result card; focus is always visible.
+- [ ] Enter on Preferencias opens the drawer with focus on ✕; Tab stays inside it; Escape closes it and focus returns to the button.
+- [ ] Enter/Space on the panel header collapses and expands the list; Enter on a card opens the station's popup.
+- [ ] With a screen reader (NVDA/VoiceOver), the status line is announced when it changes, and icon buttons (📍, ✕) have names.
+- [ ] With "reduce motion" enabled in the OS, the drawer and panel open without animation.
+
+## Errors and retry
+
+- [ ] DevTools → Network → Offline, then "Forzar actualización": a red error box with "Reintentar" appears; back online, Reintentar loads the prices and the box disappears.
+- [ ] Block location for the site and press 📍: the GPS error has "Reintentar"; after allowing location, Reintentar works.
+- [ ] An address that doesn't exist shows "Dirección no encontrada" (no Retry), and ✕ dismisses it.
 
 ## Persistence and refresh
 

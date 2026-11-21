@@ -29,6 +29,13 @@ describe('createHttpClient', () => {
     }
   });
 
+  it('still reports an HTTP error when allowHttpErrors is set but the error body is not JSON', async () => {
+    const fetchFn = fakeFetch({ [TARGET]: () => new Response('<html>Bad gateway</html>', { status: 502 }) });
+    const http = createHttpClient({ fetchFn });
+    const error = await http.getJson(TARGET, { allowHttpErrors: true }).catch((e: unknown) => e);
+    expect(error instanceof HttpError && error.status === 502).toBe(true);
+  });
+
   it('aborts after the timeout', async () => {
     const hanging = ((_url: string, init?: RequestInit) =>
       new Promise((_resolve, reject) => {

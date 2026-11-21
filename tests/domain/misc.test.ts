@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { colorForValue } from '../../src/domain/colorScale';
+import { colorForValue, textColorFor } from '../../src/domain/colorScale';
 import { daysBefore, toMitecoDate } from '../../src/domain/dates';
 import { parseSpanishNumber } from '../../src/domain/numbers';
 import { significantPricePoints } from '../../src/domain/priceHistory';
@@ -13,6 +13,33 @@ describe('colorForValue', () => {
 
   it('is green when all values are equal', () => {
     expect(colorForValue(1.5, 1.5, 1.5)).toBe('hsl(120, 82%, 40%)');
+  });
+});
+
+/** WCAG contrast ratio of an `hsl(h, s%, l%)` colour against white. */
+function contrastOnWhite(color: string): number {
+  const [h, sat, light] = color.match(/[\d.]+/g)!.map(Number) as [number, number, number];
+  const s = sat / 100;
+  const l = light / 100;
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const channel = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  const linear = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const lum = 0.2126 * linear(channel(0)) + 0.7152 * linear(channel(8)) + 0.0722 * linear(channel(4));
+  return 1.05 / (lum + 0.05);
+}
+
+describe('textColorFor', () => {
+  it('darkens the scale colour, keeping the hue', () => {
+    expect(textColorFor('hsl(60, 82%, 40%)')).toBe('hsl(60, 82%, 26%)');
+  });
+
+  it('meets WCAG AA (4.5:1 on white) for every colour of the scale', () => {
+    for (let v = 0; v <= 100; v++) {
+      const color = colorForValue(v, 0, 100);
+      expect(contrastOnWhite(textColorFor(color))).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(contrastOnWhite('hsl(60, 82%, 40%)')).toBeLessThan(4.5); // why the darker colour is needed
   });
 });
 
