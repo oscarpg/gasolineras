@@ -2,6 +2,8 @@ pluginManagement {
     repositories {
         google()
         mavenCentral()
+        // Google's mirror of Maven Central: used when Central doesn't answer (seen on CI runners).
+        maven("https://maven-central.storage-download.googleapis.com/maven2/")
         gradlePluginPortal()
     }
 }
@@ -11,6 +13,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Google's mirror of Maven Central: used when Central doesn't answer (seen on CI runners).
+        maven("https://maven-central.storage-download.googleapis.com/maven2/")
     }
 }
 

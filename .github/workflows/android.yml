@@ -29,7 +29,19 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew --stacktrace :core:test :data:test :state:test testDebugUnitTest lintDebug assembleDebug
+      - name: Build, test and lint
+        # Retry once when dependency downloads fail (Maven Central sometimes drops CI runners).
+        run: |
+          set -o pipefail
+          tasks=":core:test :data:test :state:test testDebugUnitTest lintDebug assembleDebug"
+          ./gradlew --stacktrace $tasks 2>&1 | tee build.log || {
+            if grep -q "Could not resolve\|Could not find\|Could not GET\|Could not download" build.log; then
+              echo "::warning::Dependency download failed, retrying once"
+              ./gradlew --stacktrace --refresh-dependencies $tasks
+            else
+              exit 1
+            fi
+          }
       - name: Name the APK
         run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/gasolineras-test.apk
       - name: Upload debug APK
