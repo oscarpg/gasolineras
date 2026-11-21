@@ -19,7 +19,12 @@ import es.gasolineras.state.createInitialState
 import es.gasolineras.state.setFuel
 import es.gasolineras.state.updatePreferences
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
@@ -57,6 +62,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             MainUiState(store.value, selector.select(store.value), controller.state.value),
         )
 
+    init {
+        // A larger radius or detour can reach provinces that aren't loaded yet.
+        viewModelScope.launch {
+            store.state
+                .map { Triple(it.preferences.searchRadiusKm, it.preferences.routeDetourKm, it.preferences.routeOnly) }
+                .distinctUntilChanged()
+                .drop(1)
+                .collectLatest {
+                    delay(COVERAGE_DEBOUNCE_MS) // sliders change many times a second
+                    controller.ensureCoverage()
+                }
+        }
+    }
+
     private var started = false
 
     /** First location attempt (once per ViewModel, e.g. after the permission prompt). */
@@ -81,5 +100,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         persister.stop()
+    }
+
+    private companion object {
+        const val COVERAGE_DEBOUNCE_MS = 600L
     }
 }

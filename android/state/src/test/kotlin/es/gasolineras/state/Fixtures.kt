@@ -72,3 +72,14 @@ class FakeGps(var position: LatLng? = LatLng(40.4, -3.7), var available: Boolean
 }
 
 fun BrandedStation.ids() = station.id
+
+class FakeLocator(
+    var at: (LatLng) -> String? = { "28" },
+    var within: (LatLng, Double) -> List<String> = { _, _ -> listOf("28") },
+    var along: (List<LatLng>, Double) -> List<String> = { _, _ -> listOf("28", "45") },
+) : ProvinceLocator {
+    val withinCalls = mutableListOf<Double>()
+    override fun provinceAt(point: LatLng) = at(point)
+    override fun provincesWithin(point: LatLng, radiusKm: Double) = within(point, radiusKm).also { withinCalls += radiusKm }
+    override fun provincesAlongRoute(route: List<LatLng>, detourKm: Double) = along(route, detourKm)
+}

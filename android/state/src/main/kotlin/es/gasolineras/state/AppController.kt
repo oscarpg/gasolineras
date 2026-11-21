@@ -1,6 +1,7 @@
 package es.gasolineras.state
 
 import es.gasolineras.core.domain.LatLng
+import es.gasolineras.core.domain.ROUTE_ONLY_MAX_KM
 import es.gasolineras.data.geo.Geocoder
 import es.gasolineras.data.geo.Router
 import es.gasolineras.data.miteco.MitecoSource
@@ -74,6 +75,7 @@ class AppController(
     private val router: Router,
     private val gps: PositionProvider,
     private val scope: CoroutineScope,
+    private val provinces: ProvinceLocator = ShapesProvinceLocator(),
 ) {
     private val mutableState = MutableStateFlow(ControllerState())
     val state: StateFlow<ControllerState> = mutableState.asStateFlow()
@@ -125,14 +127,50 @@ class AppController(
                 throw e
             } catch (e: Exception) {
                 null
-            }
+            } ?: provinces.provinceAt(position) // offline outlines when geocoding fails
         }
         if (province != null) {
             loadProvince(province)
         } else {
             showError(UserError.ProvinceUnknown, relaunch { setOrigin(position, zoom) })
         }
+        loadProvincesNeeded()
         settle()
+    }
+
+    /**
+     * Provinces whose stations can appear in the list: those within the search radius of the
+     * origin, or within the detour distance of the route (with a margin for the simplified outlines).
+     */
+    private fun provincesNeeded(): List<String> {
+        val s = store.value
+        val p = s.preferences
+        val route = s.route
+        return when {
+            route != null -> provinces.provincesAlongRoute(route, (if (p.routeOnly) ROUTE_ONLY_MAX_KM else p.routeDetourKm) + PROVINCE_MARGIN_KM)
+            s.userPosition != null -> provinces.provincesWithin(s.userPosition, p.searchRadiusKm + PROVINCE_MARGIN_KM)
+            else -> emptyList()
+        }
+    }
+
+    /** Loads every needed province not loaded yet. Returns false if any failed (each shows its own error). */
+    private suspend fun loadProvincesNeeded(): Boolean {
+        var ok = true
+        for (code in provincesNeeded()) {
+            if (code !in store.value.loadedProvinces && !loadProvince(code)) ok = false
+        }
+        return ok
+    }
+
+    /**
+     * Makes sure every province the current radius, detour or route reaches is loaded
+     * (call after those preferences change).
+     */
+    suspend fun ensureCoverage() {
+        if (provincesNeeded().any { it !in store.value.loadedProvinces }) {
+            loadProvincesNeeded()
+            settle()
+        }
     }
 
     /** Asks the device for its position and uses it as the origin. */
@@ -187,7 +225,6 @@ class AppController(
                 fail(UserError.DestinationNotFound)
                 return false
             }
-            if (place.provinceCode != null && place.provinceCode !in store.value.loadedProvinces) loadProvince(place.provinceCode)
             val points = router.route(origin, place.latLng)
             if (points == null) {
                 fail(UserError.RouteNotFound)
@@ -195,6 +232,8 @@ class AppController(
             }
             events.tryEmit(MapEvent.ShowRoute(points))
             store.update { it.setRoute(points) }
+            // Every province along the route, not only the destination's.
+            loadProvincesNeeded()
             settle()
             true
         } catch (e: CancellationException) {

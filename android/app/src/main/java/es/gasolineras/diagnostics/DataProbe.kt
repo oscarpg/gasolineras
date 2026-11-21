@@ -3,6 +3,8 @@ package es.gasolineras.diagnostics
 import es.gasolineras.AppContainer
 import es.gasolineras.core.domain.HistoryWindowDay
 import es.gasolineras.core.domain.LatLng
+import es.gasolineras.core.domain.ProvinceShapes
+import es.gasolineras.state.PROVINCE_MARGIN_KM
 import es.gasolineras.core.domain.VisibilityCriteria
 import es.gasolineras.core.domain.branded
 import es.gasolineras.core.domain.computeProvinceStaleness
@@ -63,12 +65,23 @@ class DataProbe(private val c: AppContainer) {
 
         // 3. Stations: forced download, then from the cache
         t = System.nanoTime()
-        val stations = step("Stations") { c.miteco.getProvinceStations(province, force = true) }
+        val own = step("Stations") { c.miteco.getProvinceStations(province, force = true) }
             ?: return@coroutineScope DataProbeResult(false, lines)
         val downloadMs = ms(t)
         t = System.nanoTime()
         c.miteco.getProvinceStations(province)
-        lines += "Stations: ${stations.size} in province $province · download $downloadMs ms · from cache ${ms(t)} ms"
+        lines += "Stations: ${own.size} in province $province · download $downloadMs ms · from cache ${ms(t)} ms"
+
+        // 3b. Neighbouring provinces within the search radius (offline outlines)
+        val radius = loadPreferences(c.preferencesStorage).searchRadiusKm
+        t = System.nanoTime()
+        val nearby = ProvinceShapes.bundled.provincesWithin(position, radius + PROVINCE_MARGIN_KM)
+        val outlineMs = ms(t)
+        val neighbours = nearby.filter { it != province }
+        val extra = neighbours.flatMap { code -> step("Province $code") { c.miteco.getProvinceStations(code) }.orEmpty() }
+        lines += "Provinces within ${radius.toInt()} km: ${nearby.joinToString(", ")} (outlines ${outlineMs} ms; outline says you're in ${ProvinceShapes.bundled.provinceAt(position) ?: "none"})" +
+            if (neighbours.isEmpty()) "" else " · +${extra.size} stations from ${neighbours.joinToString(", ")}"
+        val stations = own + extra
 
         // 4. History and staleness (as many days as the current age filter needs)
         val prefs = loadPreferences(c.preferencesStorage)
@@ -76,7 +89,7 @@ class DataProbe(private val c: AppContainer) {
         val window = (1..requiredHistoryDays(prefs.ageFilter)).map { HistoryWindowDay(it, toMitecoDate(daysBefore(today, it))) }
         t = System.nanoTime()
         val history = window.map { day -> async { runCatching { c.miteco.getHistoryDay(province, day.date) }.getOrNull() } }.awaitAll()
-        val staleness = computeProvinceStaleness(stations, window, history, toMitecoDate(today))
+        val staleness = computeProvinceStaleness(own, window, history, toMitecoDate(today))
         lines += "History: ${history.count { it != null }}/${window.size} days · ${ms(t)} ms"
         if (history.all { it == null }) ok = false
 

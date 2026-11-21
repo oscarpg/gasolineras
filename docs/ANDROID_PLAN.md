@@ -191,9 +191,11 @@ days; 87 stations within 15 km; search, a 6,386-point route and preferences save
 - Decisions:
   - Manual DI (`AppContainer`) instead of Hilt: a handful of objects, no annotation processing,
     faster builds.
-  - Plan correction: the web app does **not** load neighbouring provinces; it loads the user's
-    province and, for routes, the destination's. Kept as is. Possible improvement: when the
-    search radius crosses a province border, also load the neighbouring province.
+  - Neighbouring provinces (improvement over the web app, requested 2026-11-21): the list includes
+    every province within the search radius (+2 km margin) of the origin, and every province within
+    the detour distance of a route — not just the user's and the destination's. Uses bundled IGN
+    province outlines (`ProvinceShapes`, es-atlas, CC BY 4.0 © IGN; ~170 kB, offline), which also
+    give the province when geocoding fails. Changing the radius or detour loads what's newly reached.
 
 ### Phase 4 — Core UI (5–7 days)
 

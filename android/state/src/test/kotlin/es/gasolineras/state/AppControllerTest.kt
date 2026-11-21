@@ -27,6 +27,8 @@ class AppControllerTest {
             mutableMapOf(
                 "28" to listOf(station("A", prices = prices(FuelType.GASOLINA_95 to 1.52)), station("B", lat = 40.41, prices = prices(FuelType.GASOLINA_95 to 1.49))),
                 "45" to listOf(station("T", provinceCode = "45", lat = 39.9, prices = prices(FuelType.GASOLINA_95 to 1.39))),
+                // 11 km from home, across a (fake) province border
+                "19" to listOf(station("N", provinceCode = "19", lat = 40.5, prices = prices(FuelType.GASOLINA_95 to 1.45))),
             ),
         )
         val geocoder = FakeGeocoder(
@@ -39,7 +41,8 @@ class AppControllerTest {
         val router = FakeRouter(listOf(LatLng(40.4, -3.7), LatLng(39.9, -3.7)))
         val gps = FakeGps()
         val effects = Effects(store, miteco, scope) { LocalDate.of(2026, 11, 21) }
-        val controller = AppController(store, effects, miteco, geocoder, router, gps, scope)
+        val locator = FakeLocator()
+        val controller = AppController(store, effects, miteco, geocoder, router, gps, scope, locator)
         val selector = VisibleStationsSelector()
         fun visibleIds() = selector.select(store.value).rows.map { it.station.id }
     }
@@ -101,7 +104,7 @@ class AppControllerTest {
         val controller = AppController(
             w.store, w.effects, w.miteco,
             FakeGeocoder(w.geocoder.places) { reverseCalls++; "28" },
-            w.router, w.gps, this,
+            w.router, w.gps, this, FakeLocator(within = { _, _ -> listOf("45") }),
         )
         assertTrue(controller.searchAddress("Toledo"))
         advanceUntilIdle()
@@ -135,11 +138,74 @@ class AppControllerTest {
 
     @Test fun `an unknown province offers retry`() = runTest {
         val w = world()
-        val controller = AppController(w.store, w.effects, w.miteco, FakeGeocoder { null }, w.router, w.gps, this)
+        val controller = AppController(w.store, w.effects, w.miteco, FakeGeocoder { null }, w.router, w.gps, this, FakeLocator(at = { null }, within = { _, _ -> emptyList() }))
         controller.requestGps()
         advanceUntilIdle()
         assertEquals(UserError.ProvinceUnknown, controller.state.value.error?.error)
         assertTrue(controller.state.value.error?.retry != null)
+    }
+
+    @Test fun `stations across a province border within the radius are included`() = runTest {
+        val w = world()
+        w.locator.within = { _, _ -> listOf("28", "19") }
+        w.controller.requestGps()
+        advanceUntilIdle()
+        assertEquals(listOf("28", "19"), w.store.value.loadedProvinces)
+        assertEquals(listOf("N", "B", "A"), w.visibleIds())
+        assertEquals(listOf(15.0 + PROVINCE_MARGIN_KM), w.locator.withinCalls) // radius + margin
+    }
+
+    @Test fun `a neighbour that fails to download offers retry without hiding the rest`() = runTest {
+        val w = world()
+        w.locator.within = { _, _ -> listOf("28", "19") }
+        val saved = w.miteco.stationsByProvince.remove("19")!!
+        w.controller.requestGps()
+        advanceUntilIdle()
+        assertEquals(listOf("B", "A"), w.visibleIds())
+        val error = w.controller.state.value.error!!
+        assertEquals("19", (error.error as UserError.Province).code)
+        w.miteco.stationsByProvince["19"] = saved
+        error.retry!!()
+        advanceUntilIdle()
+        assertEquals(listOf("N", "B", "A"), w.visibleIds())
+    }
+
+    @Test fun `when geocoding fails the province comes from the offline outlines`() = runTest {
+        val w = world()
+        val controller = AppController(w.store, w.effects, w.miteco, FakeGeocoder { error("offline") }, w.router, w.gps, this, w.locator)
+        controller.requestGps()
+        advanceUntilIdle()
+        assertNull(controller.state.value.error)
+        assertEquals(listOf("28"), w.store.value.loadedProvinces)
+    }
+
+    @Test fun `a larger radius loads the provinces it now reaches`() = runTest {
+        val w = world()
+        w.locator.within = { _, km -> if (km > 20) listOf("28", "19") else listOf("28") }
+        w.controller.requestGps()
+        advanceUntilIdle()
+        assertEquals(listOf("28"), w.store.value.loadedProvinces)
+
+        w.controller.ensureCoverage() // nothing new needed
+        assertEquals(listOf("28"), w.store.value.loadedProvinces)
+
+        w.store.update { it.updatePreferences { p -> p.copy(searchRadiusKm = 30.0) } }
+        w.controller.ensureCoverage()
+        advanceUntilIdle()
+        assertEquals(listOf("28", "19"), w.store.value.loadedProvinces)
+        assertTrue("N" in w.visibleIds())
+    }
+
+    @Test fun `a route loads every province along it, using the detour as margin`() = runTest {
+        val w = world()
+        var detour = 0.0
+        w.locator.along = { _, km -> detour = km; listOf("28", "19", "45") }
+        w.controller.requestGps()
+        advanceUntilIdle()
+        w.controller.calculateRoute("Toledo")
+        advanceUntilIdle()
+        assertEquals(listOf("28", "19", "45"), w.store.value.loadedProvinces)
+        assertEquals(3.0 + PROVINCE_MARGIN_KM, detour, 0.0)
     }
 
     @Test fun `a route needs an origin first`() = runTest {
