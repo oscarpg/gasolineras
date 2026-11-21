@@ -139,12 +139,18 @@ Results:
 Conclusions: no `network_security_config` needed; GeoJSON-layer markers are smooth at 120 Hz,
 so clustering is optional rather than required.
 
-### Phase 1 — Domain port (2–3 days)
+### Phase 1 — Domain port ✅ done 2026-11-21
 
-- Port `src/domain/*` and `src/config/*` to pure Kotlin (no Android imports).
-  `LatLng`, `FuelType` enum, `Station`, `Discount` (sealed/enum `CTS`/`PCT`), `AgeFilter` sealed class, etc.
-- Port the Vitest suites for these modules to JUnit (same cases, same expected values).
-- **Done when:** `./gradlew :app:testDebugUnitTest` passes with domain parity tests.
+- `:core` module: pure Kotlin/JVM (no Android imports), so it builds and tests anywhere.
+  Ports `src/domain/*` and `src/config/*`: types (`LatLng`, `FuelType` enum with MITECO fields,
+  `Station`, `Discount`, sealed `AgeFilter`, `AgeFilterOption` with the web ids and legacy codes),
+  brands, provinces, pricing, geo, staleness, price history, colour scale (`ScaleColor`),
+  dates (`java.time`), numbers, errors, `Preferences` model and `selectVisibleStations`.
+- 75 JUnit tests: all 74 web domain test cases with the same inputs and expected values, plus
+  MITECO date parsing and rounding checks. Brand and province tables verified identical (order included).
+- Parity details kept on purpose: `+x.toFixed(3)` rounding, `Math.round` for hues,
+  `parseFloat`-style number parsing, stable sort.
+- CI runs `:core:test`; each push publishes the debug APK to the `android-test-build` pre-release.
 
 ### Phase 2 — Data layer (3–4 days)
 
