@@ -23,7 +23,7 @@
   gap: 6px;
 }
 
-#btnAbrirPrefs {
+#open-preferences {
   width: auto;
   margin: 0;
   padding: 7px 12px;
@@ -34,17 +34,17 @@
   gap: 6px;
 }
 
-.icono-movil {
+.icon-mobile {
   display: none;
   font-size: 1.15rem;
   line-height: 1;
 }
 
-.icono-web {
+.icon-desktop {
   display: inline;
 }
 
-#btnGpsRapido {
+#quick-gps {
   width: auto;
   margin: 0;
   padding: 7px 10px;
@@ -52,11 +52,11 @@
 }
 
 @media (max-width: 700px) {
-  .icono-movil {
+  .icon-mobile {
     display: inline;
   }
 
-  .icono-web {
+  .icon-desktop {
     display: none;
   }
 }

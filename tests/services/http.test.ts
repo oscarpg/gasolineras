@@ -5,6 +5,7 @@ import {
   fetchWithFallback,
   HttpError,
 } from '../../src/services/http';
+import { AppError } from '../../src/domain/errors';
 import { fakeFetch } from '../helpers';
 
 const TARGET = 'https://example.test/data';
@@ -24,7 +25,7 @@ describe('createHttpClient', () => {
     try {
       await http.getText(TARGET);
     } catch (e) {
-      expect(e instanceof HttpError && e.status === 400).toBe(true);
+      expect(e instanceof HttpError && e.status === 400 && e.code === 'http').toBe(true);
     }
   });
 
@@ -35,6 +36,11 @@ describe('createHttpClient', () => {
       })) as unknown as typeof fetch;
     const http = createHttpClient({ fetchFn: hanging, timeoutMs: 20 });
     await expect(http.getText(TARGET)).rejects.toThrow('Timeout after 20 ms');
+    try {
+      await http.getText(TARGET);
+    } catch (e) {
+      expect(e instanceof AppError && e.code === 'timeout').toBe(true);
+    }
   });
 });
 
@@ -85,13 +91,16 @@ describe('fetchWithFallback + corsFallbackAttempts', () => {
     const result = await fetchWithFallback(TARGET, JSON.parse, attempts, (m) => failures.push(m));
     expect(result).toEqual({ ok: true });
     expect(failures).toHaveLength(2);
-    expect(failures[0]).toBe('Respuesta vacía');
+    expect(failures[0]).toBe('Empty response');
   });
 
   it('fails with a clear message when every attempt fails', async () => {
     const attempts = [async () => Promise.reject(new Error('x')), async () => ''];
-    await expect(fetchWithFallback(TARGET, JSON.parse, attempts, quiet)).rejects.toThrow(
-      'No se pudo descargar la información de las gasolineras.',
-    );
+    try {
+      await fetchWithFallback(TARGET, JSON.parse, attempts, quiet);
+      expect('resolved').toBe('rejected');
+    } catch (e) {
+      expect(e instanceof AppError && e.code === 'download-failed').toBe(true);
+    }
   });
 });

@@ -1,4 +1,4 @@
-import { ageFilterFromSelectValue } from '../domain/ageFilter';
+import { ageFilterFromOption } from '../domain/ageFilter';
 import { selectVisibleStations, type VisibleStations } from '../domain/filters';
 import type { Preferences } from '../domain/preferences';
 import type { AgeFilter, BrandedStation, Car } from '../domain/types';
@@ -8,7 +8,7 @@ export const selectActiveCar = (s: AppState): Car | null =>
   s.preferences.cars.find((c) => c.id === s.preferences.activeCarId) ?? null;
 
 export const selectAgeFilter = (p: Preferences): AgeFilter =>
-  ageFilterFromSelectValue(p.ageFilterPreset, p.ageFilterCustomDays);
+  ageFilterFromOption(p.ageFilterOption, p.ageFilterCustomDays);
 
 export const selectIsCheckingHistory = (s: AppState): boolean => Object.keys(s.historyJobs).length > 0;
 

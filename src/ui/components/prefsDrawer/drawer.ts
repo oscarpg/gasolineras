@@ -7,20 +7,20 @@ export interface Drawer {
 
 /** The Preferences side panel and its backdrop. */
 export function createDrawer(): Drawer {
-  const drawer = byId('drawerPrefs');
-  const backdrop = byId('backdropPrefs');
+  const drawer = byId('preferences-drawer');
+  const backdrop = byId('preferences-backdrop');
 
   const open = () => {
-    drawer.classList.add('abierto');
-    backdrop.classList.add('activo');
+    drawer.classList.add('is-open');
+    backdrop.classList.add('is-active');
   };
   const close = () => {
-    drawer.classList.remove('abierto');
-    backdrop.classList.remove('activo');
+    drawer.classList.remove('is-open');
+    backdrop.classList.remove('is-active');
   };
 
-  byId('btnAbrirPrefs').addEventListener('click', open);
-  byId('btnCerrarPrefs').addEventListener('click', close);
+  byId('open-preferences').addEventListener('click', open);
+  byId('close-preferences').addEventListener('click', close);
   backdrop.addEventListener('click', close);
 
   return { open, close };

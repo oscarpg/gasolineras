@@ -1,10 +1,10 @@
 /* Price fragments shared by popups and list cards. */
-.precio {
+.price {
   font-weight: 700;
   color: var(--color-success);
 }
 
-.precio-tachado {
+.price-struck {
   text-decoration: line-through;
   color: var(--color-text-faint);
   font-size: 0.75rem;
@@ -12,7 +12,7 @@
   margin-left: 4px;
 }
 
-.badge-desc {
+.badge {
   background: var(--color-success-soft);
   color: var(--color-success);
   border: 1px solid var(--color-success-soft-border);

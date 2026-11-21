@@ -1,5 +1,5 @@
 import { isFuelType } from '../config/fuels';
-import { isAgeFilterPreset } from '../domain/ageFilter';
+import { isAgeFilterOption, LEGACY_AGE_FILTER_VALUES } from '../domain/ageFilter';
 import {
   DEFAULT_PREFERENCES,
   MAX_CUSTOM_AGE_DAYS,
@@ -59,6 +59,9 @@ function sanitizeCars(raw: unknown, read: (c: Loose) => Loose): Car[] {
 /**
  * Turns anything (parsed JSON, possibly corrupted or from an older version)
  * into valid Preferences. Invalid fields fall back to their defaults.
+ *
+ * Also upgrades v2 (schemaVersion 2): its `ageFilterPreset` held the Spanish codes
+ * of the original select ("TODAS", "MAS_X"…), now `ageFilterOption`.
  */
 export function sanitizePreferences(raw: unknown): Preferences {
   const p = isObject(raw) ? raw : {};
@@ -66,9 +69,11 @@ export function sanitizePreferences(raw: unknown): Preferences {
   const customDays = parseInt(String(p.ageFilterCustomDays), 10);
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     fuel: isFuelType(p.fuel) ? p.fuel : d.fuel,
-    ageFilterPreset: isAgeFilterPreset(p.ageFilterPreset) ? p.ageFilterPreset : d.ageFilterPreset,
+    ageFilterOption: isAgeFilterOption(p.ageFilterOption)
+      ? p.ageFilterOption
+      : (LEGACY_AGE_FILTER_VALUES[String(p.ageFilterPreset)] ?? d.ageFilterOption),
     ageFilterCustomDays: clamp(customDays || d.ageFilterCustomDays, MIN_CUSTOM_AGE_DAYS, MAX_CUSTOM_AGE_DAYS),
     searchRadiusKm: clamp(positive(p.searchRadiusKm) ?? d.searchRadiusKm, 1, 50),
     routeDetourKm: clamp(positive(p.routeDetourKm) ?? d.routeDetourKm, 1, 10),
@@ -93,7 +98,7 @@ export function migrateV1(raw: unknown): Preferences {
   const v1 = isObject(raw) ? raw : {};
   return sanitizePreferences({
     fuel: v1.fuel,
-    ageFilterPreset: v1.antiguedad,
+    ageFilterPreset: v1.antiguedad, // upgraded to ageFilterOption by sanitizePreferences
     ageFilterCustomDays: v1.antiguedadDias,
     searchRadiusKm: v1.searchRadius,
     routeDetourKm: v1.radius,

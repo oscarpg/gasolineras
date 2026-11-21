@@ -52,7 +52,7 @@ export function createEffects({ store, miteco, now = () => new Date() }: Effects
       const result = computeProvinceStaleness(stations, window, history, toMitecoDate(today));
       store.update((s) => finishHistoryJob(s, id, result));
     } catch (error) {
-      console.warn('No se pudo calcular la antigüedad de precios:', error);
+      console.warn('Price history check failed:', error);
       store.update((s) => finishHistoryJob(s, id, null));
     }
   }

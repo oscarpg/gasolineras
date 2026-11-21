@@ -61,7 +61,7 @@ const NOW = () => new Date(2026, 10, 21, 12);
 
 describe('createEffects', () => {
   it('loads a province, then checks the history depth the age filter needs', async () => {
-    const store = createStore(state({ ageFilterPreset: 'MAS_X', ageFilterCustomDays: 5 }));
+    const store = createStore(state({ ageFilterOption: 'moreThanCustom', ageFilterCustomDays: 5 }));
     const miteco = fakeMiteco({ '28': [station('A', { prices: prices({ GASOLINA_95: 1.5 }) })] });
     const effects = createEffects({ store, miteco, now: NOW });
 
@@ -108,7 +108,7 @@ describe('createEffects', () => {
     await effects.ensureHistoryForFilter(); // default filter needs 4 days: already covered
     expect(miteco.calls.length).toBe(before);
 
-    store.update((s) => setPreferences(s, { ageFilterPreset: 'MAX_X', ageFilterCustomDays: 7 }));
+    store.update((s) => setPreferences(s, { ageFilterOption: 'atMostCustom', ageFilterCustomDays: 7 }));
     await effects.ensureHistoryForFilter();
     expect(store.getState().historyDepth).toEqual({ '28': 8, '46': 8 });
   });

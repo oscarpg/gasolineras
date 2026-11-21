@@ -3,7 +3,7 @@ import type { LeafletIcon, LeafletStatic } from './leaflet';
 
 /** Red dot for the user's location / route origin. */
 export const userIcon = (L: LeafletStatic): LeafletIcon =>
-  L.divIcon({ className: 'marcador-usuario', iconSize: [18, 18], iconAnchor: [9, 9], popupAnchor: [0, -10] });
+  L.divIcon({ className: 'user-marker', iconSize: [18, 18], iconAnchor: [9, 9], popupAnchor: [0, -10] });
 
 /** Map pin filled with the station's price colour. */
 export function stationIcon(L: LeafletStatic, color: string): LeafletIcon {
@@ -15,7 +15,7 @@ export function stationIcon(L: LeafletStatic, color: string): LeafletIcon {
       <circle cx="13" cy="13" r="4.5" fill="#ffffff"/>
     </svg>`;
   return L.divIcon({
-    className: 'icono-gasolinera',
+    className: 'station-marker',
     html: svg,
     iconSize: [26, 38],
     iconAnchor: [13, 37],

@@ -3,20 +3,26 @@ import type { AppState } from '../../../state/appState';
 import type { Store } from '../../../state/store';
 import { deleteCar, saveCar, selectCar } from '../../../state/transitions';
 import { byId, delegate, html, setHtml } from '../../dom';
-import { fuelLabel, TEXT } from '../../text';
+import { fuelLabel } from '../../format';
+import { i18n } from '../../i18nContext';
 import type { Toaster } from '../../toast';
 
-/** "Mis coches": add/update form and the list of saved cars. */
+/** Fills a <select> with the fuels in the current language, keeping its selection. */
+export function renderFuelOptions(select: HTMLSelectElement): void {
+  const selected = select.value;
+  setHtml(select, html`${FUEL_TYPES.map((f) => html`<option value="${f}">${fuelLabel(f)}</option>`)}`);
+  if (selected) select.value = selected;
+}
+
+/** "My cars": add/update form and the list of saved cars. */
 export function createCarsSection(store: Store<AppState>, toast: Toaster, newId = () => 'car_' + Date.now()) {
-  const name = byId<HTMLInputElement>('cocheNombre');
-  const fuel = byId<HTMLSelectElement>('cocheFuel');
-  const tank = byId<HTMLInputElement>('cocheDeposito');
-  const consumption = byId<HTMLInputElement>('cocheConsumo');
-  const list = byId('listaCoches');
+  const name = byId<HTMLInputElement>('car-name');
+  const fuel = byId<HTMLSelectElement>('car-fuel');
+  const tank = byId<HTMLInputElement>('car-tank');
+  const consumption = byId<HTMLInputElement>('car-consumption');
+  const list = byId('car-list');
 
-  for (const f of FUEL_TYPES) fuel.add(new Option(fuelLabel(f), f));
-
-  byId('btnGuardarCoche').addEventListener('click', () => {
+  byId('save-car').addEventListener('click', () => {
     const carName = name.value.trim();
     const tankLitres = parseFloat(tank.value);
     const consumptionL100km = parseFloat(consumption.value);
@@ -30,7 +36,7 @@ export function createCarsSection(store: Store<AppState>, toast: Toaster, newId 
       Number.isFinite(consumptionL100km) &&
       consumptionL100km > 0;
     if (!valid) {
-      toast.show(TEXT.carIncomplete);
+      toast.show(i18n().t('cars.incomplete'));
       return;
     }
 
@@ -47,32 +53,39 @@ export function createCarsSection(store: Store<AppState>, toast: Toaster, newId 
     store.update((s) => deleteCar(s, button.dataset.id!)),
   );
 
-  let last: { cars: unknown; activeCarId: unknown } | null = null;
+  let last: { cars: unknown; activeCarId: unknown; locale: string } | null = null;
 
   return {
     render(state: AppState) {
       const { cars, activeCarId } = state.preferences;
-      if (last && last.cars === cars && last.activeCarId === activeCarId) return;
-      last = { cars, activeCarId };
+      const { t, locale, decimal } = i18n();
+      if (last && last.cars === cars && last.activeCarId === activeCarId && last.locale === locale) return;
+      if (!last || last.locale !== locale) renderFuelOptions(fuel);
+      last = { cars, activeCarId, locale };
 
       if (cars.length === 0) {
-        setHtml(list, html`<small class="u-text-muted">${TEXT.noCars}</small>`);
+        setHtml(list, html`<small class="u-text-muted">${t('cars.none')}</small>`);
         return;
       }
       setHtml(
         list,
         html`${cars.map((c) => {
           const active = c.id === activeCarId;
-          return html`<div class="coche-item ${active ? 'activo' : ''}">
-      <div class="coche-info">
-        <div><b>${c.name}</b> ${active ? html`<span class="badge-desc">${TEXT.active}</span>` : ''}</div>
-        <div class="coche-meta">
-          ${fuelLabel(c.fuel)} · Depósito: ${c.tankLitres} L · ${c.consumptionL100km} l/100km
+          const details = t('cars.details', {
+            fuel: fuelLabel(c.fuel),
+            tank: decimal(c.tankLitres),
+            consumption: decimal(c.consumptionL100km),
+          });
+          return html`<div class="car-item ${active ? 'is-active' : ''}">
+      <div class="car-info">
+        <div><b>${c.name}</b> ${active ? html`<span class="badge">${t('cars.active')}</span>` : ''}</div>
+        <div class="car-meta">
+          ${details}
         </div>
       </div>
-      <div class="coche-acciones">
-        ${active ? '' : html`<button class="sec btn-mini btn-usar" data-action="use-car" data-id="${c.id}">${TEXT.use}</button>`}
-        <button class="btn-del" data-action="delete-car" data-id="${c.id}" title="${TEXT.deleteCar}">✕</button>
+      <div class="car-actions">
+        ${active ? '' : html`<button class="btn-secondary btn-mini" data-action="use-car" data-id="${c.id}">${t('cars.use')}</button>`}
+        <button class="btn-delete" data-action="delete-car" data-id="${c.id}" title="${t('cars.delete')}">✕</button>
       </div>
     </div>`;
         })}`,

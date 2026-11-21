@@ -1,11 +1,13 @@
 import { CORS_RELAYS } from '../config/endpoints';
+import { AppError } from '../domain/errors';
 
-export class HttpError extends Error {
+/** A non-2xx response. Shown to the user as `errors.http` with the status. */
+export class HttpError extends AppError {
   constructor(
     readonly status: number,
     readonly url: string,
   ) {
-    super(`HTTP ${status}`);
+    super('http', { status }, `HTTP ${status}`);
     this.name = 'HttpError';
   }
 }
@@ -39,7 +41,7 @@ export function createHttpClient({ fetchFn, timeoutMs = 30_000 }: HttpClientOpti
       if (!response.ok && !allowHttpErrors) throw new HttpError(response.status, url);
       return response;
     } catch (error) {
-      if (controller.signal.aborted) throw new Error(`Timeout after ${timeoutMs} ms`);
+      if (controller.signal.aborted) throw new AppError('timeout', {}, `Timeout after ${timeoutMs} ms`);
       throw error;
     } finally {
       clearTimeout(timer);
@@ -78,16 +80,16 @@ export async function fetchWithFallback<T>(
   url: string,
   parse: (text: string) => T,
   attempts: readonly DownloadAttempt[],
-  onAttemptFailed: (message: string) => void = (m) => console.warn('Intento de descarga falló:', m),
+  onAttemptFailed: (message: string) => void = (m) => console.warn('Download attempt failed:', m),
 ): Promise<T> {
   for (const attempt of attempts) {
     try {
       const text = (await attempt(url)).trim();
-      if (!text) throw new Error('Respuesta vacía');
+      if (!text) throw new Error('Empty response');
       return parse(text);
     } catch (error) {
       onAttemptFailed(error instanceof Error ? error.message : String(error));
     }
   }
-  throw new Error('No se pudo descargar la información de las gasolineras.');
+  throw new AppError('download-failed', {}, `All download attempts failed for ${url}`);
 }

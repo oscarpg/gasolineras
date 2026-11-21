@@ -1,5 +1,5 @@
 /* Floating card with the cheapest stations (bottom-left). */
-#panelBaratas {
+#results-panel {
   position: absolute;
   bottom: 20px;
   left: 12px;
@@ -17,11 +17,11 @@
   transition: max-height var(--transition-panel);
 }
 
-#panelBaratas.minimizado {
+#results-panel.is-minimized {
   max-height: 42px !important;
 }
 
-.cabecera-baratas {
+.results-header {
   padding: 10px 12px;
   background: var(--color-primary);
   color: var(--color-text-on-primary);
@@ -37,7 +37,7 @@
 }
 
 /* "Sort by total cost" option bar */
-.opciones-baratas {
+.results-options {
   padding: 6px 10px;
   background: var(--color-primary-soft);
   border-bottom: 1px solid var(--color-primary-soft-border);
@@ -50,19 +50,19 @@
   flex-shrink: 0;
 }
 
-.opciones-baratas.deshabilitado {
+.results-options.is-disabled {
   background: var(--color-surface-disabled);
   border-bottom-color: var(--color-border);
   color: var(--color-text-faint);
   font-weight: 400;
 }
 
-.opciones-baratas input[type='checkbox'] {
+.results-options input[type='checkbox'] {
   margin: 0;
   cursor: pointer;
 }
 
-.opciones-baratas label {
+.results-options label {
   margin: 0;
   cursor: pointer;
   font-size: 0.78rem;
@@ -71,7 +71,7 @@
 }
 
 /* Status line */
-#estado {
+#status {
   font-size: 0.74rem;
   color: var(--color-text-secondary);
   padding: 5px 10px;
@@ -80,7 +80,7 @@
   flex-shrink: 0;
 }
 
-#listaBaratas {
+#results-list {
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
@@ -91,7 +91,7 @@
 }
 
 @media (max-width: 700px) {
-  #panelBaratas {
+  #results-panel {
     width: calc(100vw - 24px);
     bottom: 12px;
     max-height: 42vh;

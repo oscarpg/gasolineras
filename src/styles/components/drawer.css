@@ -1,5 +1,5 @@
 /* Preferences side drawer and its backdrop. */
-#backdropPrefs {
+#preferences-backdrop {
   position: fixed;
   inset: 0;
   background: var(--color-backdrop);
@@ -7,11 +7,11 @@
   display: none;
 }
 
-#backdropPrefs.activo {
+#preferences-backdrop.is-active {
   display: block;
 }
 
-#drawerPrefs {
+#preferences-drawer {
   position: fixed;
   top: 0;
   left: 0;
@@ -27,7 +27,7 @@
   flex-direction: column;
 }
 
-#drawerPrefs.abierto {
+#preferences-drawer.is-open {
   transform: translateX(0);
 }
 
@@ -45,7 +45,7 @@
   font-size: 1.05rem;
 }
 
-#btnCerrarPrefs {
+#close-preferences {
   width: auto;
   margin: 0;
   padding: 4px 10px;
@@ -69,7 +69,7 @@
 }
 
 /* Scrollable brand checklist */
-#marcas {
+#brand-list {
   max-height: 140px;
   overflow-y: auto;
   border: 1px solid var(--color-border);
@@ -78,7 +78,7 @@
   background: var(--color-surface);
 }
 
-#marcas label {
+#brand-list label {
   margin: 2px 0;
   font-size: 0.82rem;
   display: flex;

@@ -1,7 +1,8 @@
 import type { StationRow } from '../../domain/filters';
 import type { Car } from '../../domain/types';
 import { html, raw, type SafeHtml } from '../dom';
-import { discountLabel, stalenessText } from '../text';
+import { discountLabel, euros, km, pricePerLitre, stalenessText, stationName } from '../format';
+import { i18n } from '../i18nContext';
 
 export interface CardContext {
   car: Car | null;
@@ -15,57 +16,59 @@ export function stationCardHtml(
   index: number,
   { car, hasRoute, sortedByTotalCost }: CardContext,
 ): SafeHtml {
+  const { t } = i18n();
   const s = row.station;
   const c = row.cost;
   const color = row.color;
   const hasDiscount = row.finalPrice < row.basePrice;
 
   const distance = hasRoute
-    ? `🛣️ Desvío ${row.routeDetourKm!.toFixed(1)} km · `
+    ? t('card.detour', { km: km(row.routeDetourKm!) })
     : row.distanceFromUserKm !== null
-      ? `📍 ${row.distanceFromUserKm.toFixed(1)} km · `
+      ? t('card.distance', { km: km(row.distanceFromUserKm) })
       : '';
 
   const struck = hasDiscount
-    ? html`<div class="precio-tachado u-ml-0">${row.basePrice.toFixed(3)} €/l</div>`
+    ? html`<div class="price-struck u-ml-0">${pricePerLitre(row.basePrice)}</div>`
     : '';
 
   let carLine: SafeHtml = raw('');
   let right = html`
-        <div class="importe" style="color:${color}">${row.finalPrice.toFixed(3)} €/l</div>
+        <div class="station-card-amount" style="color:${color}">${pricePerLitre(row.finalPrice)}</div>
         ${struck}
       `;
 
   if (car && c.totalCost != null) {
+    const total = t('unit.euros', { value: euros(c.totalCost) });
     carLine = html`
-          <div class="meta-coche">
-            🚗 Depósito: ${c.tankCost!.toFixed(2)} € + Viaje i/v: ${c.tripCost!.toFixed(2)} € = <b>${c.totalCost.toFixed(2)} €</b>
+          <div class="station-card-car">
+            ${t('card.costLine', { tank: euros(c.tankCost!), trip: euros(c.tripCost!) })} <b>${total}</b>
           </div>
         `;
     right = sortedByTotalCost
       ? html`
-            <div class="importe" style="color:${color}">${c.totalCost.toFixed(2)} €</div>
-            <div class="sub-importe">${row.finalPrice.toFixed(3)} €/l</div>
+            <div class="station-card-amount" style="color:${color}">${total}</div>
+            <div class="station-card-subamount">${pricePerLitre(row.finalPrice)}</div>
             ${struck}
           `
       : html`
-            <div class="importe" style="color:${color}">${row.finalPrice.toFixed(3)} €/l</div>
+            <div class="station-card-amount" style="color:${color}">${pricePerLitre(row.finalPrice)}</div>
             ${struck}
-            <div class="sub-importe">Total: ${c.totalCost.toFixed(2)} €</div>
+            <div class="station-card-subamount">${t('card.total', { cost: euros(c.totalCost) })}</div>
           `;
   }
 
   return html`
-        <div class="info">
-          <div class="nombre">
-            ${index + 1}. ${s.name}
-            ${hasDiscount ? html`<span class="badge-desc">${discountLabel(row.discount)}</span>` : ''}
+        <div class="station-card-info">
+          <div class="station-card-name">
+            ${index + 1}. ${stationName(s.name)}
+            ${hasDiscount ? html`<span class="badge">${discountLabel(row.discount)}</span>` : ''}
           </div>
-          <div class="meta">${distance}${s.address}</div>
+          <div class="station-card-meta">${distance}${s.address}</div>
           ${carLine}
-          <div class="meta">${stalenessText(s.bulletinDate, row.staleness)}</div>
+          <div class="station-card-meta">${stalenessText(s.bulletinDate, row.staleness)}</div>
         </div>
-        <div class="item-precios">
+        <div class="station-card-prices">
           ${right}
         </div>
       `;

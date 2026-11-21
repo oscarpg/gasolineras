@@ -31,51 +31,53 @@ export function requiredHistoryDays(filter: AgeFilter): number {
   return Math.max(MIN_HISTORY_DAYS, Math.min(MAX_HISTORY_DAYS, filter.days + 1));
 }
 
-/** Values of the current "antigüedad" <select> (also what saved preferences store). */
-export const AGE_FILTER_PRESETS = [
-  'TODAS',
-  '0',
-  '1',
-  '2',
-  '3',
-  'MAX_X',
-  'EXACTO_1',
-  'EXACTO_2',
-  'MAS_3',
-  'MAS_X',
+/**
+ * The choices offered in the age-filter menu, in display order. Options marked
+ * `custom` use the user's "X days" value; the others have a fixed threshold.
+ */
+export const AGE_FILTER_OPTIONS = [
+  { id: 'all', mode: 'all' },
+  { id: 'updatedToday', mode: 'atMost', days: 0 },
+  { id: 'atMost1', mode: 'atMost', days: 1 },
+  { id: 'atMost2', mode: 'atMost', days: 2 },
+  { id: 'atMost3', mode: 'atMost', days: 3 },
+  { id: 'atMostCustom', mode: 'atMost', custom: true },
+  { id: 'exactly1', mode: 'exactly', days: 1 },
+  { id: 'exactly2', mode: 'exactly', days: 2 },
+  { id: 'moreThan3', mode: 'moreThan', days: 3 },
+  { id: 'moreThanCustom', mode: 'moreThan', custom: true },
 ] as const;
 
-export type AgeFilterPreset = (typeof AGE_FILTER_PRESETS)[number];
+export type AgeFilterOption = (typeof AGE_FILTER_OPTIONS)[number]['id'];
 
-export function isAgeFilterPreset(value: unknown): value is AgeFilterPreset {
-  return typeof value === 'string' && (AGE_FILTER_PRESETS as readonly string[]).includes(value);
+export const AGE_FILTER_OPTION_IDS: readonly AgeFilterOption[] = AGE_FILTER_OPTIONS.map((o) => o.id);
+
+export function isAgeFilterOption(value: unknown): value is AgeFilterOption {
+  return typeof value === 'string' && (AGE_FILTER_OPTION_IDS as readonly string[]).includes(value);
 }
 
-/**
- * Converts the values of the current "antigüedad" <select> (also stored in saved
- * preferences) into an AgeFilter. Unknown values mean "all".
- *
- * @param value      select value: "TODAS", "0".."3", "MAX_X", "EXACTO_1", "EXACTO_2", "MAS_3", "MAS_X"
- * @param customDays the "X" input, used by MAX_X and MAS_X
- */
-export function ageFilterFromSelectValue(value: string, customDays: number): AgeFilter {
-  switch (value) {
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-      return { mode: 'atMost', days: Number(value) };
-    case 'MAX_X':
-      return { mode: 'atMost', days: customDays };
-    case 'EXACTO_1':
-      return { mode: 'exactly', days: 1 };
-    case 'EXACTO_2':
-      return { mode: 'exactly', days: 2 };
-    case 'MAS_3':
-      return { mode: 'moreThan', days: 3 };
-    case 'MAS_X':
-      return { mode: 'moreThan', days: customDays };
-    default:
-      return { mode: 'all' };
-  }
+/** Whether the option uses the custom "X days" value (so the X input should be shown). */
+export function isCustomAgeOption(option: AgeFilterOption): boolean {
+  return AGE_FILTER_OPTIONS.some((o) => o.id === option && 'custom' in o);
 }
+
+/** The filter an option stands for; `customDays` is used by the custom options. */
+export function ageFilterFromOption(option: AgeFilterOption, customDays: number): AgeFilter {
+  const o = AGE_FILTER_OPTIONS.find((x) => x.id === option) ?? AGE_FILTER_OPTIONS[0];
+  if (o.mode === 'all') return { mode: 'all' };
+  return { mode: o.mode, days: 'custom' in o ? customDays : o.days };
+}
+
+/** Values stored by preferences v1/v2 (Spanish codes of the original select) → options. */
+export const LEGACY_AGE_FILTER_VALUES: Readonly<Record<string, AgeFilterOption>> = {
+  TODAS: 'all',
+  '0': 'updatedToday',
+  '1': 'atMost1',
+  '2': 'atMost2',
+  '3': 'atMost3',
+  MAX_X: 'atMostCustom',
+  EXACTO_1: 'exactly1',
+  EXACTO_2: 'exactly2',
+  MAS_3: 'moreThan3',
+  MAS_X: 'moreThanCustom',
+};

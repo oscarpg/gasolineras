@@ -1,167 +1,231 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gasolineras España</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<link rel="stylesheet" href="/src/styles/main.css">
-</head>
-<body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gasolineras España</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="/src/styles/main.css" />
+  </head>
+  <body>
+    <!--
+  Texts are in Spanish so the page reads correctly before the script runs.
+  At start-up (and when the language changes) every element with a data-i18n*
+  attribute is translated: data-i18n → text, data-i18n-placeholder, data-i18n-title.
+-->
 
-<!-- Barra superior flotante limpia en pantalla principal -->
-<div id="topbar">
-  <div class="topbar-card">
-    <button id="btnAbrirPrefs" title="Abrir Preferencias">
-      <span class="icono-movil">☰</span>
-      <span class="icono-web">⚙️ Preferencias</span>
-    </button>
-  </div>
-  <div class="topbar-card">
-    <button class="sec" id="btnGpsRapido" title="Usar mi ubicación GPS">📍</button>
-  </div>
-</div>
-
-<!-- Mapa principal a pantalla completa -->
-<div id="mapa"></div>
-
-<!-- Listado flotante de gasolineras más baratas -->
-<div id="panelBaratas">
-  <div class="cabecera-baratas" id="toggleBaratas">
-    <span>⛽ Gasolineras más baratas</span>
-    <span id="iconoToggleBaratas">▼</span>
-  </div>
-  <div class="opciones-baratas" id="contenedorChkCoste">
-    <input type="checkbox" id="chkOrdenCosteReal">
-    <label for="chkOrdenCosteReal" id="lblOrdenCosteReal">Ordenar por coste total (depósito + ida y vuelta)</label>
-  </div>
-  <div id="estado">Esperando ubicación…</div>
-  <div id="listaBaratas">
-    <em class="u-text-sm u-text-muted">Sin datos para mostrar…</em>
-  </div>
-</div>
-
-<!-- Fondo oscuro y Panel lateral de Preferencias -->
-<div id="backdropPrefs"></div>
-<aside id="drawerPrefs">
-  <div class="drawer-header">
-    <h2>⚙️ Preferencias y Filtros</h2>
-    <button id="btnCerrarPrefs" title="Cerrar">✕</button>
-  </div>
-  <div class="drawer-body">
-
-    <!-- 1. Mis Coches -->
-    <fieldset>
-      <legend>🚗 Mis coches</legend>
-      <label for="cocheNombre">Nombre del coche:</label>
-      <input type="text" id="cocheNombre" placeholder="Ej: SEAT León">
-
-      <div class="fila">
-        <div class="u-flex-1">
-          <label for="cocheFuel">Combustible:</label>
-          <select id="cocheFuel"></select>
-        </div>
+    <!-- Floating top bar -->
+    <div id="topbar">
+      <div class="topbar-card">
+        <button id="open-preferences" title="Abrir Preferencias" data-i18n-title="topbar.openPreferences">
+          <span class="icon-mobile">☰</span>
+          <span class="icon-desktop" data-i18n="topbar.preferences">⚙️ Preferencias</span>
+        </button>
       </div>
-
-      <div class="fila">
-        <div class="u-flex-1">
-          <label for="cocheDeposito">Depósito (litros):</label>
-          <input type="number" id="cocheDeposito" placeholder="Ej: 50" min="5" max="200" step="1">
-        </div>
-        <div class="u-flex-1">
-          <label for="cocheConsumo">Consumo (l/100km):</label>
-          <input type="number" id="cocheConsumo" placeholder="Ej: 6.2" min="1" max="40" step="0.1">
-        </div>
+      <div class="topbar-card">
+        <button
+          class="btn-secondary"
+          id="quick-gps"
+          title="Usar mi ubicación GPS"
+          data-i18n-title="topbar.useGps"
+        >
+          📍
+        </button>
       </div>
-      <button class="sec" id="btnGuardarCoche">Añadir / Guardar coche</button>
-      <div id="listaCoches" class="item-list"></div>
-    </fieldset>
+    </div>
 
-    <!-- 2. Ubicación y Distancia máxima -->
-    <fieldset>
-      <legend>📍 Ubicación y Distancia</legend>
-      <button id="btnGps" class="u-mt-0">Usar mi ubicación GPS</button>
-      <label for="direccion">o buscar dirección:</label>
-      <input type="text" id="direccion" placeholder="Calle, número, ciudad…">
-      <button class="sec" id="btnDir">Establecer dirección</button>
+    <!-- Full-screen map -->
+    <div id="map"></div>
 
-      <label for="radioUbicacion" class="u-mt-10">
-        Distancia máxima admitida: <b><span id="radioUbicacionVal">15</span> km</b>
-      </label>
-      <input type="range" id="radioUbicacion" min="1" max="50" step="1" value="15">
-    </fieldset>
-
-    <!-- 3. Ruta -->
-    <fieldset>
-      <legend>🛣️ Ruta</legend>
-      <label for="destino">Dirección de destino:</label>
-      <input type="text" id="destino" placeholder="Ciudad o dirección de destino…">
-      <button id="btnRuta">Calcular ruta</button>
-
-      <label for="radio">Radio de desvío en ruta: <b><span id="radioVal">3</span> km</b></label>
-      <input type="range" id="radio" min="1" max="10" step="0.5" value="3">
-
-      <div class="fila">
-        <input type="checkbox" id="soloRuta">
-        <label for="soloRuta" class="u-m-0">Solo gasolineras en la ruta (sin desvíos)</label>
+    <!-- Floating list of the cheapest stations -->
+    <div id="results-panel">
+      <div class="results-header" id="results-toggle">
+        <span data-i18n="results.title">⛽ Gasolineras más baratas</span>
+        <span id="results-toggle-icon">▼</span>
       </div>
-
-      <button class="sec" id="btnQuitarRuta">Quitar ruta</button>
-    </fieldset>
-
-    <!-- 4. Filtros de Carburante, Antigüedad y Marcas -->
-    <fieldset>
-      <legend>🔎 Filtros de gasolineras</legend>
-      <label for="carburante">Carburante a mostrar:</label>
-      <select id="carburante"></select>
-
-      <label for="antiguedad">Filtro por días sin actualizar el precio:</label>
-      <select id="antiguedad">
-        <option value="TODAS">Todas las gasolineras</option>
-        <option value="0">Actualizado hoy (0 días)</option>
-        <option value="1">Sin actualizar ≤ 1 día (ocultar &gt; 1 día)</option>
-        <option value="2">Sin actualizar ≤ 2 días (ocultar &gt; 2 días)</option>
-        <option value="3">Sin actualizar ≤ 3 días (ocultar &gt; 3 días)</option>
-        <option value="MAX_X">Sin actualizar ≤ X días (personalizado)…</option>
-        <option value="EXACTO_1">Exactamente 1 día sin actualizar</option>
-        <option value="EXACTO_2">Exactamente 2 días sin actualizar</option>
-        <option value="MAS_3">Más de 3 días sin actualizar</option>
-        <option value="MAS_X">Más de X días sin actualizar (personalizado)…</option>
-      </select>
-
-      <div id="filaDiasCustom" class="fila" hidden>
-        <label for="diasAntiguedadVal" class="u-m-0 u-flex-1">Número de días (X):</label>
-        <input type="number" id="diasAntiguedadVal" min="1" max="10" step="1" value="3" class="u-w-80px">
+      <div class="results-options" id="sort-by-cost-option">
+        <input type="checkbox" id="sort-by-cost" />
+        <label for="sort-by-cost" id="sort-by-cost-label"
+          >Ordenar por coste total (depósito + ida y vuelta)</label
+        >
       </div>
-      <div id="infoEstadoAntiguedad" class="form-hint"></div>
-
-      <label class="u-mt-8">Marcas permitidas:</label>
-      <div id="marcas"><em class="u-text-sm">Esperando ubicación…</em></div>
-    </fieldset>
-
-    <!-- 5. Descuentos por marca -->
-    <fieldset>
-      <legend>🏷️ Descuentos por marca</legend>
-      <label for="descMarca">Marca:</label>
-      <select id="descMarca">
-        <option value="">Selecciona una marca…</option>
-      </select>
-      <div class="fila">
-        <input type="number" id="descValor" placeholder="Ej: 5" min="0" step="0.5" class="u-w-45">
-        <select id="descTipo" class="u-w-55">
-          <option value="CTS">cts/litro (ej. 5 cts)</option>
-          <option value="PCT">% porcentaje (ej. 3%)</option>
-        </select>
+      <div id="status" data-i18n="results.waiting">Esperando ubicación…</div>
+      <div id="results-list">
+        <em class="u-text-sm u-text-muted" data-i18n="results.noData">Sin datos para mostrar…</em>
       </div>
-      <button class="sec" id="btnAddDesc">Añadir / Actualizar descuento</button>
-      <div id="listaDescuentos" class="item-list"></div>
-    </fieldset>
+    </div>
 
-    <button class="sec u-mb-14" id="btnActualizar">🔄 Forzar actualización de precios</button>
-  </div>
-</aside>
+    <!-- Preferences drawer and its backdrop -->
+    <div id="preferences-backdrop"></div>
+    <aside id="preferences-drawer">
+      <div class="drawer-header">
+        <h2 data-i18n="drawer.title">⚙️ Preferencias y Filtros</h2>
+        <button id="close-preferences" title="Cerrar" data-i18n-title="drawer.close">✕</button>
+      </div>
+      <div class="drawer-body">
+        <!-- 1. Cars -->
+        <fieldset>
+          <legend data-i18n="cars.legend">🚗 Mis coches</legend>
+          <label for="car-name" data-i18n="cars.name">Nombre del coche:</label>
+          <input
+            type="text"
+            id="car-name"
+            placeholder="Ej: SEAT León"
+            data-i18n-placeholder="cars.namePlaceholder"
+          />
 
-<script type="module" src="/src/main.ts"></script>
-</body>
+          <div class="form-row">
+            <div class="u-flex-1">
+              <label for="car-fuel" data-i18n="cars.fuel">Combustible:</label>
+              <select id="car-fuel"></select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="u-flex-1">
+              <label for="car-tank" data-i18n="cars.tank">Depósito (litros):</label>
+              <input
+                type="number"
+                id="car-tank"
+                placeholder="Ej: 50"
+                data-i18n-placeholder="cars.tankPlaceholder"
+                min="5"
+                max="200"
+                step="1"
+              />
+            </div>
+            <div class="u-flex-1">
+              <label for="car-consumption" data-i18n="cars.consumption">Consumo (l/100km):</label>
+              <input
+                type="number"
+                id="car-consumption"
+                placeholder="Ej: 6.2"
+                data-i18n-placeholder="cars.consumptionPlaceholder"
+                min="1"
+                max="40"
+                step="0.1"
+              />
+            </div>
+          </div>
+          <button class="btn-secondary" id="save-car" data-i18n="cars.save">Añadir / Guardar coche</button>
+          <div id="car-list" class="item-list"></div>
+        </fieldset>
+
+        <!-- 2. Location and maximum distance -->
+        <fieldset>
+          <legend data-i18n="location.legend">📍 Ubicación y Distancia</legend>
+          <button id="use-gps" class="u-mt-0" data-i18n="location.useGps">Usar mi ubicación GPS</button>
+          <label for="address" data-i18n="location.orAddress">o buscar dirección:</label>
+          <input
+            type="text"
+            id="address"
+            placeholder="Calle, número, ciudad…"
+            data-i18n-placeholder="location.addressPlaceholder"
+          />
+          <button class="btn-secondary" id="set-address" data-i18n="location.setAddress">
+            Establecer dirección
+          </button>
+
+          <label for="search-radius" class="u-mt-10">
+            <span data-i18n="location.maxDistance">Distancia máxima admitida:</span>
+            <b><span id="search-radius-value">15</span> km</b>
+          </label>
+          <input type="range" id="search-radius" min="1" max="50" step="1" value="15" />
+        </fieldset>
+
+        <!-- 3. Route -->
+        <fieldset>
+          <legend data-i18n="route.legend">🛣️ Ruta</legend>
+          <label for="destination" data-i18n="route.destination">Dirección de destino:</label>
+          <input
+            type="text"
+            id="destination"
+            placeholder="Ciudad o dirección de destino…"
+            data-i18n-placeholder="route.destinationPlaceholder"
+          />
+          <button id="calculate-route" data-i18n="route.calculate">Calcular ruta</button>
+
+          <label for="route-detour"
+            ><span data-i18n="route.detour">Radio de desvío en ruta:</span>
+            <b><span id="route-detour-value">3</span> km</b></label
+          >
+          <input type="range" id="route-detour" min="1" max="10" step="0.5" value="3" />
+
+          <div class="form-row">
+            <input type="checkbox" id="route-only" />
+            <label for="route-only" class="u-m-0" data-i18n="route.only"
+              >Solo gasolineras en la ruta (sin desvíos)</label
+            >
+          </div>
+
+          <button class="btn-secondary" id="clear-route" data-i18n="route.clear">Quitar ruta</button>
+        </fieldset>
+
+        <!-- 4. Fuel, price age and brand filters -->
+        <fieldset>
+          <legend data-i18n="filters.legend">🔎 Filtros de gasolineras</legend>
+          <label for="fuel" data-i18n="filters.fuel">Carburante a mostrar:</label>
+          <select id="fuel"></select>
+
+          <label for="age-filter" data-i18n="filters.age">Filtro por días sin actualizar el precio:</label>
+          <select id="age-filter"></select>
+
+          <div id="custom-days-row" class="form-row" hidden>
+            <label for="custom-days" class="u-m-0 u-flex-1" data-i18n="filters.customDays"
+              >Número de días (X):</label
+            >
+            <input type="number" id="custom-days" min="1" max="10" step="1" value="3" class="u-w-80px" />
+          </div>
+          <div id="history-status" class="form-hint"></div>
+
+          <label class="u-mt-8" data-i18n="filters.brands">Marcas permitidas:</label>
+          <div id="brand-list">
+            <em class="u-text-sm" data-i18n="filters.waiting">Esperando ubicación…</em>
+          </div>
+        </fieldset>
+
+        <!-- 5. Brand discounts -->
+        <fieldset>
+          <legend data-i18n="discounts.legend">🏷️ Descuentos por marca</legend>
+          <label for="discount-brand" data-i18n="discounts.brand">Marca:</label>
+          <select id="discount-brand">
+            <option value="" data-i18n="discounts.chooseBrand">Selecciona una marca…</option>
+          </select>
+          <div class="form-row">
+            <input
+              type="number"
+              id="discount-value"
+              placeholder="Ej: 5"
+              data-i18n-placeholder="discounts.valuePlaceholder"
+              min="0"
+              step="0.5"
+              class="u-w-45"
+            />
+            <select id="discount-type" class="u-w-55">
+              <option value="CTS" data-i18n="discounts.typeCents">cts/litro (ej. 5 cts)</option>
+              <option value="PCT" data-i18n="discounts.typePercent">% porcentaje (ej. 3%)</option>
+            </select>
+          </div>
+          <button class="btn-secondary" id="add-discount" data-i18n="discounts.add">
+            Añadir / Actualizar descuento
+          </button>
+          <div id="discount-list" class="item-list"></div>
+        </fieldset>
+
+        <!-- 6. Language -->
+        <fieldset>
+          <legend data-i18n="language.legend">🌐 Idioma</legend>
+          <label for="language" data-i18n="language.label">Idioma de la aplicación:</label>
+          <select id="language"></select>
+        </fieldset>
+
+        <button class="btn-secondary u-mb-14" id="refresh-prices" data-i18n="drawer.refresh">
+          🔄 Forzar actualización de precios
+        </button>
+      </div>
+    </aside>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>

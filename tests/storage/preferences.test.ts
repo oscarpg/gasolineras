@@ -31,9 +31,9 @@ const V1 = {
 describe('migrateV1', () => {
   it('converts every field of the original format', () => {
     expect(migrateV1(V1)).toEqual({
-      schemaVersion: 2,
+      schemaVersion: 3,
       fuel: 'GASOLEO_A',
-      ageFilterPreset: 'MAS_X',
+      ageFilterOption: 'moreThanCustom',
       ageFilterCustomDays: 5,
       searchRadiusKm: 25,
       routeDetourKm: 4.5,
@@ -59,7 +59,7 @@ describe('sanitizePreferences', () => {
   it('replaces invalid values with defaults', () => {
     const p = sanitizePreferences({
       fuel: 'KEROSENO',
-      ageFilterPreset: 'NOPE',
+      ageFilterOption: 'NOPE',
       ageFilterCustomDays: 'abc',
       searchRadiusKm: -3,
       routeDetourKm: 'x',
@@ -68,7 +68,7 @@ describe('sanitizePreferences', () => {
       locale: 'fr',
     });
     expect(p.fuel).toBe('GASOLINA_95');
-    expect(p.ageFilterPreset).toBe('TODAS');
+    expect(p.ageFilterOption).toBe('all');
     expect(p.ageFilterCustomDays).toBe(3);
     expect(p.searchRadiusKm).toBe(15);
     expect(p.routeDetourKm).toBe(3);
@@ -97,6 +97,15 @@ describe('sanitizePreferences', () => {
     });
     expect(p.cars.map((c) => c.id)).toEqual(['a']);
     expect(Object.keys(p.discounts)).toEqual(['A']);
+  });
+
+  it('upgrades v2 preferences (Spanish age-filter codes) to v3 options', () => {
+    const v2 = { ...migrateV1(V1), schemaVersion: 2, ageFilterPreset: 'EXACTO_2' } as Record<string, unknown>;
+    delete v2.ageFilterOption;
+    const p = sanitizePreferences(v2);
+    expect(p.schemaVersion).toBe(3);
+    expect(p.ageFilterOption).toBe('exactly2');
+    expect(p.cars).toHaveLength(2);
   });
 
   it('is idempotent', () => {

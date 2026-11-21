@@ -4,8 +4,7 @@ import globals from 'globals';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  // src/legacy/ is the old inline script, moved as-is; it shrinks each phase and is deleted in Phase 5.
-  { ignores: ['dist', 'node_modules', 'coverage', 'src/legacy/**'] },
+  { ignores: ['dist', 'node_modules', 'coverage'] },
 
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -23,10 +22,10 @@ export default tseslint.config(
   },
 
   // Layer boundaries (see refactor plan §3 and §8).
-  // domain/ and state/ must stay platform-free so they can be reused
+  // domain/, state/ and i18n/ must stay platform-free so they can be reused
   // in a PWA, Capacitor or React Native app.
   {
-    files: ['src/domain/**/*.ts', 'src/state/**/*.ts'],
+    files: ['src/domain/**/*.ts', 'src/state/**/*.ts', 'src/i18n/**/*.ts'],
     rules: {
       'no-restricted-globals': [
         'error',
@@ -34,7 +33,7 @@ export default tseslint.config(
           (name) => ({
             name,
             message:
-              'domain/ and state/ must not touch platform APIs. Inject them through services/, storage/ or platform/.',
+              'domain/, state/ and i18n/ must not touch platform APIs. Inject them through services/, storage/ or platform/.',
           }),
         ),
       ],

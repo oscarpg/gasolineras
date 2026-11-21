@@ -3,8 +3,3 @@ coverage
 node_modules
 package-lock.json
 tests/fixtures
-
-# Legacy code, moved as-is from the old single-file app. Formatted when it is
-# rewritten in Phases 3–5; remove these lines once src/legacy/ is gone.
-index.html
-src/legacy/

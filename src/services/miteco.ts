@@ -24,9 +24,9 @@ export function decodeXmlTagName(tag: string): string {
 /** Converts MITECO's XML format into the same shape as its JSON format. Needs a DOMParser (browser). */
 export function parseMitecoXml(text: string, parser: DOMParser = new DOMParser()): MitecoPayload {
   const doc = parser.parseFromString(text, 'application/xml');
-  if (doc.querySelector('parsererror')) throw new Error('XML mal formado');
+  if (doc.querySelector('parsererror')) throw new Error('Malformed XML');
   const items = [...doc.querySelectorAll('EESSPrecio')];
-  if (items.length === 0) throw new Error('El XML no contiene estaciones');
+  if (items.length === 0) throw new Error('XML contains no stations');
   return {
     Fecha: doc.querySelector('Fecha')?.textContent || '',
     ListaEESSPrecio: items.map((el) => {
@@ -42,10 +42,15 @@ export function parseMitecoText(text: string): MitecoPayload {
   return text.startsWith('<') ? parseMitecoXml(text) : (JSON.parse(text) as MitecoPayload);
 }
 
-const readPrices = (raw: RawMitecoStation): FuelPrices =>
-  Object.fromEntries(
-    FUEL_TYPES.map((fuel) => [fuel, parseSpanishNumber(raw[FUELS[fuel].mitecoField])]),
+const FIELD_KEYS = FUEL_TYPES.map((fuel) => [fuel, FUELS[fuel].mitecoField.toLowerCase()] as const);
+
+/** Prices by fuel, matching MITECO field names case-insensitively. */
+function readPrices(raw: RawMitecoStation): FuelPrices {
+  const byLowerKey = new Map(Object.entries(raw).map(([k, v]) => [k.toLowerCase(), v]));
+  return Object.fromEntries(
+    FIELD_KEYS.map(([fuel, key]) => [fuel, parseSpanishNumber(byLowerKey.get(key))]),
   ) as FuelPrices;
+}
 
 /**
  * Normalises a province's current-prices payload into Stations.
@@ -68,7 +73,7 @@ export function toStations(
         code: raw['IDEESS'] || '',
         provinceCode,
         bulletinDate,
-        name: raw['Rótulo'] || 'Sin nombre',
+        name: raw['Rótulo'] || '',
         address: [raw['Dirección'], raw['Localidad'], raw['Provincia']].filter(Boolean).join(', '),
         lat,
         lon,
@@ -85,12 +90,7 @@ export function toHistoryPrices(payload: MitecoPayload): HistoryPrices {
   for (const raw of payload.ListaEESSPrecio || []) {
     const code = raw['IDEESS'];
     if (!code) continue;
-    const prices: Partial<FuelPrices> = {};
-    for (const fuel of FUEL_TYPES) {
-      const price = parseSpanishNumber(raw[FUELS[fuel].mitecoField]);
-      if (price !== null) prices[fuel] = price;
-    }
-    result[code] = prices;
+    result[code] = Object.fromEntries(Object.entries(readPrices(raw)).filter(([, price]) => price !== null));
   }
   return result;
 }

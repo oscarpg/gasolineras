@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { ageFilterFromSelectValue, matchesAgeFilter, requiredHistoryDays } from '../../src/domain/ageFilter';
+import {
+  AGE_FILTER_OPTION_IDS,
+  ageFilterFromOption,
+  isAgeFilterOption,
+  isCustomAgeOption,
+  LEGACY_AGE_FILTER_VALUES,
+  matchesAgeFilter,
+  requiredHistoryDays,
+} from '../../src/domain/ageFilter';
 import type { AgeFilter } from '../../src/domain/types';
 
 describe('matchesAgeFilter', () => {
@@ -39,20 +47,43 @@ describe('requiredHistoryDays', () => {
   });
 });
 
-describe('ageFilterFromSelectValue', () => {
-  it('maps every select option', () => {
-    expect(ageFilterFromSelectValue('TODAS', 5)).toEqual({ mode: 'all' });
-    expect(ageFilterFromSelectValue('0', 5)).toEqual({ mode: 'atMost', days: 0 });
-    expect(ageFilterFromSelectValue('3', 5)).toEqual({ mode: 'atMost', days: 3 });
-    expect(ageFilterFromSelectValue('MAX_X', 5)).toEqual({ mode: 'atMost', days: 5 });
-    expect(ageFilterFromSelectValue('EXACTO_1', 5)).toEqual({ mode: 'exactly', days: 1 });
-    expect(ageFilterFromSelectValue('EXACTO_2', 5)).toEqual({ mode: 'exactly', days: 2 });
-    expect(ageFilterFromSelectValue('MAS_3', 5)).toEqual({ mode: 'moreThan', days: 3 });
-    expect(ageFilterFromSelectValue('MAS_X', 7)).toEqual({ mode: 'moreThan', days: 7 });
+describe('age filter options', () => {
+  it('maps every option to its filter', () => {
+    expect(ageFilterFromOption('all', 5)).toEqual({ mode: 'all' });
+    expect(ageFilterFromOption('updatedToday', 5)).toEqual({ mode: 'atMost', days: 0 });
+    expect(ageFilterFromOption('atMost3', 5)).toEqual({ mode: 'atMost', days: 3 });
+    expect(ageFilterFromOption('atMostCustom', 5)).toEqual({ mode: 'atMost', days: 5 });
+    expect(ageFilterFromOption('exactly1', 5)).toEqual({ mode: 'exactly', days: 1 });
+    expect(ageFilterFromOption('exactly2', 5)).toEqual({ mode: 'exactly', days: 2 });
+    expect(ageFilterFromOption('moreThan3', 5)).toEqual({ mode: 'moreThan', days: 3 });
+    expect(ageFilterFromOption('moreThanCustom', 7)).toEqual({ mode: 'moreThan', days: 7 });
   });
 
-  it('treats unknown values as "all"', () => {
-    expect(ageFilterFromSelectValue('', 5)).toEqual({ mode: 'all' });
-    expect(ageFilterFromSelectValue('NOPE', 5)).toEqual({ mode: 'all' });
+  it('knows which options use the custom days', () => {
+    expect(AGE_FILTER_OPTION_IDS.filter(isCustomAgeOption)).toEqual(['atMostCustom', 'moreThanCustom']);
+  });
+
+  it('validates option ids', () => {
+    expect(isAgeFilterOption('moreThan3')).toBe(true);
+    expect(isAgeFilterOption('MAS_3')).toBe(false);
+    expect(isAgeFilterOption(undefined)).toBe(false);
+  });
+
+  it('maps every value the original select stored to an option with the same meaning', () => {
+    const old: Record<string, unknown> = {
+      TODAS: { mode: 'all' },
+      '0': { mode: 'atMost', days: 0 },
+      '1': { mode: 'atMost', days: 1 },
+      '2': { mode: 'atMost', days: 2 },
+      '3': { mode: 'atMost', days: 3 },
+      MAX_X: { mode: 'atMost', days: 6 },
+      EXACTO_1: { mode: 'exactly', days: 1 },
+      EXACTO_2: { mode: 'exactly', days: 2 },
+      MAS_3: { mode: 'moreThan', days: 3 },
+      MAS_X: { mode: 'moreThan', days: 6 },
+    };
+    for (const [legacy, filter] of Object.entries(old)) {
+      expect(ageFilterFromOption(LEGACY_AGE_FILTER_VALUES[legacy]!, 6)).toEqual(filter);
+    }
   });
 });

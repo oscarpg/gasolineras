@@ -1,5 +1,5 @@
 /* Leaflet divIcon markers. */
-.marcador-usuario {
+.user-marker {
   background-color: var(--color-user-marker);
   border: 3px solid #fff;
   border-radius: 50%;
@@ -8,7 +8,7 @@
     0 2px 6px rgba(0, 0, 0, 0.45);
 }
 
-.icono-gasolinera {
+.station-marker {
   background: transparent;
   border: none;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));

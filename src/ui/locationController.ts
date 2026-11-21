@@ -8,9 +8,9 @@ import type { Effects } from '../state/effects';
 import type { Store } from '../state/store';
 import { resetHistoryDepth, setRoute, setUserPosition } from '../state/transitions';
 import type { StatusLine } from './components/resultsPanel';
-import { errorMessage } from './dom';
+import { errorText } from './format';
+import { i18n } from './i18nContext';
 import type { MapView } from './map/mapView';
-import { TEXT } from './text';
 
 export interface LocationControllerDeps {
   store: Store<AppState>;
@@ -49,11 +49,12 @@ export function createLocationController(d: LocationControllerDeps): LocationCon
   async function loadProvince(code: string | null, force = false) {
     if (!code) return;
     if (!force && store.getState().loadedProvinces.includes(code)) return;
-    if (force || !d.miteco.hasCachedProvince(code)) status.show(TEXT.downloadingProvince(code));
+    if (force || !d.miteco.hasCachedProvince(code))
+      status.show(i18n().t('message.downloadingProvince', { code }));
     try {
       await d.effects.loadProvince(code, { force });
     } catch (error) {
-      status.show(TEXT.provinceError(errorMessage(error)));
+      status.show(i18n().t('message.provinceError', { message: errorText(error) }));
     }
   }
 
@@ -62,7 +63,7 @@ export function createLocationController(d: LocationControllerDeps): LocationCon
     store.update((s) => setUserPosition(s, [lat, lon]));
 
     if (!province) {
-      status.show(TEXT.findingProvince);
+      status.show(i18n().t('message.findingProvince'));
       try {
         province = await d.geocoder.reverseProvince([lat, lon]);
       } catch {
@@ -71,16 +72,16 @@ export function createLocationController(d: LocationControllerDeps): LocationCon
     }
 
     if (province) await loadProvince(province);
-    else status.show(TEXT.provinceUnknown);
+    else status.show(i18n().t('message.provinceUnknown'));
     // As in the original app: the summary replaces any temporary message.
     d.rerender();
   }
 
   function requestGps() {
-    status.show(TEXT.locatingGps);
+    status.show(i18n().t('message.locatingGps'));
     d.gps.getCurrentPosition().then(
       (position) => setOrigin(position),
-      (error: unknown) => status.show(TEXT.gpsError(errorMessage(error))),
+      (error: unknown) => status.show(i18n().t('message.gpsError', { message: errorText(error) })),
     );
   }
 
@@ -88,17 +89,17 @@ export function createLocationController(d: LocationControllerDeps): LocationCon
     requestGps,
 
     async searchAddress(query) {
-      status.show(TEXT.searchingAddress);
+      status.show(i18n().t('message.searchingAddress'));
       try {
         const place = await d.geocoder.search(query);
         if (!place) {
-          status.show(TEXT.addressNotFound);
+          status.show(i18n().t('message.addressNotFound'));
           return false;
         }
         await setOrigin(place.latLng, 13, place.provinceCode);
         return true;
       } catch (error) {
-        status.show(TEXT.genericError(errorMessage(error)));
+        status.show(i18n().t('message.genericError', { message: errorText(error) }));
         return false;
       }
     },
@@ -106,14 +107,14 @@ export function createLocationController(d: LocationControllerDeps): LocationCon
     async calculateRoute(query) {
       const origin = store.getState().userPosition;
       if (!origin) {
-        status.show(TEXT.originFirst);
+        status.show(i18n().t('message.originFirst'));
         return false;
       }
-      status.show(TEXT.calculatingRoute);
+      status.show(i18n().t('message.calculatingRoute'));
       try {
         const place = await d.geocoder.search(query);
         if (!place) {
-          status.show(TEXT.destinationNotFound);
+          status.show(i18n().t('message.destinationNotFound'));
           return false;
         }
         if (place.provinceCode && !store.getState().loadedProvinces.includes(place.provinceCode)) {
@@ -121,14 +122,14 @@ export function createLocationController(d: LocationControllerDeps): LocationCon
         }
         const points = await d.router.route(origin, place.latLng);
         if (!points) {
-          status.show(TEXT.routeNotFound);
+          status.show(i18n().t('message.routeNotFound'));
           return false;
         }
         d.mapView.showRoute(points);
         store.update((s) => setRoute(s, points));
         return true;
       } catch (error) {
-        status.show(TEXT.routeError(errorMessage(error)));
+        status.show(i18n().t('message.routeError', { message: errorText(error) }));
         return false;
       }
     },
@@ -145,13 +146,13 @@ export function createLocationController(d: LocationControllerDeps): LocationCon
 
     start() {
       if (!d.gps.isAvailable()) {
-        status.show(TEXT.noGeolocation);
+        status.show(i18n().t('message.noGeolocation'));
         return;
       }
-      status.show(TEXT.locating);
+      status.show(i18n().t('message.locating'));
       d.gps.getCurrentPosition().then(
         (position) => setOrigin(position),
-        () => status.show(TEXT.noLocationYet),
+        () => status.show(i18n().t('message.noLocationYet')),
       );
     },
   };

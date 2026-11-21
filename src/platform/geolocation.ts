@@ -1,3 +1,4 @@
+import { AppError } from '../domain/errors';
 import type { LatLng } from '../domain/types';
 
 /**
@@ -6,7 +7,7 @@ import type { LatLng } from '../domain/types';
  */
 export interface GeoProvider {
   isAvailable(): boolean;
-  /** Rejects with an Error whose message explains the failure (permission denied, timeout…). */
+  /** Rejects with an AppError: geolocation-denied, -unavailable or -timeout. */
   getCurrentPosition(): Promise<LatLng>;
 }
 
@@ -18,12 +19,23 @@ export function browserGeoProvider(
     getCurrentPosition: () =>
       new Promise((resolve, reject) => {
         if (!geolocation) {
-          reject(new Error('Geolocation not available'));
+          reject(new AppError('geolocation-unavailable'));
           return;
         }
         geolocation.getCurrentPosition(
           (pos) => resolve([pos.coords.latitude, pos.coords.longitude]),
-          (err) => reject(new Error(err.message)),
+          (err) =>
+            reject(
+              new AppError(
+                err.code === 1
+                  ? 'geolocation-denied'
+                  : err.code === 3
+                    ? 'geolocation-timeout'
+                    : 'geolocation-unavailable',
+                {},
+                err.message,
+              ),
+            ),
         );
       }),
   };

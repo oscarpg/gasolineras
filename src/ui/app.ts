@@ -1,10 +1,11 @@
 /**
  * Builds the UI from its components and keeps it in sync with the store.
  *
- * Each component reads the state it needs and skips work when its inputs haven't
- * changed; map markers are diffed. All HTML is built with the escaping `html`
- * helper, and dynamic buttons use event delegation (no global functions).
+ * Each component reads the state it needs and skips work when its inputs (and
+ * the language) haven't changed; map markers are diffed. All HTML is built with
+ * the escaping `html` helper, and dynamic buttons use event delegation.
  */
+import { createI18n, resolveLocale } from '../i18n';
 import type { GeoProvider } from '../platform/geolocation';
 import type { Geocoder } from '../services/geocoding';
 import type { MitecoService } from '../services/miteco';
@@ -18,8 +19,10 @@ import { createCarsSection } from './components/prefsDrawer/carsSection';
 import { createDiscountsSection } from './components/prefsDrawer/discountsSection';
 import { createDrawer } from './components/prefsDrawer/drawer';
 import { createFiltersSection } from './components/prefsDrawer/filtersSection';
+import { createLanguageSection } from './components/prefsDrawer/languageSection';
 import { createLocationRouteSections } from './components/prefsDrawer/locationRouteSections';
 import { createResultsPanel } from './components/resultsPanel';
+import { i18n, setI18n, translateStaticText } from './i18nContext';
 import { createLocationController } from './locationController';
 import { createMapView } from './map/mapView';
 import { createStationMarkers } from './map/stationMarkers';
@@ -32,15 +35,35 @@ export interface AppContext {
   geocoder: Geocoder;
   router: Router;
   gps: GeoProvider;
+  /** Browser language preferences, used when the user hasn't chosen a language. */
+  browserLanguages?: readonly string[];
 }
 
 /** Zoom used when a result card is clicked. */
 const STATION_ZOOM = 15;
 
-export function startApp({ store, effects, miteco, geocoder, router, gps }: AppContext): void {
+export function startApp({
+  store,
+  effects,
+  miteco,
+  geocoder,
+  router,
+  gps,
+  browserLanguages = navigator.languages ?? [navigator.language],
+}: AppContext): void {
+  /** Switches the translator when the chosen (or browser) language changes. Returns true if it changed. */
+  const applyLocale = (state: AppState): boolean => {
+    const locale = resolveLocale(state.preferences.locale, browserLanguages);
+    if (locale === i18n().locale && document.documentElement.lang === locale) return false;
+    setI18n(createI18n(locale));
+    translateStaticText();
+    return true;
+  };
+  applyLocale(store.getState());
+
   const selectVisible = createVisibleStationsSelector();
   const toast = createToaster();
-  const mapView = createMapView('mapa');
+  const mapView = createMapView('map');
   const markers = createStationMarkers(mapView.L, mapView.stationsLayer);
   const drawer = createDrawer();
 
@@ -68,11 +91,13 @@ export function startApp({ store, effects, miteco, geocoder, router, gps }: AppC
     createFiltersSection(store, effects),
     createCarsSection(store, toast),
     createDiscountsSection(store),
+    createLanguageSection(store),
   ];
 
   bindPriceHistoryButtons(document, { store, miteco });
 
   function render(state: AppState) {
+    applyLocale(state);
     for (const section of sections) section.render(state);
     const visible = selectVisible(state);
     markers.update(visible.rows, {
@@ -83,8 +108,8 @@ export function startApp({ store, effects, miteco, geocoder, router, gps }: AppC
     results.render(state, visible);
   }
 
-  // Initial screen: controls, cars, discounts and the sort option reflect the saved
-  // preferences; results appear once there is a location (as in the original app).
+  // Initial screen: controls, cars, discounts and the sort option reflect the saved preferences;
+  // results appear on the first state change (as in the original app).
   const initial = store.getState();
   for (const section of sections) section.render(initial);
   results.prepare(initial);

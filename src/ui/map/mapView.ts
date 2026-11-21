@@ -1,6 +1,6 @@
 import type { LatLng } from '../../domain/types';
 import { escapeHtml } from '../dom';
-import { TEXT } from '../text';
+import { i18n } from '../i18nContext';
 import { userIcon } from './icons';
 import { getLeaflet, type LeafletLayerGroup, type LeafletMarker, type LeafletStatic } from './leaflet';
 
@@ -36,7 +36,7 @@ export function createMapView(elementId: string, L: LeafletStatic = getLeaflet()
       if (userMarker) map.removeLayer(userMarker);
       userMarker = L.marker(position, { icon: userIcon(L), zIndexOffset: 1000 })
         .addTo(map)
-        .bindPopup(`<b>${escapeHtml(TEXT.yourLocation)}</b>`)
+        .bindPopup(`<b>${escapeHtml(i18n().t('message.yourLocation'))}</b>`)
         .openPopup();
       map.setView(position, zoom);
     },

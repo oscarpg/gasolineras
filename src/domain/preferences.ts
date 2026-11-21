@@ -1,15 +1,15 @@
 import { DEFAULT_FUEL } from '../config/fuels';
-import type { AgeFilterPreset } from './ageFilter';
+import type { AgeFilterOption } from './ageFilter';
 import type { Car, Discount, FuelType } from './types';
 
 export type Locale = 'es' | 'en';
 
 /** Everything the user chooses that survives a reload. Persisted by storage/preferences.ts. */
 export interface Preferences {
-  schemaVersion: 2;
+  schemaVersion: 3;
   fuel: FuelType;
-  /** Value of the age-filter select; reworked in Phase 5. */
-  ageFilterPreset: AgeFilterPreset;
+  /** Chosen age-filter option (see AGE_FILTER_OPTIONS). */
+  ageFilterOption: AgeFilterOption;
   /** The "X" days used by the custom age-filter options (1–10). */
   ageFilterCustomDays: number;
   /** Max distance from the user's location (1–50 km). */
@@ -26,14 +26,14 @@ export interface Preferences {
   discounts: Record<string, Discount>;
   cars: Car[];
   activeCarId: string | null;
-  /** UI language; `null` = follow the browser (Phase 5). */
+  /** UI language; `null` = follow the browser. */
   locale: Locale | null;
 }
 
 export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
-  schemaVersion: 2,
+  schemaVersion: 3,
   fuel: DEFAULT_FUEL,
-  ageFilterPreset: 'TODAS',
+  ageFilterOption: 'all',
   ageFilterCustomDays: 3,
   searchRadiusKm: 15,
   routeDetourKm: 3,

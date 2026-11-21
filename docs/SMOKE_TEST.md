@@ -38,7 +38,7 @@ tested too.
 
 ## Filters
 
-- [ ] Each fuel in "Carburante a mostrar" updates map and list.
+- [ ] Each fuel in "Carburante a mostrar" updates map and list (including GNC/GNL where a station sells them).
 - [ ] Age filter: try "Actualizado hoy", "≤ 2 días", "Más de X días" with X = 5.
       The custom X field appears only for the "X" options and the info line reports the history check.
 - [ ] Brands: untick "Todas", tick one brand, only that brand is shown; tick "Todas" again.
@@ -56,6 +56,12 @@ tested too.
 - [ ] Popup → "Ver evolución (7 días)" shows the SVG chart.
 - [ ] Results panel collapses/expands from its header.
 - [ ] Mobile width (≤ 700 px, use DevTools): ☰ icon replaces "Preferencias", panel spans the width.
+
+## Language
+
+- [ ] With the browser in Spanish, everything is in Spanish with decimal commas (`1,459 €/l`, `3,3 km`) and dates as `dd/mm/aaaa`.
+- [ ] Preferences → Idioma → English: the whole UI (drawer, list, status line, popups, chart, placeholders, tab title) switches immediately, with decimal points.
+- [ ] Reload: English is kept. Choose "Automatic (browser)": back to the browser's language.
 
 ## Persistence and refresh
 

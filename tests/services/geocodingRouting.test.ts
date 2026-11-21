@@ -4,6 +4,9 @@ import { createHttpClient } from '../../src/services/http';
 import { createRateLimiter } from '../../src/services/rateLimit';
 import { createRouter } from '../../src/services/routing';
 import { fakeFetch } from '../helpers';
+import realSearch from '../fixtures/nominatim-search.json';
+import realReverse from '../fixtures/nominatim-reverse.json';
+import realRoute from '../fixtures/osrm-route.json';
 
 /** A fake clock whose sleep() advances time instantly. */
 const fakeClock = () => {
@@ -137,5 +140,26 @@ describe('createRouter', () => {
     });
     const router = createRouter({ http: createHttpClient({ fetchFn }) });
     expect(await router.route([40.4, -3.7], [28.1, -15.4])).toBeNull();
+  });
+});
+
+describe('real Nominatim / OSRM responses (tests/fixtures)', () => {
+  it('geocodes Puerta del Sol to Madrid (28) and reverse-geocodes it back', async () => {
+    const fetchFn = fakeFetch({ '/search': realSearch, '/reverse': realReverse });
+    const geocoder = createGeocoder({ http: createHttpClient({ fetchFn }), limiter: createRateLimiter(0) });
+    const place = await geocoder.search('Puerta del Sol, Madrid');
+    expect(place!.provinceCode).toBe('28');
+    expect(place!.latLng[0]).toBeCloseTo(40.4169, 3);
+    expect(await geocoder.reverseProvince(place!.latLng)).toBe('28');
+  });
+
+  it('turns a real OSRM route into [lat, lon] points', async () => {
+    const fetchFn = fakeFetch({ 'router.project-osrm.org': realRoute });
+    const points = await createRouter({ http: createHttpClient({ fetchFn }) }).route(
+      [40.4168, -3.7038],
+      [40.4067, -3.711],
+    );
+    expect(points).toHaveLength(realRoute.routes[0]!.geometry.coordinates.length);
+    expect(points![0]![0]).toBeGreaterThan(40); // latitude first
   });
 });

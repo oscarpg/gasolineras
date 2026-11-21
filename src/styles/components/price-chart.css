@@ -1,5 +1,5 @@
 /* 7-day price history chart inside the popup. */
-.grafica-precio {
+.price-chart {
   margin-top: 6px;
   background: var(--color-surface-chart);
   border: 1px solid var(--color-border);
@@ -7,7 +7,7 @@
   display: block;
 }
 
-.grafica-nota {
+.price-chart-note {
   color: var(--color-text-muted);
   display: block;
   margin-top: 2px;

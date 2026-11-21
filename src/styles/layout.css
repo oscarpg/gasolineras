@@ -1,12 +1,12 @@
 /* Page-level layout: full-screen map with floating UI on top. */
-#mapa {
+#map {
   width: 100%;
   height: 100%;
   z-index: var(--z-map);
 }
 
 /* Horizontal row of controls inside a form section */
-.fila {
+.form-row {
   display: flex;
   gap: 8px;
   align-items: center;

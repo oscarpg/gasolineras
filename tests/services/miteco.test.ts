@@ -10,6 +10,8 @@ import {
 import { memoryStorageAdapter } from '../../src/storage/adapter';
 import { createCache } from '../../src/storage/cache';
 import { rawStation, samplePayload } from '../helpers';
+import realProvince from '../fixtures/miteco-province-28.json';
+import realHistory from '../fixtures/miteco-history-28.json';
 
 describe('parsing', () => {
   it('decodes escaped XML tag names', () => {
@@ -55,7 +57,7 @@ describe('parsing', () => {
     };
     const stations = toStations(payload, '28', new Date(2026, 10, 21));
     expect(stations).toHaveLength(1);
-    expect(stations[0]!.name).toBe('Sin nombre');
+    expect(stations[0]!.name).toBe(''); // the UI shows it as "Sin nombre" / "Unnamed"
     expect(stations[0]!.code).toBe('');
     expect(stations[0]!.address).toBe('CALLE EJEMPLO 1, MADRID');
     expect(stations[0]!.bulletinDate).toBe('21-11-2026'); // no "Fecha" → today
@@ -124,5 +126,37 @@ describe('createMitecoService', () => {
     await service.getHistoryDay('28', '20-11-2026');
     expect(urls).toHaveLength(1);
     expect(urls[0]).toMatch(/EstacionesTerrestresHist\/FiltroProvincia\/20-11-2026\/28$/);
+  });
+});
+
+describe('real MITECO responses (tests/fixtures, from `npm run fixtures`)', () => {
+  it('parses every station of a real province file', () => {
+    const stations = toStations(realProvince as MitecoPayload, '28');
+    expect(stations).toHaveLength(realProvince.ListaEESSPrecio.length);
+    const first = stations.find((s) => s.code === realProvince.ListaEESSPrecio[0]!.IDEESS)!;
+    const raw = realProvince.ListaEESSPrecio[0]!;
+    expect(first.name).toBe(raw['Rótulo']);
+    expect(first.lat).toBeCloseTo(Number(raw.Latitud.replace(',', '.')), 6);
+    expect(first.prices.GASOLINA_95).toBe(Number(raw['Precio Gasolina 95 E5'].replace(',', '.')));
+    expect(first.bulletinDate).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+    // Every station has at least one supported fuel price
+    expect(stations.every((s) => Object.values(s.prices).some((p) => p !== null))).toBe(true);
+  });
+
+  it('parses a real history file', () => {
+    const history = toHistoryPrices(realHistory as MitecoPayload);
+    expect(Object.keys(history)).toHaveLength(realHistory.ListaEESSPrecio.length);
+  });
+
+  it('reads fuel fields whatever their capitalisation (MITECO renamed "Gas natural" → "Gas Natural")', () => {
+    const current = rawStation(0, {
+      'Precio Gas Natural Comprimido': '1,234',
+      'Precio Gas Natural Licuado': '1,111',
+    });
+    const old = rawStation(1, { 'Precio Gas natural comprimido': '1,300' });
+    const [a, b] = toStations({ ListaEESSPrecio: [current, old] }, '28');
+    expect(a!.prices.GNC).toBe(1.234);
+    expect(a!.prices.GNL).toBe(1.111);
+    expect(b!.prices.GNC).toBe(1.3);
   });
 });

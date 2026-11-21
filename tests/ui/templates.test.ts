@@ -98,7 +98,7 @@ describe('station templates content', () => {
       route: [HOME, [40.5, -3.7]],
     });
     const popup = stationPopupHtml(row!, { fuel: 'GASOLINA_95', car: null, hasRoute: true }).value;
-    expect(popup).toContain('🛣️ Desvío de ruta: 0.0 km (0.0 km i/v)');
+    expect(popup).toContain('🛣️ Desvío de ruta: 0,0 km (0,0 km i/v)');
     expect(stationCardHtml(row!, 4, { car: null, hasRoute: true, sortedByTotalCost: false }).value).toContain(
       '5. REPSOL',
     );
@@ -125,14 +125,14 @@ describe('priceChartSvg', () => {
     expect(svg.match(/<circle/g)).toHaveLength(4);
     expect(svg).toContain('stroke-dasharray="none"');
     expect(svg).toMatch(/fill="#bbb"\s*>d2<\/text/);
-    expect(svg).not.toContain('grafica-nota');
+    expect(svg).not.toContain('price-chart-note');
   });
 
   it('draws a dashed line and a note when the price never changed', () => {
     const flat = series.map((s) => ({ ...s, price: s.price === null ? null : 1.5 }));
     const svg = priceChartSvg(flat, [flat[0]!, flat[6]!]).value;
     expect(svg).toContain('stroke-dasharray="4,3"');
-    expect(svg).toContain('grafica-nota');
+    expect(svg).toContain('price-chart-note');
   });
 });
 
