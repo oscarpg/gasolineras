@@ -172,6 +172,10 @@ so clustering is optional rather than required.
 - Diagnostics "Datos (prueba completa)": position → province → stations (download + cache) →
   history → staleness → visible stations, plus search, route and preferences save, all live.
 
+Phone check (Pixel 10 Pro, Android 17, A Coruña): province 15 from both the phone geocoder
+(272 ms) and Nominatim (1.1 s); 291 stations downloaded in 615 ms, 52 ms from cache; 4/4 history
+days; 87 stations within 15 km; search, a 6,386-point route and preferences save all OK.
+
 ### Phase 3 — State & ViewModel (2 days)
 
 - `AppState` + pure transitions + selectors (`selectVisibleStations` reused from domain).
