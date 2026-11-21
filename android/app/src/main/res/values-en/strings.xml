@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_title">Diagnostics</string>
+    <string name="diag_intro">Checks that the app works on this device. When you\'re done, copy the report and send it.</string>
+    <string name="diag_device">Device</string>
+    <string name="diag_miteco">MITECO prices</string>
+    <string name="diag_map_tiles">Map (OpenFreeMap)</string>
+    <string name="diag_location">Location</string>
+    <string name="diag_map_test">Map performance</string>
+    <string name="diag_not_run">Not run yet</string>
+    <string name="diag_running">Checking…</string>
+    <string name="diag_run_network">Test connection</string>
+    <string name="diag_run_location">Test location</string>
+    <string name="diag_open_map">Open map test</string>
+    <string name="diag_copy_report">Copy report</string>
+    <string name="diag_share_report">Share</string>
+    <string name="diag_report_copied">Report copied</string>
+    <string name="diag_report">Report</string>
+    <string name="map_test_title">Map test</string>
+    <string name="map_test_running">Measuring performance…</string>
+    <string name="map_test_done">Test finished</string>
+    <string name="map_test_markers">Stations on the map: %1$d</string>
+    <string name="navigate_back">Back</string>
+</resources>

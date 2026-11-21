@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Gasolineras</string>
+    <string name="diag_title">Diagnóstico</string>
+    <string name="diag_intro">Comprueba que la app funciona en este dispositivo. Al terminar, copia el informe y envíalo.</string>
+    <string name="diag_device">Dispositivo</string>
+    <string name="diag_miteco">Precios MITECO</string>
+    <string name="diag_map_tiles">Mapa (OpenFreeMap)</string>
+    <string name="diag_location">Ubicación</string>
+    <string name="diag_map_test">Rendimiento del mapa</string>
+    <string name="diag_not_run">Sin ejecutar</string>
+    <string name="diag_running">Comprobando…</string>
+    <string name="diag_run_network">Probar conexión</string>
+    <string name="diag_run_location">Probar ubicación</string>
+    <string name="diag_open_map">Abrir prueba del mapa</string>
+    <string name="diag_copy_report">Copiar informe</string>
+    <string name="diag_share_report">Compartir</string>
+    <string name="diag_report_copied">Informe copiado</string>
+    <string name="diag_report">Informe</string>
+    <string name="map_test_title">Prueba del mapa</string>
+    <string name="map_test_running">Midiendo rendimiento…</string>
+    <string name="map_test_done">Prueba terminada</string>
+    <string name="map_test_markers">Gasolineras en el mapa: %1$d</string>
+    <string name="navigate_back">Atrás</string>
+</resources>

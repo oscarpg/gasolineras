@@ -1,0 +1,275 @@
+package es.gasolineras.map.maplibre
+
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import es.gasolineras.map.api.CameraTarget
+import es.gasolineras.map.api.GeoPoint
+import es.gasolineras.map.api.MapContent
+import es.gasolineras.map.api.MapRenderer
+import es.gasolineras.map.api.MapStyle
+import org.maplibre.android.MapLibre
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
+import org.maplibre.android.style.expressions.Expression.get
+import org.maplibre.android.style.expressions.Expression.literal
+import org.maplibre.android.style.expressions.Expression.switchCase
+import org.maplibre.android.style.expressions.Expression.toBool
+import org.maplibre.android.style.expressions.Expression.toColor
+import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.Property
+import org.maplibre.android.style.layers.PropertyFactory.circleColor
+import org.maplibre.android.style.layers.PropertyFactory.circleRadius
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
+import org.maplibre.android.style.layers.PropertyFactory.lineCap
+import org.maplibre.android.style.layers.PropertyFactory.lineColor
+import org.maplibre.android.style.layers.PropertyFactory.lineJoin
+import org.maplibre.android.style.layers.PropertyFactory.lineWidth
+import org.maplibre.android.style.layers.PropertyFactory.textColor
+import org.maplibre.android.style.layers.PropertyFactory.textField
+import org.maplibre.android.style.layers.PropertyFactory.textFont
+import org.maplibre.android.style.layers.PropertyFactory.textHaloColor
+import org.maplibre.android.style.layers.PropertyFactory.textHaloWidth
+import org.maplibre.android.style.layers.PropertyFactory.textOffset
+import org.maplibre.android.style.layers.PropertyFactory.textOptional
+import org.maplibre.android.style.layers.PropertyFactory.textSize
+import org.maplibre.android.style.layers.SymbolLayer
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.Feature
+import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.LineString
+import org.maplibre.geojson.Point
+
+/** OpenFreeMap vector styles: free, no API key. Swap these to change tile provider. */
+val OpenFreeMapStyle = MapStyle(
+    styleUrl = "https://tiles.openfreemap.org/styles/liberty",
+    darkStyleUrl = "https://tiles.openfreemap.org/styles/dark",
+)
+
+/**
+ * [MapRenderer] backed by MapLibre Native. The only class in the project that knows MapLibre.
+ * Markers are drawn as a GeoJSON source + circle/symbol layers so thousands stay smooth.
+ */
+class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRenderer {
+
+    @Composable
+    override fun Map(
+        content: MapContent,
+        camera: CameraTarget,
+        darkTheme: Boolean,
+        onMarkerClick: (id: String) -> Unit,
+        onCameraIdle: (CameraTarget) -> Unit,
+        modifier: Modifier,
+        contentPadding: PaddingValues,
+    ) {
+        val context = LocalContext.current
+        val density = LocalDensity.current
+        val layoutDirection = LocalLayoutDirection.current
+        val mapView = remember {
+            MapLibre.getInstance(context)
+            MapView(context).apply { onCreate(null) }
+        }
+        var map by remember { mutableStateOf<MapLibreMap?>(null) }
+        var loadedStyle by remember { mutableStateOf<Style?>(null) }
+        var cameraInitialised by remember { mutableStateOf(false) }
+        val currentOnMarkerClick by rememberUpdatedState(onMarkerClick)
+        val currentOnCameraIdle by rememberUpdatedState(onCameraIdle)
+
+        MapViewLifecycle(mapView)
+
+        LaunchedEffect(mapView) {
+            mapView.getMapAsync { m ->
+                m.uiSettings.isRotateGesturesEnabled = false
+                m.uiSettings.isTiltGesturesEnabled = false
+                m.addOnMapClickListener { point ->
+                    val screen = m.projection.toScreenLocation(point)
+                    val id = m.queryRenderedFeatures(screen, MARKER_LAYER)
+                        .firstOrNull()
+                        ?.getStringProperty(PROP_ID)
+                    if (id != null) currentOnMarkerClick(id)
+                    id != null
+                }
+                m.addOnCameraIdleListener {
+                    val position = m.cameraPosition
+                    val target = position.target ?: return@addOnCameraIdleListener
+                    currentOnCameraIdle(CameraTarget(GeoPoint(target.latitude, target.longitude), position.zoom))
+                }
+                map = m
+            }
+        }
+
+        val styleUrl = if (darkTheme) style.darkStyleUrl else style.styleUrl
+        LaunchedEffect(map, styleUrl) {
+            val m = map ?: return@LaunchedEffect
+            loadedStyle = null
+            m.setStyle(Style.Builder().fromUri(styleUrl)) { s ->
+                addLayers(s)
+                loadedStyle = s
+            }
+        }
+
+        LaunchedEffect(loadedStyle, content) {
+            val s = loadedStyle ?: return@LaunchedEffect
+            s.getSourceAs<GeoJsonSource>(MARKER_SOURCE)?.setGeoJson(
+                FeatureCollection.fromFeatures(
+                    content.markers.map { marker ->
+                        Feature.fromGeometry(marker.position.toPoint()).apply {
+                            addStringProperty(PROP_ID, marker.id)
+                            addStringProperty(PROP_LABEL, marker.label)
+                            addStringProperty(PROP_COLOR, marker.color.toHex())
+                            addBooleanProperty(PROP_SELECTED, marker.selected)
+                        }
+                    },
+                ),
+            )
+            s.getSourceAs<GeoJsonSource>(ROUTE_SOURCE)?.setGeoJson(
+                FeatureCollection.fromFeatures(
+                    listOfNotNull(
+                        content.route?.takeIf { it.size >= 2 }?.let { route ->
+                            Feature.fromGeometry(LineString.fromLngLats(route.map { it.toPoint() }))
+                        },
+                    ),
+                ),
+            )
+            s.getSourceAs<GeoJsonSource>(USER_SOURCE)?.setGeoJson(
+                FeatureCollection.fromFeatures(
+                    listOfNotNull(content.userPosition?.let { Feature.fromGeometry(it.toPoint()) }),
+                ),
+            )
+        }
+
+        LaunchedEffect(map, camera, contentPadding) {
+            val m = map ?: return@LaunchedEffect
+            val padding = with(density) {
+                doubleArrayOf(
+                    contentPadding.calculateLeftPadding(layoutDirection).toPx().toDouble(),
+                    contentPadding.calculateTopPadding().toPx().toDouble(),
+                    contentPadding.calculateRightPadding(layoutDirection).toPx().toDouble(),
+                    contentPadding.calculateBottomPadding().toPx().toDouble(),
+                )
+            }
+            val position = CameraPosition.Builder()
+                .target(LatLng(camera.center.lat, camera.center.lon))
+                .zoom(camera.zoom)
+                .padding(padding)
+                .build()
+            if (cameraInitialised) {
+                m.animateCamera(CameraUpdateFactory.newCameraPosition(position), CAMERA_ANIMATION_MS)
+            } else {
+                m.cameraPosition = position
+                cameraInitialised = true
+            }
+        }
+
+        AndroidView(factory = { mapView }, modifier = modifier)
+    }
+
+    private fun addLayers(s: Style) {
+        s.addSource(GeoJsonSource(ROUTE_SOURCE))
+        s.addLayer(
+            LineLayer(ROUTE_LAYER, ROUTE_SOURCE).withProperties(
+                lineColor(ROUTE_COLOR),
+                lineWidth(5f),
+                lineCap(Property.LINE_CAP_ROUND),
+                lineJoin(Property.LINE_JOIN_ROUND),
+            ),
+        )
+        s.addSource(GeoJsonSource(MARKER_SOURCE))
+        s.addLayer(
+            CircleLayer(MARKER_LAYER, MARKER_SOURCE).withProperties(
+                circleColor(toColor(get(PROP_COLOR))),
+                circleRadius(switchCase(toBool(get(PROP_SELECTED)), literal(11f), literal(7f))),
+                circleStrokeColor("#FFFFFF"),
+                circleStrokeWidth(2f),
+            ),
+        )
+        s.addLayer(
+            SymbolLayer(LABEL_LAYER, MARKER_SOURCE).withProperties(
+                textField(get(PROP_LABEL)),
+                textFont(arrayOf("Noto Sans Regular")),
+                textSize(12f),
+                textOffset(arrayOf(0f, 1.5f)),
+                textColor("#202124"),
+                textHaloColor("#FFFFFF"),
+                textHaloWidth(1.5f),
+                textOptional(true),
+            ),
+        )
+        s.addSource(GeoJsonSource(USER_SOURCE))
+        s.addLayer(
+            CircleLayer(USER_LAYER, USER_SOURCE).withProperties(
+                circleColor(ROUTE_COLOR),
+                circleRadius(8f),
+                circleStrokeColor("#FFFFFF"),
+                circleStrokeWidth(3f),
+            ),
+        )
+    }
+
+    private companion object {
+        const val MARKER_SOURCE = "gas-markers"
+        const val MARKER_LAYER = "gas-markers-circles"
+        const val LABEL_LAYER = "gas-markers-labels"
+        const val ROUTE_SOURCE = "gas-route"
+        const val ROUTE_LAYER = "gas-route-line"
+        const val USER_SOURCE = "gas-user"
+        const val USER_LAYER = "gas-user-dot"
+        const val PROP_ID = "id"
+        const val PROP_LABEL = "label"
+        const val PROP_COLOR = "color"
+        const val PROP_SELECTED = "selected"
+        const val ROUTE_COLOR = "#1A73E8"
+        const val CAMERA_ANIMATION_MS = 600
+    }
+}
+
+private fun GeoPoint.toPoint(): Point = Point.fromLngLat(lon, lat)
+
+private fun Color.toHex(): String = String.format(java.util.Locale.ROOT, "#%06X", 0xFFFFFF and toArgb())
+
+/** Forwards the host lifecycle to the MapView, as MapLibre requires. */
+@Composable
+private fun MapViewLifecycle(mapView: MapView) {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, mapView) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> mapView.onStart()
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                Lifecycle.Event.ON_STOP -> mapView.onStop()
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+            val state = lifecycle.currentState
+            if (state.isAtLeast(Lifecycle.State.RESUMED)) mapView.onPause()
+            if (state.isAtLeast(Lifecycle.State.STARTED)) mapView.onStop()
+            mapView.onDestroy()
+        }
+    }
+}
