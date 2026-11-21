@@ -5,6 +5,10 @@ cheapest stations from MITECO data, real cost with car + discounts, route mode,
 price-age filter, 7-day price chart, ES/EN), looking and behaving like a
 first-class Android app.
 
+**Decisions taken:** map = OpenFreeMap (behind a swappable map layer, see §3.1) ·
+distribution = signed APK on GitHub Releases · package = `es.gasolineras` ·
+home-screen widget included in the first release.
+
 ## 1. Key decisions
 
 | Topic | Decision | Why |
@@ -17,13 +21,15 @@ first-class Android app.
 | Architecture | Single activity, MVVM + unidirectional state (`StateFlow`), mirroring the web `store / transitions / selectors / effects` split | Same mental model as the web code; domain stays pure and testable. |
 | DI | Hilt | Standard, integrates with ViewModels and WorkManager. |
 | Networking | OkHttp + Retrofit (or Ktor) + kotlinx.serialization | No CORS on Android: call MITECO directly, **drop the CORS relays**. |
-| Map | **MapLibre Native (Android) + OpenFreeMap vector tiles** — alternative: Google Maps Compose | MapLibre: no API key, no billing account, OSM data like the web. Google Maps looks the most "stock" but needs a Cloud project + key. Decide in Phase 0. |
+| Map | **MapLibre Native (Android) + OpenFreeMap vector tiles**, behind a provider-agnostic map interface (§3.1) | No API key, no billing account, OSM data like the web. Tiles or the whole map SDK can be swapped later without touching screens. |
 | Location | Fused Location Provider (Play Services), coarse + fine permission, "approximate" supported | Fast fixes, battery friendly. |
 | Geocoding | Platform `android.location.Geocoder` first, Nominatim fallback (keep 1 req/s limiter + identifying User-Agent) | Fewer calls to Nominatim; postcode → province logic is reused. |
 | Routing | OSRM (same as web) | Reuse; flag as risk (demo server is not for production). |
 | Persistence | Preferences: **DataStore** (JSON-serialised `Preferences` v3, same schema). Cache: JSON files in `cacheDir` with TTL (same keys: `stations:<prov>:<day>`, `history:<prov>:<date>`) | Mirrors `storage/cache.ts` and `storage/preferences.ts`. |
 | Chart | Small custom Compose `Canvas` line chart | Only one chart; avoids a dependency. |
 | i18n | `strings.xml` (`values-es` default content, `values-en`), per-app language via `AppCompatDelegate.setApplicationLocales` + `locales_config.xml` | Native language picker in system settings on Android 13+. |
+| Package / app id | `es.gasolineras` (debug builds: `es.gasolineras.debug`) | Chosen. |
+| Distribution | Signed APK attached to GitHub Releases; Play Store later | Chosen. Release build stays Play-ready (AAB can be added in one CI step). |
 | Repo layout | New `android/` folder in this repo, independent Gradle project | Shares fixtures and docs; web build untouched. |
 
 ## 2. Feature mapping (web → Android)
@@ -57,17 +63,54 @@ android/
       prefs/       # PreferencesRepository (DataStore, schema v3 + migrations)
       location/    # LocationRepository (fused provider, permission state)
     state/         # AppState, transitions, selectors, effects (coroutines)
+    widget/        # Glance home-screen widget + WorkManager refresh
     ui/
       theme/       # Color, Type, Shape, dynamic colour
-      map/         # MapScreen, markers, route polyline
+      map/         # MapScreen + api/ (MapRenderer, MapMarker, MapStyle) — SDK-free
       results/     # sheet, list rows, sort/fuel controls
       station/     # detail sheet, PriceChart
       settings/    # settings screens, cars, discounts, brands
       components/  # shared composables
     MainActivity.kt, GasolinerasApp.kt (Hilt)
+  map-maplibre/        # MapLibreRenderer: the only module that knows MapLibre
   app/src/test/        # JVM unit tests (domain, parsing, repos with MockWebServer)
   app/src/androidTest/ # Compose UI tests
 ```
+
+### 3.1 Swappable map layer
+
+Screens never import MapLibre. They talk to a small interface and receive plain domain data:
+
+```kotlin
+// ui/map/api — no SDK types here
+data class MapMarker(val id: String, val position: LatLng, val label: String, val color: Color, val selected: Boolean)
+data class CameraTarget(val center: LatLng, val zoom: Double)
+
+interface MapRenderer {
+    @Composable
+    fun Map(
+        markers: List<MapMarker>,
+        route: List<LatLng>?,
+        userPosition: LatLng?,
+        camera: CameraTarget,
+        contentPadding: PaddingValues,       // keeps markers clear of the bottom sheet
+        onMarkerClick: (id: String) -> Unit,
+        onCameraIdle: (CameraTarget) -> Unit,
+        modifier: Modifier,
+    )
+}
+
+data class MapStyle(val styleUrl: String, val darkStyleUrl: String, val attribution: String)
+```
+
+- `ui/map/maplibre/MapLibreRenderer` is the only code that depends on the MapLibre SDK.
+- The tile source is configuration: `MapStyle` is provided by Hilt from `config/MapConfig.kt`
+  (OpenFreeMap "liberty" / dark style URLs today). Switching to MapTiler, Stadia or a
+  self-hosted style = change the URLs (and add a key via `BuildConfig` if needed).
+- Switching SDK (e.g. Google Maps) = add `ui/map/google/GoogleMapRenderer` and change one
+  Hilt binding. A `FakeMapRenderer` is used in Compose UI tests.
+- Map SDK isolated in its own Gradle module (`:map-maplibre`) so a replacement doesn't
+  touch the app module's dependencies.
 
 Test fixtures: reuse `tests/fixtures/*.json|xml` from the web project (Gradle copies
 them into test resources), so both apps are validated against the same real samples.
@@ -81,8 +124,9 @@ Each phase ends with a working, tested build; mirrors how the web refactor was d
 - Spike: fetch `FiltroProvincia/28` from a real device/emulator. **Verify the MITECO TLS
   chain** (FNMT-issued cert); if the system trust store rejects it, add a
   `network_security_config.xml` pinning the FNMT root for that host only.
-- Spike: MapLibre + OpenFreeMap rendering 1,000+ markers smoothly; decide MapLibre vs Google Maps.
-- App id, name, adaptive icon (reuse ⛽ identity), splash screen API.
+- Spike: MapLibre + OpenFreeMap rendering 1,000+ markers smoothly (GeoJSON symbol layer), light and dark styles.
+- Define the `MapRenderer` interface and `MapStyle` config (§3.1) before any map screen is written.
+- App id `es.gasolineras`, name, adaptive icon (reuse ⛽ identity), splash screen API.
 - **Done when:** empty app with theme runs on API 26 and API 36 emulators; CI builds it.
 
 ### Phase 1 — Domain port (2–3 days)
@@ -129,18 +173,27 @@ Each phase ends with a working, tested build; mirrors how the web refactor was d
 - Compose UI tests for main flows; optional screenshot tests (Roborazzi/Paparazzi).
 - **Done when:** no lint errors, cold start < 1.5 s on a mid-range device, UI tests green.
 
-### Phase 7 — Release (2 days)
-- GitHub Actions `android.yml` (path filter `android/**`, `tests/fixtures/**`): lint, detekt, unit tests, `assembleRelease`/`bundleRelease`.
-- Release signing via repository secrets; versioning from tags.
-- Play Console: listing (ES/EN), data-safety form (location used on-device only, no account, no tracking), privacy policy page (can live on the GitHub Pages site), internal → closed → production tracks.
+### Phase 7 — Home-screen widget (2–3 days)
+- Jetpack Glance widget (resizable: small = best price + brand; medium = top 3 with distance).
+- Data: last known location + active car's fuel (or chosen fuel), stations from the daily cache; refresh with a periodic `WorkManager` job (e.g. every 3 h, unmetered not required) and on app open.
+- Tap a row → opens the app on that station; refresh button; "location unavailable" / "no data" states.
+- Respects dynamic colour and dark mode; strings in ES/EN.
+- **Done when:** widget updates after a price refresh and survives reboot; works with only "approximate location".
 
-### Phase 8 — Optional, native-only extras
-- Home-screen widget (Glance): cheapest station near last location for the active car's fuel.
+### Phase 8 — APK release (1–2 days)
+- GitHub Actions `android.yml` (path filter `android/**`, `tests/fixtures/**`): lint, detekt, unit tests, `assembleRelease` on every PR.
+- On tag `android-v*`: build a **signed release APK** (keystore + passwords as repository secrets), attach it to a GitHub Release with changelog. `versionName` from the tag, `versionCode` from the run number.
+- In-app "About": version, data sources and OSM/OpenFreeMap attribution, link to releases page.
+- README section: how to install the APK (allow "install unknown apps"), and how to update.
+- Keep the build Play-ready (R8, signing config, privacy policy page on GitHub Pages) so publishing later is only adding `bundleRelease` + the Play listing.
+
+### Phase 9 — Later, optional
+- Play Store publishing (AAB, listing ES/EN, data-safety form).
 - App shortcuts ("Cheapest near me", "Route home").
 - Android Auto (Car App Library, POI category) — later, needs Google review.
 - Favourite stations and price-drop notifications (WorkManager daily check).
 
-**Rough total:** ~4–5 weeks for one developer to reach Play Store parity (Phases 0–7).
+**Rough total:** ~5 weeks for one developer to reach a released APK with widget (Phases 0–8).
 
 ## 5. Risks & mitigations
 
@@ -153,9 +206,12 @@ Each phase ends with a working, tested build; mirrors how the web refactor was d
 | Logic drift between web and Android | Shared fixtures + ported parity tests; any domain change updates both test suites. |
 | Many markers hurting performance | MapLibre symbol layer (GeoJSON source) instead of individual views; clustering. |
 
-## 6. Open questions for you
+## 6. Decision log
 
-1. **Map provider:** MapLibre + OpenFreeMap (free, no key) or Google Maps (most familiar look, needs a Google Cloud key)?
-2. **Play Store** publishing in scope now, or sideloaded APK / GitHub Releases first?
-3. Package name (e.g. `es.gasolineras` or `io.github.oscarpg.gasolineras`)?
-4. Any Phase 8 extras you want promoted into the first release (widget is the cheapest win)?
+| Date | Decision |
+| --- | --- |
+| 2026-11-21 | Native Kotlin + Compose, Material 3, minSdk 26 / targetSdk 36 |
+| 2026-11-21 | Map: OpenFreeMap tiles via MapLibre, behind a swappable `MapRenderer` interface |
+| 2026-11-21 | Distribution: signed APK on GitHub Releases (Play Store later) |
+| 2026-11-21 | Package name: `es.gasolineras` |
+| 2026-11-21 | Home-screen widget included in the first release |
