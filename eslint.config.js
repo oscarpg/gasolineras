@@ -4,7 +4,8 @@ import globals from 'globals';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'coverage'] },
+  // src/legacy/ is the old inline script, moved as-is; it shrinks each phase and is deleted in Phase 5.
+  { ignores: ['dist', 'node_modules', 'coverage', 'src/legacy/**'] },
 
   js.configs.recommended,
   ...tseslint.configs.recommended,
