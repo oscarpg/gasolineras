@@ -86,7 +86,9 @@ await step('MITECO province (XML)', async () => {
 });
 
 await step('MITECO history (yesterday, JSON)', async () => {
-  const text = await get(`${MITECO}/EstacionesTerrestresHist/FiltroProvincia/${mitecoDate(yesterday)}/${PROVINCE}`);
+  const text = await get(
+    `${MITECO}/EstacionesTerrestresHist/FiltroProvincia/${mitecoDate(yesterday)}/${PROVINCE}`,
+  );
   await save(`miteco-history-${PROVINCE}.json`, trimMitecoJson(text));
 });
 

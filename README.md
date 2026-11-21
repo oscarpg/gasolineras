@@ -20,16 +20,16 @@ npm run dev        # http://localhost:5173/gasolineras/
 
 ## Scripts
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Local dev server with hot reload |
-| `npm run build` | Type-check and build the static site into `dist/` |
-| `npm run preview` | Serve `dist/` locally to check the production build |
-| `npm run check` | Lint + format check + type-check + tests (what CI runs) |
-| `npm test` | Unit tests (Vitest) |
-| `npm run lint` | ESLint |
-| `npm run format` | Format all files with Prettier |
-| `npm run fixtures` | Download small real API samples into `tests/fixtures/` |
+| Command            | What it does                                            |
+| ------------------ | ------------------------------------------------------- |
+| `npm run dev`      | Local dev server with hot reload                        |
+| `npm run build`    | Type-check and build the static site into `dist/`       |
+| `npm run preview`  | Serve `dist/` locally to check the production build     |
+| `npm run check`    | Lint + format check + type-check + tests (what CI runs) |
+| `npm test`         | Unit tests (Vitest)                                     |
+| `npm run lint`     | ESLint                                                  |
+| `npm run format`   | Format all files with Prettier                          |
+| `npm run fixtures` | Download small real API samples into `tests/fixtures/`  |
 
 ## Deployment
 

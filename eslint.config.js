@@ -60,7 +60,14 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['leaflet', '**/ui/**', '**/storage/**', '**/platform/**', '**/services/**', '**/state/**'],
+              group: [
+                'leaflet',
+                '**/ui/**',
+                '**/storage/**',
+                '**/platform/**',
+                '**/services/**',
+                '**/state/**',
+              ],
               message: 'domain/ is pure: it may only import from config/ and other domain/ files.',
             },
           ],
