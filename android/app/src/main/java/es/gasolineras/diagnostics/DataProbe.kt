@@ -10,6 +10,8 @@ import es.gasolineras.core.domain.daysBefore
 import es.gasolineras.core.domain.requiredHistoryDays
 import es.gasolineras.core.domain.selectVisibleStations
 import es.gasolineras.core.domain.toMitecoDate
+import es.gasolineras.data.prefs.loadPreferences
+import es.gasolineras.data.prefs.savePreferences
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -69,7 +71,7 @@ class DataProbe(private val c: AppContainer) {
         lines += "Stations: ${stations.size} in province $province · download $downloadMs ms · from cache ${ms(t)} ms"
 
         // 4. History and staleness (as many days as the current age filter needs)
-        val prefs = c.preferences.preferences.value
+        val prefs = loadPreferences(c.preferencesStorage)
         val today = LocalDate.now()
         val window = (1..requiredHistoryDays(prefs.ageFilter)).map { HistoryWindowDay(it, toMitecoDate(daysBefore(today, it))) }
         t = System.nanoTime()
@@ -114,7 +116,7 @@ class DataProbe(private val c: AppContainer) {
         }
 
         // 7. Preferences are saved
-        val saved = c.preferences.update { it }
+        val saved = savePreferences(c.preferencesStorage, prefs)
         lines += "Preferences: ${if (saved) "saved" else "SAVE FAILED"}"
         if (!saved) ok = false
 

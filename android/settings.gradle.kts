@@ -19,5 +19,6 @@ rootProject.name = "gasolineras"
 include(":app")
 include(":core")
 include(":data")
+include(":state")
 include(":map-api")
 include(":map-maplibre")

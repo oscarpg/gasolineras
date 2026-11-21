@@ -23,6 +23,13 @@ import java.time.format.DateTimeFormatter
 
 private const val DAY_MS = 24L * 60 * 60 * 1000
 
+/** What the app state needs from MITECO (lets state tests use a fake). */
+interface MitecoSource {
+    fun hasCachedProvince(code: String): Boolean
+    suspend fun getProvinceStations(code: String, force: Boolean = false): List<Station>
+    suspend fun getHistoryDay(code: String, date: String): HistoryPrices
+}
+
 /**
  * MITECO prices with a daily cache. Port of services/miteco.ts.
  * No CORS on Android, so the attempts are only: JSON, then whatever MITECO sends by default (XML).
@@ -34,7 +41,7 @@ class MitecoRepository(
     /** Runs shared downloads, so one caller giving up doesn't cancel the others. */
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
     private val onAttemptFailed: (String) -> Unit = {},
-) {
+) : MitecoSource {
     constructor(http: HttpClient, cache: Cache, now: () -> LocalDateTime = LocalDateTime::now) :
         this(cache, defaultAttempts(http), now)
 
@@ -67,10 +74,10 @@ class MitecoRepository(
         cache.get(stationsKey(code), STATIONS)?.takeIf { it.isNotEmpty() }
 
     /** Whether today's prices for the province are already cached (no download needed). */
-    fun hasCachedProvince(code: String): Boolean = cachedStations(code) != null
+    override fun hasCachedProvince(code: String): Boolean = cachedStations(code) != null
 
     /** Today's stations for a province; downloaded at most once a day unless [force] is set. */
-    suspend fun getProvinceStations(code: String, force: Boolean = false): List<Station> {
+    override suspend fun getProvinceStations(code: String, force: Boolean): List<Station> {
         if (!force) cachedStations(code)?.let { return it }
         return once("stations:$code") {
             val payload = fetchWithFallback(Endpoints.MITECO_PROVINCE + code, ::parseMitecoText, attempts, onAttemptFailed)
@@ -81,7 +88,7 @@ class MitecoRepository(
     }
 
     /** Prices a province had on a past day (`dd-mm-yyyy`). Past days never change, so they're cached. */
-    suspend fun getHistoryDay(code: String, date: String): HistoryPrices {
+    override suspend fun getHistoryDay(code: String, date: String): HistoryPrices {
         val key = historyKey(code, date)
         cache.get(key, HISTORY)?.let { return it }
         return once(key) {

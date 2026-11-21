@@ -10,7 +10,6 @@ import es.gasolineras.core.domain.Preferences
 import es.gasolineras.data.prefs.LEGACY_PREFERENCES_KEY
 import es.gasolineras.data.prefs.PREFERENCES_KEY
 import es.gasolineras.data.prefs.PreferencesCodec
-import es.gasolineras.data.prefs.PreferencesStore
 import es.gasolineras.data.prefs.loadPreferences
 import es.gasolineras.data.prefs.savePreferences
 import es.gasolineras.data.storage.MemoryStorage
@@ -144,13 +143,4 @@ class PreferencesTest {
 
     @Test fun `reports failure instead of throwing when storage is full`() =
         assertFalse(savePreferences(MemoryStorage(10), migrated))
-
-    @Test fun `the store saves every change and reloads it`() {
-        val storage = MemoryStorage()
-        val store = PreferencesStore(storage)
-        assertTrue(store.update { it.copy(searchRadiusKm = 30.0, locale = AppLocale.ES) })
-        assertEquals(30.0, store.preferences.value.searchRadiusKm, 0.0)
-        assertEquals(30.0, PreferencesStore(storage).preferences.value.searchRadiusKm, 0.0)
-        assertEquals(AppLocale.ES, PreferencesStore(storage).preferences.value.locale)
-    }
 }

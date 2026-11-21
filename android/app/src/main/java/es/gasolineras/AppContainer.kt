@@ -11,7 +11,6 @@ import es.gasolineras.data.geo.Router
 import es.gasolineras.data.http.HttpClient
 import es.gasolineras.data.http.OkHttpHttpClient
 import es.gasolineras.data.miteco.MitecoRepository
-import es.gasolineras.data.prefs.PreferencesStore
 import es.gasolineras.data.storage.Cache
 import es.gasolineras.data.storage.FileStorage
 import okhttp3.OkHttpClient
@@ -42,8 +41,8 @@ class AppContainer(context: Context) {
     val geocoder: Geocoder = FallbackGeocoder(phoneGeocoder, nominatim)
     val router: Router = OsrmRouter(http)
 
-    /** User choices: in filesDir (kept until uninstall). */
-    val preferences = PreferencesStore(FileStorage(File(app.filesDir, "preferences")))
+    /** User choices: in filesDir (kept until uninstall). The app state owns them; see MainViewModel. */
+    val preferencesStorage = FileStorage(File(app.filesDir, "preferences"))
 
     val location = LocationRepository(app)
 }

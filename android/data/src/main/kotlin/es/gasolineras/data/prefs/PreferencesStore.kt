@@ -2,10 +2,6 @@ package es.gasolineras.data.prefs
 
 import es.gasolineras.core.domain.Preferences
 import es.gasolineras.data.storage.KeyValueStorage
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 
 /** Storage key for the current preferences format (same as the web app). */
 const val PREFERENCES_KEY = "gasolineras.preferences"
@@ -34,17 +30,4 @@ fun savePreferences(storage: KeyValueStorage, preferences: Preferences): Boolean
     true
 } catch (e: Exception) {
     false
-}
-
-/** The app's preferences as observable state, saved on every change. */
-class PreferencesStore(private val storage: KeyValueStorage) {
-    private val state = MutableStateFlow(loadPreferences(storage))
-    val preferences: StateFlow<Preferences> = state.asStateFlow()
-
-    /** Applies [change] and saves. Returns false if saving failed (the change still applies in memory). */
-    @Synchronized
-    fun update(change: (Preferences) -> Preferences): Boolean {
-        state.update(change)
-        return savePreferences(storage, state.value)
-    }
 }

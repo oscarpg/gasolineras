@@ -43,7 +43,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DiagnosticsScreen(viewModel: DiagnosticsViewModel, onOpenMapTest: () -> Unit) {
+fun DiagnosticsScreen(viewModel: DiagnosticsViewModel, onOpenMapTest: () -> Unit, onOpenPreview: () -> Unit) {
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -75,6 +75,11 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel, onOpenMapTest: () -> Unit
         ) {
             item {
                 Text(stringResource(R.string.diag_intro), style = MaterialTheme.typography.bodyLarge)
+            }
+            item {
+                FilledTonalButton(onClick = onOpenPreview, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.preview_open))
+                }
             }
             item {
                 ResultCard(stringResource(R.string.diag_device), DiagnosticsReport.device(viewModel.device), ok = null)
