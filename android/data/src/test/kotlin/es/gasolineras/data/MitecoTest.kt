@@ -101,6 +101,20 @@ class MitecoTest {
         assertEquals(fromJson, fromXml)
     }
 
+    @Test fun `XML scanner handles entities, empty elements and rejects non-station XML`() {
+        val xml = "<P><Fecha>21/11/2026 9:05:12</Fecha><ListaEESSPrecio><EESSPrecio>" +
+            "<IDEESS>1</IDEESS><R_x00F3_tulo>A &amp; B &#x00D1;</R_x00F3_tulo><Horario/>" +
+            "<Latitud>40,4</Latitud><Longitud_x0020__x0028_WGS84_x0029_>-3,7</Longitud_x0020__x0028_WGS84_x0029_>" +
+            "</EESSPrecio></ListaEESSPrecio></P>"
+        val p = parseMitecoXml(xml)
+        assertEquals("21/11/2026 9:05:12", p.fecha)
+        assertEquals("A & B Ñ", p.stations.single()["Rótulo"])
+        assertEquals("", p.stations.single()["Horario"])
+        assertEquals("-3,7", p.stations.single()["Longitud (WGS84)"])
+        val error = runCatching { parseMitecoXml("<html><body>Service unavailable</body></html>") }.exceptionOrNull()
+        assertEquals("XML contains no stations", error?.message)
+    }
+
     @Test fun `parses a real history file`() {
         val json = parseMitecoJson(fixture("miteco-history-28.json"))
         assertEquals(json.stations.size, toHistoryPrices(json).size)

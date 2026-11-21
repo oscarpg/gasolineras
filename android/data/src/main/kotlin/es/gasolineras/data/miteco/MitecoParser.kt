@@ -12,11 +12,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import org.w3c.dom.Element
-import org.w3c.dom.Node
-import java.io.ByteArrayInputStream
 import java.time.LocalDate
-import javax.xml.parsers.DocumentBuilderFactory
 
 /** One station as MITECO sends it: Spanish field names, decimal commas, everything a string. */
 typealias RawMitecoStation = Map<String, String>
@@ -43,33 +39,43 @@ fun parseMitecoJson(text: String): MitecoPayload {
     )
 }
 
-/** MITECO's XML format, converted to the same shape as the JSON one. */
+private val XML_STATION = Regex("""<EESSPrecio>(.*?)</EESSPrecio>""", RegexOption.DOT_MATCHES_ALL)
+private val XML_FIELD = Regex("""<([^\s/>]+)\s*/>|<([^\s/>]+)>([^<]*)</\2\s*>""")
+private val XML_FECHA = Regex("""<Fecha>([^<]*)</Fecha>""")
+private val XML_ENTITY = Regex("""&(#x[0-9A-Fa-f]+|#\d+|amp|lt|gt|quot|apos);""")
+
+private fun decodeXmlText(text: String): String = XML_ENTITY.replace(text) { m ->
+    when (val e = m.groupValues[1]) {
+        "amp" -> "&"
+        "lt" -> "<"
+        "gt" -> ">"
+        "quot" -> "\""
+        "apos" -> "'"
+        else -> if (e.startsWith("#x")) String(Character.toChars(e.drop(2).toInt(16))) else String(Character.toChars(e.drop(1).toInt()))
+    }
+}
+
+/**
+ * MITECO's XML format, converted to the same shape as the JSON one.
+ *
+ * MITECO's XML is flat and fixed (stations of leaf elements), so it is read with a small
+ * dedicated scanner instead of the platform DOM parser: identical behaviour on the JVM and
+ * Android (whose built-in parser rejects this file), and no DTD/entity expansion at all.
+ */
 fun parseMitecoXml(text: String): MitecoPayload {
-    val factory = DocumentBuilderFactory.newInstance().apply {
-        isNamespaceAware = false
-        isExpandEntityReferences = false
-        // Not every platform parser supports these; best effort against XXE.
-        runCatching { setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
-        runCatching { setFeature("http://xml.org/sax/features/external-general-entities", false) }
-    }
-    val doc = try {
-        factory.newDocumentBuilder().parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
-    } catch (e: Exception) {
-        throw IllegalArgumentException("Malformed XML", e)
-    }
-    val items = doc.getElementsByTagName("EESSPrecio")
-    require(items.length > 0) { "XML contains no stations" }
-    return MitecoPayload(
-        fecha = doc.getElementsByTagName("Fecha").item(0)?.textContent.orEmpty(),
-        stations = (0 until items.length).map { i ->
-            val el = items.item(i) as Element
-            val children = el.childNodes
-            (0 until children.length)
-                .map { children.item(it) }
-                .filter { it.nodeType == Node.ELEMENT_NODE }
-                .associate { decodeXmlTagName((it as Element).tagName) to it.textContent.orEmpty() }
-        },
-    )
+    require(text.trimStart().startsWith("<")) { "Malformed XML" }
+    val stations = XML_STATION.findAll(text).map { station ->
+        XML_FIELD.findAll(station.groupValues[1]).associate { m ->
+            val selfClosing = m.groupValues[1]
+            if (selfClosing.isNotEmpty()) {
+                decodeXmlTagName(selfClosing) to ""
+            } else {
+                decodeXmlTagName(m.groupValues[2]) to decodeXmlText(m.groupValues[3])
+            }
+        }
+    }.toList()
+    require(stations.isNotEmpty()) { "XML contains no stations" }
+    return MitecoPayload(fecha = XML_FECHA.find(text)?.groupValues?.get(1)?.let(::decodeXmlText).orEmpty(), stations = stations)
 }
 
 /** A MITECO response body, which can be JSON or XML depending on the Accept header honoured. */
