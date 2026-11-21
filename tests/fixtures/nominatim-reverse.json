@@ -1,0 +1,32 @@
+{
+  "place_id": 293906632,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "way",
+  "osm_id": 549535251,
+  "lat": "40.4167872",
+  "lon": "-3.7038165",
+  "class": "highway",
+  "type": "pedestrian",
+  "place_rank": 26,
+  "importance": 0.053419141680018274,
+  "addresstype": "pedestrian",
+  "name": "",
+  "display_name": "Barrio de los Austrias, Sol, Centro, Madrid, Comunidad de Madrid, 28013, España",
+  "address": {
+    "neighbourhood": "Barrio de los Austrias",
+    "quarter": "Sol",
+    "city_district": "Centro",
+    "city": "Madrid",
+    "state": "Comunidad de Madrid",
+    "ISO3166-2-lvl4": "ES-MD",
+    "postcode": "28013",
+    "country": "España",
+    "country_code": "es"
+  },
+  "boundingbox": [
+    "40.4166780",
+    "40.4170603",
+    "-3.7040231",
+    "-3.7037320"
+  ]
+}

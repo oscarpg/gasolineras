@@ -1,0 +1,9 @@
+dist
+coverage
+node_modules
+package-lock.json
+tests/fixtures
+
+# Legacy single-file app: formatted as part of Phases 1–5 when its
+# CSS and JS move out into src/. Remove this line once that is done.
+index.html

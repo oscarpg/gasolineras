@@ -1,0 +1,35 @@
+[
+  {
+    "place_id": 290557619,
+    "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+    "osm_type": "relation",
+    "osm_id": 7424032,
+    "lat": "40.4168630",
+    "lon": "-3.7038762",
+    "class": "highway",
+    "type": "pedestrian",
+    "place_rank": 25,
+    "importance": 0.4794252209824919,
+    "addresstype": "square",
+    "name": "Puerta del Sol",
+    "display_name": "Puerta del Sol, Barrio de los Austrias, Sol, Centro, Madrid, Comunidad de Madrid, 28013, España",
+    "address": {
+      "square": "Puerta del Sol",
+      "neighbourhood": "Barrio de los Austrias",
+      "quarter": "Sol",
+      "city_district": "Centro",
+      "city": "Madrid",
+      "state": "Comunidad de Madrid",
+      "ISO3166-2-lvl4": "ES-MD",
+      "postcode": "28013",
+      "country": "España",
+      "country_code": "es"
+    },
+    "boundingbox": [
+      "40.4164803",
+      "40.4172442",
+      "-3.7047263",
+      "-3.7022633"
+    ]
+  }
+]
