@@ -17,7 +17,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -43,7 +47,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DiagnosticsScreen(viewModel: DiagnosticsViewModel, onOpenMapTest: () -> Unit, onOpenPreview: () -> Unit) {
+fun DiagnosticsScreen(viewModel: DiagnosticsViewModel, onOpenMapTest: () -> Unit, onBack: () -> Unit) {
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -63,6 +67,11 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel, onOpenMapTest: () -> Unit
         topBar = {
             LargeTopAppBar(
                 title = { Text(stringResource(R.string.diag_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.navigate_back))
+                    }
+                },
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -75,11 +84,6 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel, onOpenMapTest: () -> Unit
         ) {
             item {
                 Text(stringResource(R.string.diag_intro), style = MaterialTheme.typography.bodyLarge)
-            }
-            item {
-                FilledTonalButton(onClick = onOpenPreview, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.preview_open))
-                }
             }
             item {
                 ResultCard(stringResource(R.string.diag_device), DiagnosticsReport.device(viewModel.device), ok = null)

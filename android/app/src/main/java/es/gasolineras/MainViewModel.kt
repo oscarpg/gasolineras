@@ -4,6 +4,21 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import es.gasolineras.core.domain.FuelType
+import es.gasolineras.core.domain.LatLng
+import es.gasolineras.core.domain.Station
+import es.gasolineras.core.domain.daysBefore
+import es.gasolineras.core.domain.toMitecoDate
+import es.gasolineras.map.api.CameraTarget
+import es.gasolineras.map.api.GeoPoint
+import es.gasolineras.state.MapEvent
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import java.time.LocalDate
+import kotlin.math.ln
 import es.gasolineras.core.domain.VisibleStations
 import es.gasolineras.data.LocationPositionProvider
 import es.gasolineras.data.prefs.loadPreferences
@@ -52,6 +67,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val mapEvents = controller.mapEvents
 
+    /** Where the map should be. Changed by location/route events and by selecting a station. */
+    private val mutableCamera = MutableStateFlow(SPAIN)
+    val camera: StateFlow<CameraTarget> = mutableCamera.asStateFlow()
+
+    /** The station whose details are open, by id. */
+    private val mutableSelected = MutableStateFlow<String?>(null)
+    val selectedStationId: StateFlow<String?> = mutableSelected.asStateFlow()
+
     val ui: StateFlow<MainUiState> = combine(store.state, controller.state) { app, controllerState ->
         MainUiState(app, selector.select(app), controllerState)
     }
@@ -63,6 +86,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
 
     init {
+        viewModelScope.launch {
+            controller.mapEvents.collect { event ->
+                when (event) {
+                    is MapEvent.ShowUserPosition -> mutableCamera.value = CameraTarget(event.position.toGeo(), event.zoom)
+                    is MapEvent.ShowRoute -> mutableCamera.value = fitCamera(event.points)
+                    MapEvent.ClearRoute -> store.value.userPosition?.let { mutableCamera.value = CameraTarget(it.toGeo(), 13.0) }
+                }
+            }
+        }
         // A larger radius or detour can reach provinces that aren't loaded yet.
         viewModelScope.launch {
             store.state
@@ -95,6 +127,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setFuel(fuel: FuelType) = store.update { it.setFuel(fuel) }
     fun setSortByTotalCost(on: Boolean) = store.update { it.updatePreferences { p -> p.copy(sortByTotalCost = on) } }
 
+    fun selectStation(id: String?, moveCamera: Boolean = true) {
+        mutableSelected.value = id
+        if (id == null || !moveCamera) return
+        store.value.stations.firstOrNull { it.id == id }?.let { s ->
+            mutableCamera.value = CameraTarget(GeoPoint(s.station.lat, s.station.lon), maxOf(14.0, mutableCamera.value.zoom))
+        }
+    }
+
+    /**
+     * The station's price for [fuel] over the last 6 days plus today (oldest first);
+     * a null price means that day's data is missing. Past days come from the daily cache when possible.
+     */
+    suspend fun priceHistory(station: Station, fuel: FuelType): List<PriceDay> = coroutineScope {
+        val today = LocalDate.now()
+        val past = (6 downTo 1).map { n ->
+            val date = daysBefore(today, n)
+            async {
+                val prices = try {
+                    container.miteco.getHistoryDay(station.provinceCode, toMitecoDate(date))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    null
+                }
+                PriceDay(date, prices?.get(station.code)?.get(fuel))
+            }
+        }.awaitAll()
+        past + PriceDay(today, station.prices[fuel])
+    }
+
     /** Saves pending preference changes now (call when the app goes to the background). */
     fun flush() = persister.flush()
 
@@ -104,5 +166,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private companion object {
         const val COVERAGE_DEBOUNCE_MS = 600L
+        val SPAIN = CameraTarget(GeoPoint(40.2, -3.7), 5.2)
     }
+}
+
+/** One day of a station's price history. */
+data class PriceDay(val date: LocalDate, val price: Double?)
+
+fun LatLng.toGeo() = GeoPoint(lat, lon)
+
+/** A camera that shows all [points] (approximate, good enough for a route overview). */
+fun fitCamera(points: List<LatLng>): CameraTarget {
+    if (points.isEmpty()) return CameraTarget(GeoPoint(40.2, -3.7), 5.2)
+    val minLat = points.minOf { it.lat }
+    val maxLat = points.maxOf { it.lat }
+    val minLon = points.minOf { it.lon }
+    val maxLon = points.maxOf { it.lon }
+    val latSpan = maxOf(maxLat - minLat, 0.005)
+    val lonSpan = maxOf(maxLon - minLon, 0.005)
+    val zoom = minOf(ln(360.0 / lonSpan) / ln(2.0), ln(170.0 / latSpan) / ln(2.0)) - 0.8
+    return CameraTarget(GeoPoint((minLat + maxLat) / 2, (minLon + maxLon) / 2), zoom.coerceIn(3.0, 15.0))
 }

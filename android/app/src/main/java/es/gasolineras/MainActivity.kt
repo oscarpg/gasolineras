@@ -14,7 +14,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import es.gasolineras.diagnostics.DiagnosticsScreen
 import es.gasolineras.diagnostics.DiagnosticsViewModel
 import es.gasolineras.diagnostics.MapTestScreen
-import es.gasolineras.ui.preview.PreviewScreen
+import es.gasolineras.ui.main.MainScreen
 import es.gasolineras.ui.theme.GasolinerasTheme
 
 class MainActivity : ComponentActivity() {
@@ -26,13 +26,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             GasolinerasTheme {
                 val diagnostics: DiagnosticsViewModel = viewModel()
-                var screen by rememberSaveable { mutableStateOf(Screen.DIAGNOSTICS) }
-                if (screen != Screen.DIAGNOSTICS) BackHandler { screen = Screen.DIAGNOSTICS }
+                var screen by rememberSaveable { mutableStateOf(Screen.MAIN) }
+                if (screen == Screen.DIAGNOSTICS) BackHandler { screen = Screen.MAIN }
+                if (screen == Screen.MAP_TEST) BackHandler { screen = Screen.DIAGNOSTICS }
                 when (screen) {
+                    Screen.MAIN -> MainScreen(mainViewModel, MapModule.renderer, onOpenDiagnostics = { screen = Screen.DIAGNOSTICS })
                     Screen.DIAGNOSTICS -> DiagnosticsScreen(
                         diagnostics,
                         onOpenMapTest = { screen = Screen.MAP_TEST },
-                        onOpenPreview = { screen = Screen.PREVIEW },
+                        onBack = { screen = Screen.MAIN },
                     )
                     Screen.MAP_TEST -> MapTestScreen(
                         renderer = MapModule.renderer,
@@ -40,7 +42,6 @@ class MainActivity : ComponentActivity() {
                         onFinished = diagnostics::onMapTestFinished,
                         onBack = { screen = Screen.DIAGNOSTICS },
                     )
-                    Screen.PREVIEW -> PreviewScreen(mainViewModel, onBack = { screen = Screen.DIAGNOSTICS })
                 }
             }
         }
@@ -51,5 +52,5 @@ class MainActivity : ComponentActivity() {
         mainViewModel.flush()
     }
 
-    private enum class Screen { DIAGNOSTICS, MAP_TEST, PREVIEW }
+    private enum class Screen { MAIN, DIAGNOSTICS, MAP_TEST }
 }

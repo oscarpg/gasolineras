@@ -24,12 +24,8 @@
     <string name="navigate_back">Atrás</string>
     <string name="diag_data">Datos (prueba completa)</string>
     <string name="diag_run_data">Probar datos</string>
-    <string name="preview_title">Vista previa</string>
-    <string name="preview_open">Abrir vista previa (fase 3)</string>
     <string name="preview_my_location">Mi ubicación</string>
     <string name="preview_refresh">Actualizar precios</string>
-    <string name="preview_search_hint">Buscar dirección</string>
-    <string name="preview_route_hint">Ruta hasta…</string>
     <string name="preview_clear_route">Quitar ruta</string>
     <string name="preview_sort_cost">Ordenar por coste total</string>
     <string name="preview_summary_radius">%1$d gasolineras a menos de %2$d km</string>
@@ -72,4 +68,28 @@
     <string name="fuel_GNC">GNC</string>
     <string name="fuel_GNL">GNL</string>
     <string name="station_unnamed">Sin nombre</string>
+    <string name="main_search_hint">Buscar dirección o destino</string>
+    <string name="main_use_as_origin">Usar como mi ubicación</string>
+    <string name="main_route_here">Ruta hasta aquí</string>
+    <string name="main_route_active">Ruta activa</string>
+    <string name="main_more">Más opciones</string>
+    <string name="main_clear_search">Borrar búsqueda</string>
+    <string name="detail_navigate">Cómo llegar</string>
+    <string name="detail_share">Compartir</string>
+    <string name="detail_prices">Precios</string>
+    <string name="detail_hours">Horario: %1$s</string>
+    <string name="detail_distance">A %1$s km (%2$s km ida y vuelta)</string>
+    <string name="detail_detour">Desvío de la ruta: %1$s km (%2$s km ida y vuelta)</string>
+    <string name="detail_cost">Depósito %1$s € + viaje %2$s € = %3$s €</string>
+    <string name="detail_discount">Descuento de %1$s aplicado (antes %2$s €)</string>
+    <string name="detail_unchanged">Precio sin cambios desde el %1$s</string>
+    <string name="detail_unchanged_at_least">Precio sin cambios desde al menos el %1$s</string>
+    <string name="detail_changed">Precio cambiado desde ayer</string>
+    <string name="detail_no_maps_app">No hay ninguna app de mapas instalada</string>
+    <string name="chart_title">Últimos 7 días</string>
+    <string name="chart_loading">Cargando historial…</string>
+    <string name="chart_flat">Sin cambios de precio estos días.</string>
+    <string name="chart_error">No se pudo cargar el historial.</string>
+    <string name="chart_today">Hoy</string>
+    <string name="chart_description">Gráfico de precios de los últimos 7 días</string>
 </resources>

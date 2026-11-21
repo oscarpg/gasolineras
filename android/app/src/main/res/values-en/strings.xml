@@ -23,12 +23,8 @@
     <string name="navigate_back">Back</string>
     <string name="diag_data">Data (end-to-end)</string>
     <string name="diag_run_data">Test data</string>
-    <string name="preview_title">Preview</string>
-    <string name="preview_open">Open preview (phase 3)</string>
     <string name="preview_my_location">My location</string>
     <string name="preview_refresh">Refresh prices</string>
-    <string name="preview_search_hint">Search for an address</string>
-    <string name="preview_route_hint">Route to…</string>
     <string name="preview_clear_route">Clear route</string>
     <string name="preview_sort_cost">Sort by total cost</string>
     <string name="preview_summary_radius">%1$d stations within %2$d km</string>
@@ -71,4 +67,28 @@
     <string name="fuel_GNC">CNG</string>
     <string name="fuel_GNL">LNG</string>
     <string name="station_unnamed">Unnamed</string>
+    <string name="main_search_hint">Search address or destination</string>
+    <string name="main_use_as_origin">Use as my location</string>
+    <string name="main_route_here">Route here</string>
+    <string name="main_route_active">Route active</string>
+    <string name="main_more">More options</string>
+    <string name="main_clear_search">Clear search</string>
+    <string name="detail_navigate">Directions</string>
+    <string name="detail_share">Share</string>
+    <string name="detail_prices">Prices</string>
+    <string name="detail_hours">Opening hours: %1$s</string>
+    <string name="detail_distance">%1$s km away (%2$s km round trip)</string>
+    <string name="detail_detour">Detour from route: %1$s km (%2$s km round trip)</string>
+    <string name="detail_cost">Tank %1$s € + trip %2$s € = %3$s €</string>
+    <string name="detail_discount">%1$s discount applied (was %2$s €)</string>
+    <string name="detail_unchanged">Price unchanged since %1$s</string>
+    <string name="detail_unchanged_at_least">Price unchanged since at least %1$s</string>
+    <string name="detail_changed">Price changed since yesterday</string>
+    <string name="detail_no_maps_app">No maps app installed</string>
+    <string name="chart_title">Last 7 days</string>
+    <string name="chart_loading">Loading history…</string>
+    <string name="chart_flat">No price changes on these days.</string>
+    <string name="chart_error">Couldn\'t load the price history.</string>
+    <string name="chart_today">Today</string>
+    <string name="chart_description">Price chart for the last 7 days</string>
 </resources>
