@@ -1,0 +1,55 @@
+/* Design tokens: the only place raw colours, shadows, radii and layers are defined. */
+:root {
+  /* Brand */
+  --color-primary: #1565c0;
+  --color-primary-soft: #eef6ff;
+  --color-primary-soft-border: #b3d4fc;
+  --color-primary-hover-bg: #f0f6ff;
+
+  --color-success: #2e7d32;
+  --color-success-soft: #e8f5e9;
+  --color-success-soft-border: #a5d6a7;
+  --color-success-border: #81c784;
+
+  --color-danger: #c62828;
+  --color-user-marker: #d32f2f;
+
+  /* Text */
+  --color-text: #333;
+  --color-text-secondary: #555;
+  --color-text-muted: #666;
+  --color-text-faint: #888;
+  --color-text-on-primary: #fff;
+
+  /* Surfaces */
+  --color-surface: #fff;
+  --color-surface-alt: #f5f7fa;
+  --color-surface-drawer: #fafafa;
+  --color-surface-disabled: #f5f5f5;
+  --color-surface-chart: #f8f9fa;
+  --color-border: #ddd;
+  --color-backdrop: rgba(0, 0, 0, 0.4);
+
+  /* Shape */
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+
+  --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.18);
+  --shadow-drawer: 4px 0 18px rgba(0, 0, 0, 0.25);
+
+  /* Typography */
+  --font-family: system-ui, Arial, sans-serif;
+
+  /* Motion */
+  --transition-panel: 0.25s ease;
+
+  /* Layers (Leaflet panes use 200–700 inside the map container) */
+  --z-map: 1;
+  --z-floating: 500;
+  --z-backdrop: 900;
+  --z-drawer: 1000;
+
+  /* Breakpoint (reference only; CSS media queries can't read variables): 700px */
+}

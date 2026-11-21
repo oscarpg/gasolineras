@@ -1,0 +1,17 @@
+/* Station popup content. */
+.popup small {
+  color: var(--color-text-muted);
+}
+
+/* Car cost breakdown block */
+.popup-coche {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* "Ver evolución (7 días)" button */
+button.btn-historial {
+  margin-top: 6px;
+  padding: 4px 6px;
+  font-size: 0.78rem;
+}

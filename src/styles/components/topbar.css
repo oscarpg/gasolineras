@@ -1,0 +1,62 @@
+/* Floating top bar: Preferences button (left) and quick GPS button (right). */
+#topbar {
+  position: absolute;
+  top: 12px;
+  left: 54px; /* leaves room for Leaflet's zoom control */
+  right: 12px;
+  z-index: var(--z-floating);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+.topbar-card {
+  pointer-events: auto;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  gap: 6px;
+}
+
+#btnAbrirPrefs {
+  width: auto;
+  margin: 0;
+  padding: 7px 12px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icono-movil {
+  display: none;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.icono-web {
+  display: inline;
+}
+
+#btnGpsRapido {
+  width: auto;
+  margin: 0;
+  padding: 7px 10px;
+  font-size: 1rem;
+}
+
+@media (max-width: 700px) {
+  .icono-movil {
+    display: inline;
+  }
+
+  .icono-web {
+    display: none;
+  }
+}

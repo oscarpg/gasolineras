@@ -1,0 +1,15 @@
+/* 7-day price history chart inside the popup. */
+.grafica-precio {
+  margin-top: 6px;
+  background: var(--color-surface-chart);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  display: block;
+}
+
+.grafica-nota {
+  color: var(--color-text-muted);
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+}

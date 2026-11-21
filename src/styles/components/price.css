@@ -1,0 +1,25 @@
+/* Price fragments shared by popups and list cards. */
+.precio {
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+.precio-tachado {
+  text-decoration: line-through;
+  color: var(--color-text-faint);
+  font-size: 0.75rem;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.badge-desc {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  border: 1px solid var(--color-success-soft-border);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  margin-left: 4px;
+  vertical-align: middle;
+}

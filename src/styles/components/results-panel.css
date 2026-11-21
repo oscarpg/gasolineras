@@ -1,0 +1,99 @@
+/* Floating card with the cheapest stations (bottom-left). */
+#panelBaratas {
+  position: absolute;
+  bottom: 20px;
+  left: 12px;
+  width: 370px;
+  max-width: calc(100vw - 24px);
+  max-height: 48vh;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
+  z-index: var(--z-floating);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: max-height var(--transition-panel);
+}
+
+#panelBaratas.minimizado {
+  max-height: 42px !important;
+}
+
+.cabecera-baratas {
+  padding: 10px 12px;
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  font-weight: 600;
+  font-size: 0.88rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  min-height: 42px;
+}
+
+/* "Sort by total cost" option bar */
+.opciones-baratas {
+  padding: 6px 10px;
+  background: var(--color-primary-soft);
+  border-bottom: 1px solid var(--color-primary-soft-border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--color-primary);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.opciones-baratas.deshabilitado {
+  background: var(--color-surface-disabled);
+  border-bottom-color: var(--color-border);
+  color: var(--color-text-faint);
+  font-weight: 400;
+}
+
+.opciones-baratas input[type='checkbox'] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.opciones-baratas label {
+  margin: 0;
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: inherit;
+  user-select: none;
+}
+
+/* Status line */
+#estado {
+  font-size: 0.74rem;
+  color: var(--color-text-secondary);
+  padding: 5px 10px;
+  background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+#listaBaratas {
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  flex: 1;
+}
+
+@media (max-width: 700px) {
+  #panelBaratas {
+    width: calc(100vw - 24px);
+    bottom: 12px;
+    max-height: 42vh;
+  }
+}

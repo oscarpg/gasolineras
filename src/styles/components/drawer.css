@@ -1,0 +1,87 @@
+/* Preferences side drawer and its backdrop. */
+#backdropPrefs {
+  position: fixed;
+  inset: 0;
+  background: var(--color-backdrop);
+  z-index: var(--z-backdrop);
+  display: none;
+}
+
+#backdropPrefs.activo {
+  display: block;
+}
+
+#drawerPrefs {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 380px;
+  max-width: 92vw;
+  background: var(--color-surface-drawer);
+  z-index: var(--z-drawer);
+  box-shadow: var(--shadow-drawer);
+  transform: translateX(-100%);
+  transition: transform var(--transition-panel);
+  display: flex;
+  flex-direction: column;
+}
+
+#drawerPrefs.abierto {
+  transform: translateX(0);
+}
+
+.drawer-header {
+  padding: 12px 16px;
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.drawer-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+#btnCerrarPrefs {
+  width: auto;
+  margin: 0;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--color-text-on-primary);
+  font-size: 1rem;
+  border-radius: var(--radius);
+}
+
+.drawer-body {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Small explanatory text under a control */
+.form-hint {
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+/* Scrollable brand checklist */
+#marcas {
+  max-height: 140px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 4px;
+  background: var(--color-surface);
+}
+
+#marcas label {
+  margin: 2px 0;
+  font-size: 0.82rem;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}

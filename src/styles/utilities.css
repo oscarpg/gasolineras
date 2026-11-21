@@ -1,0 +1,57 @@
+/*
+ * Single-purpose helpers that replaced inline style="" attributes.
+ * They use !important on purpose: like the inline styles they replace,
+ * they must win over element and component rules.
+ * Prefer a component class when a combination repeats.
+ */
+.u-flex-1 {
+  flex: 1 !important;
+}
+
+.u-m-0 {
+  margin: 0 !important;
+}
+
+.u-mt-0 {
+  margin-top: 0 !important;
+}
+
+.u-mt-8 {
+  margin-top: 8px !important;
+}
+
+.u-mt-10 {
+  margin-top: 10px !important;
+}
+
+.u-mb-14 {
+  margin-bottom: 14px !important;
+}
+
+.u-ml-0 {
+  margin-left: 0 !important;
+}
+
+.u-w-45 {
+  width: 45% !important;
+}
+
+.u-w-55 {
+  width: 55% !important;
+}
+
+.u-w-80px {
+  width: 80px !important;
+}
+
+.u-text-sm {
+  font-size: 0.8rem !important;
+}
+
+.u-text-muted {
+  color: var(--color-text-muted) !important;
+}
+
+.u-text-danger {
+  color: var(--color-danger) !important;
+}

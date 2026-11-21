@@ -6,287 +6,7 @@
 <title>Gasolineras España</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-  :root { --azul:#1565C0; --verde:#2E7D32; --borde:#ddd; --sombra: 0 4px 14px rgba(0,0,0,0.18); }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, Arial, sans-serif; height:100vh; width:100vw; overflow:hidden; position:relative; }
-
-  /* Mapa a pantalla completa */
-  #mapa { width:100%; height:100%; z-index:1; }
-
-  /* Barra superior flotante limpia */
-  #topbar {
-    position: absolute;
-    top: 12px;
-    left: 54px; /* Espacio para controles de zoom de Leaflet */
-    right: 12px;
-    z-index: 500;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    pointer-events: none;
-  }
-  .topbar-card {
-    pointer-events: auto;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: var(--sombra);
-    border: 1px solid var(--borde);
-    display: flex;
-    align-items: center;
-    padding: 4px;
-    gap: 6px;
-  }
-  #btnAbrirPrefs {
-    width: auto; margin: 0; padding: 7px 12px; font-weight: 600; font-size: .85rem;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .icono-movil { display: none; font-size: 1.15rem; line-height: 1; }
-  .icono-web { display: inline; }
-
-  #btnGpsRapido {
-    width: auto; margin: 0; padding: 7px 10px; font-size: 1rem;
-  }
-
-  /* Tarjeta flotante: Listado de más baratas */
-  #panelBaratas {
-    position: absolute;
-    bottom: 20px;
-    left: 12px;
-    width: 370px;
-    max-width: calc(100vw - 24px);
-    max-height: 48vh;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: var(--sombra);
-    border: 1px solid var(--borde);
-    z-index: 500;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    transition: max-height 0.25s ease;
-  }
-  #panelBaratas.minimizado {
-    max-height: 42px !important;
-  }
-  .cabecera-baratas {
-    padding: 10px 12px;
-    background: var(--azul);
-    color: #fff;
-    font-weight: 600;
-    font-size: .88rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-    flex-shrink: 0;
-    min-height: 42px;
-  }
-  .opciones-baratas {
-    padding: 6px 10px;
-    background: #eef6ff;
-    border-bottom: 1px solid #b3d4fc;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: .78rem;
-    color: #1565C0;
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-  .opciones-baratas.deshabilitado {
-    background: #f5f5f5;
-    border-bottom-color: var(--borde);
-    color: #888;
-    font-weight: 400;
-  }
-  .opciones-baratas input[type="checkbox"] {
-    margin: 0;
-    cursor: pointer;
-  }
-  .opciones-baratas label {
-    margin: 0;
-    cursor: pointer;
-    font-size: .78rem;
-    color: inherit;
-    user-select: none;
-  }
-  #estado {
-    font-size: .74rem;
-    color: #555;
-    padding: 5px 10px;
-    background: #f5f7fa;
-    border-bottom: 1px solid var(--borde);
-    flex-shrink: 0;
-  }
-  #listaBaratas {
-    overflow-y: auto;
-    overflow-x: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 8px;
-    flex: 1;
-  }
-
-  /* Drawer lateral de Preferencias */
-  #backdropPrefs {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.4);
-    z-index: 900;
-    display: none;
-  }
-  #backdropPrefs.activo { display: block; }
-
-  #drawerPrefs {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    width: 380px;
-    max-width: 92vw;
-    background: #fafafa;
-    z-index: 1000;
-    box-shadow: 4px 0 18px rgba(0,0,0,0.25);
-    transform: translateX(-100%);
-    transition: transform 0.25s ease;
-    display: flex;
-    flex-direction: column;
-  }
-  #drawerPrefs.abierto { transform: translateX(0); }
-
-  .drawer-header {
-    padding: 12px 16px;
-    background: var(--azul);
-    color: #fff;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .drawer-header h2 { margin: 0; font-size: 1.05rem; }
-  #btnCerrarPrefs {
-    width: auto; margin: 0; padding: 4px 10px; background: rgba(255,255,255,0.2);
-    color: #fff; font-size: 1rem; border-radius: 6px;
-  }
-  .drawer-body {
-    padding: 12px;
-    overflow-y: auto;
-    flex: 1;
-  }
-
-  /* Formularios y controles dentro de Preferencias */
-  fieldset {
-    border: 1px solid var(--borde);
-    border-radius: 8px;
-    margin: 0 0 12px;
-    padding: 8px 10px;
-    background: #fff;
-    min-width: 0;
-    max-width: 100%;
-  }
-  legend { font-size:.85rem; font-weight:600; color:#555; padding:0 4px; }
-  label { display:block; font-size:.82rem; margin:6px 0 2px; color:#333; }
-  select, input[type=text], input[type=number] {
-    width:100%; padding:6px; border:1px solid var(--borde); border-radius:6px; font-size:.88rem;
-  }
-  input[type=range] { width:100%; }
-  .fila { display:flex; gap:8px; align-items:center; margin-top:6px; }
-  button {
-    cursor:pointer; border:none; border-radius:6px; padding:8px 10px;
-    font-size:.88rem; background:var(--azul); color:#fff; width:100%; margin-top:6px;
-  }
-  button.sec { background:#fff; color:var(--azul); border:1px solid var(--azul); }
-  button:hover { opacity:.92; }
-
-  #marcas { max-height:140px; overflow-y:auto; border:1px solid var(--borde); border-radius:6px; padding:4px; background:#fff; }
-  #marcas label { margin:2px 0; font-size:.82rem; display:flex; gap:6px; align-items:center; }
-
-  /* Tarjetas de coches y descuentos */
-  .coche-item, .desc-item {
-    display: flex; justify-content: space-between; align-items: center;
-    background: #eef6ff; border: 1px solid #b3d4fc; border-radius: 6px;
-    padding: 6px 8px; font-size: .8rem; margin-top: 6px; gap: 6px;
-  }
-  .coche-item.activo {
-    background: #e8f5e9; border-color: #81c784;
-  }
-  .coche-info { flex: 1; min-width: 0; }
-  .coche-acciones { display: flex; gap: 4px; align-items: center; }
-  .btn-mini {
-    width: auto; margin: 0; padding: 3px 7px; font-size: .75rem; border-radius: 4px;
-  }
-  .btn-del {
-    width: auto; margin: 0; padding: 2px 6px; background: transparent;
-    color: #c62828; font-weight: 700; font-size: .85rem;
-  }
-
-  /* Items de gasolineras */
-  .precio { font-weight:700; color:var(--verde); }
-  .popup small { color:#666; }
-  .marcador-usuario {
-    background-color: #D32F2F;
-    border: 3px solid #FFFFFF;
-    border-radius: 50%;
-    box-shadow: 0 0 0 5px rgba(211, 47, 47, 0.35), 0 2px 6px rgba(0, 0, 0, 0.45);
-  }
-  .icono-gasolinera {
-    background: transparent;
-    border: none;
-    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
-  }
-  .item-gasolinera {
-    border: 1px solid var(--borde);
-    border-radius: 6px;
-    padding: 6px 8px;
-    background: #fff;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    min-width: 0;
-    transition: background 0.15s, border-color 0.15s;
-  }
-  .item-gasolinera:hover { background: #f0f6ff; border-color: var(--azul); }
-  .item-gasolinera .info { flex: 1 1 0%; min-width: 0; overflow: hidden; }
-  .item-gasolinera .nombre {
-    font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .item-gasolinera .meta {
-    font-size: .73rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .item-gasolinera .meta-coche {
-    font-size: .72rem; color: #1565C0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    margin-top: 1px;
-  }
-  .item-gasolinera .importe {
-    font-size: .95rem; font-weight: 700; color: var(--verde); white-space: nowrap; flex-shrink: 0;
-  }
-  .item-gasolinera .sub-importe {
-    font-size: .72rem; color: #1565C0; font-weight: 600; white-space: nowrap;
-  }
-  .precio-tachado {
-    text-decoration: line-through; color: #888; font-size: .75rem; font-weight: 400; margin-left: 4px;
-  }
-  .badge-desc {
-    background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7;
-    border-radius: 4px; padding: 1px 4px; font-size: .68rem; font-weight: 600;
-    margin-left: 4px; vertical-align: middle;
-  }
-
-  @media (max-width: 700px) {
-    .icono-movil { display: inline; }
-    .icono-web { display: none; }
-    #panelBaratas {
-      width: calc(100vw - 24px);
-      bottom: 12px;
-      max-height: 42vh;
-    }
-  }
-</style>
+<link rel="stylesheet" href="/src/styles/main.css">
 </head>
 <body>
 
@@ -318,7 +38,7 @@
   </div>
   <div id="estado">Esperando ubicación…</div>
   <div id="listaBaratas">
-    <em style="font-size:.8rem; color:#666">Sin datos para mostrar…</em>
+    <em class="u-text-sm u-text-muted">Sin datos para mostrar…</em>
   </div>
 </div>
 
@@ -338,35 +58,35 @@
       <input type="text" id="cocheNombre" placeholder="Ej: SEAT León">
 
       <div class="fila">
-        <div style="flex:1">
+        <div class="u-flex-1">
           <label for="cocheFuel">Combustible:</label>
           <select id="cocheFuel"></select>
         </div>
       </div>
 
       <div class="fila">
-        <div style="flex:1">
+        <div class="u-flex-1">
           <label for="cocheDeposito">Depósito (litros):</label>
           <input type="number" id="cocheDeposito" placeholder="Ej: 50" min="5" max="200" step="1">
         </div>
-        <div style="flex:1">
+        <div class="u-flex-1">
           <label for="cocheConsumo">Consumo (l/100km):</label>
           <input type="number" id="cocheConsumo" placeholder="Ej: 6.2" min="1" max="40" step="0.1">
         </div>
       </div>
       <button class="sec" id="btnGuardarCoche">Añadir / Guardar coche</button>
-      <div id="listaCoches" style="margin-top:6px"></div>
+      <div id="listaCoches" class="item-list"></div>
     </fieldset>
 
     <!-- 2. Ubicación y Distancia máxima -->
     <fieldset>
       <legend>📍 Ubicación y Distancia</legend>
-      <button id="btnGps" style="margin-top:0">Usar mi ubicación GPS</button>
+      <button id="btnGps" class="u-mt-0">Usar mi ubicación GPS</button>
       <label for="direccion">o buscar dirección:</label>
       <input type="text" id="direccion" placeholder="Calle, número, ciudad…">
       <button class="sec" id="btnDir">Establecer dirección</button>
 
-      <label for="radioUbicacion" style="margin-top:10px">
+      <label for="radioUbicacion" class="u-mt-10">
         Distancia máxima admitida: <b><span id="radioUbicacionVal">15</span> km</b>
       </label>
       <input type="range" id="radioUbicacion" min="1" max="50" step="1" value="15">
@@ -384,7 +104,7 @@
 
       <div class="fila">
         <input type="checkbox" id="soloRuta">
-        <label for="soloRuta" style="margin:0">Solo gasolineras en la ruta (sin desvíos)</label>
+        <label for="soloRuta" class="u-m-0">Solo gasolineras en la ruta (sin desvíos)</label>
       </div>
 
       <button class="sec" id="btnQuitarRuta">Quitar ruta</button>
@@ -410,14 +130,14 @@
         <option value="MAS_X">Más de X días sin actualizar (personalizado)…</option>
       </select>
 
-      <div id="filaDiasCustom" class="fila" style="display:none; margin-top:6px">
-        <label for="diasAntiguedadVal" style="margin:0; flex:1">Número de días (X):</label>
-        <input type="number" id="diasAntiguedadVal" min="1" max="10" step="1" value="3" style="width:80px">
+      <div id="filaDiasCustom" class="fila" hidden>
+        <label for="diasAntiguedadVal" class="u-m-0 u-flex-1">Número de días (X):</label>
+        <input type="number" id="diasAntiguedadVal" min="1" max="10" step="1" value="3" class="u-w-80px">
       </div>
-      <div id="infoEstadoAntiguedad" style="font-size:.74rem; color:#666; margin-top:4px"></div>
+      <div id="infoEstadoAntiguedad" class="form-hint"></div>
 
-      <label style="margin-top:8px">Marcas permitidas:</label>
-      <div id="marcas"><em style="font-size:.8rem">Esperando ubicación…</em></div>
+      <label class="u-mt-8">Marcas permitidas:</label>
+      <div id="marcas"><em class="u-text-sm">Esperando ubicación…</em></div>
     </fieldset>
 
     <!-- 5. Descuentos por marca -->
@@ -428,17 +148,17 @@
         <option value="">Selecciona una marca…</option>
       </select>
       <div class="fila">
-        <input type="number" id="descValor" placeholder="Ej: 5" min="0" step="0.5" style="width:45%">
-        <select id="descTipo" style="width:55%">
+        <input type="number" id="descValor" placeholder="Ej: 5" min="0" step="0.5" class="u-w-45">
+        <select id="descTipo" class="u-w-55">
           <option value="CTS">cts/litro (ej. 5 cts)</option>
           <option value="PCT">% porcentaje (ej. 3%)</option>
         </select>
       </div>
       <button class="sec" id="btnAddDesc">Añadir / Actualizar descuento</button>
-      <div id="listaDescuentos" style="margin-top:6px"></div>
+      <div id="listaDescuentos" class="item-list"></div>
     </fieldset>
 
-    <button class="sec" id="btnActualizar" style="margin-bottom:14px">🔄 Forzar actualización de precios</button>
+    <button class="sec u-mb-14" id="btnActualizar">🔄 Forzar actualización de precios</button>
   </div>
 </aside>
 
@@ -614,7 +334,7 @@ document.getElementById("chkOrdenCosteReal").checked = !!prefs.sortByRealCost;
 function actualizarVisibilidadDiasCustom() {
   const val = selAntiguedad.value;
   const usaCustom = val === "MAX_X" || val === "MAS_X";
-  document.getElementById("filaDiasCustom").style.display = usaCustom ? "flex" : "none";
+  document.getElementById("filaDiasCustom").hidden = !usaCustom;
 }
 actualizarVisibilidadDiasCustom();
 
@@ -668,7 +388,7 @@ function actualizarUICoches() {
   const cont = document.getElementById("listaCoches");
   cont.innerHTML = "";
   if (coches.length === 0) {
-    cont.innerHTML = `<small style="color:#666">No hay coches configurados.</small>`;
+    cont.innerHTML = `<small class="u-text-muted">No hay coches configurados.</small>`;
     return;
   }
 
@@ -679,7 +399,7 @@ function actualizarUICoches() {
     div.innerHTML = `
       <div class="coche-info">
         <div><b>${c.nombre}</b> ${esActivo ? `<span class="badge-desc">Activo</span>` : ""}</div>
-        <div style="color:#555; font-size:.74rem">
+        <div class="coche-meta">
           ${FUELS[c.fuel]?.label} · Depósito: ${c.deposito} L · ${c.consumo} l/100km
         </div>
       </div>
@@ -838,7 +558,7 @@ function actualizarUIDescuentos() {
   cont.innerHTML = "";
   const entradas = Object.entries(descuentos);
   if (entradas.length === 0) {
-    cont.innerHTML = `<small style="color:#666">Sin descuentos configurados.</small>`;
+    cont.innerHTML = `<small class="u-text-muted">Sin descuentos configurados.</small>`;
     return;
   }
 
@@ -1051,7 +771,7 @@ function construirFiltroMarcas() {
   const marcas = [...conteo.keys()].sort((a, b) => a.localeCompare(b, "es"));
 
   if (marcas.length === 0) {
-    cont.innerHTML = `<em style="font-size:.8rem">Sin gasolineras</em>`;
+    cont.innerHTML = `<em class="u-text-sm">Sin gasolineras</em>`;
     return;
   }
   const todas = document.createElement("label");
@@ -1144,7 +864,7 @@ function pintar() {
     let infoCochePopup = "";
     if (coche && d.costeTotal != null) {
       infoCochePopup =
-        `<br><small style="color:#1565C0;font-weight:600">` +
+        `<br><small class="popup-coche">` +
         `🚗 <b>${coche.nombre}</b> (${coche.deposito}L):<br>` +
         `• Depósito: ${d.costeDeposito.toFixed(2)} €<br>` +
         `• Desplazamiento i/v (${d.distIdaVueltaKm.toFixed(1)} km · ${d.litrosViaje.toFixed(2)}L): +${d.costeViaje.toFixed(2)} €<br>` +
@@ -1153,7 +873,7 @@ function pintar() {
     }
 
     const btnHist = e.ideess
-      ? `<br><button class="sec" style="margin-top:6px;padding:4px 6px;font-size:.78rem" onclick="verEvolucion('${e.ideess}', '${e.codProvincia}', '${e.id}')">📈 Ver evolución (7 días)</button><div id="grafica-${e.ideess}"></div>`
+      ? `<br><button class="sec btn-historial" onclick="verEvolucion('${e.ideess}', '${e.codProvincia}', '${e.id}')">📈 Ver evolución (7 días)</button><div id="grafica-${e.ideess}"></div>`
       : "";
 
     const htmlPrecioPopup = tieneDesc
@@ -1179,7 +899,7 @@ function pintar() {
   contLista.innerHTML = "";
 
   if (filtradas.length === 0) {
-    contLista.innerHTML = `<em style="font-size:.8rem; color:#666">Ninguna gasolinera cumple el filtro.</em>`;
+    contLista.innerHTML = `<em class="u-text-sm u-text-muted">Ninguna gasolinera cumple el filtro.</em>`;
   } else {
     for (const [idx, e] of filtradas.slice(0, 20).entries()) {
       const precioBase = e.precios[fuel];
@@ -1198,7 +918,7 @@ function pintar() {
       let lineaCoche = "";
       let bloqueDerecho = `
         <div class="importe" style="color:${color}">${precioFinal.toFixed(3)} €/l</div>
-        ${tieneDesc ? `<div class="precio-tachado" style="margin-left:0">${precioBase.toFixed(3)} €/l</div>` : ""}
+        ${tieneDesc ? `<div class="precio-tachado u-ml-0">${precioBase.toFixed(3)} €/l</div>` : ""}
       `;
 
       if (coche && d.costeTotal != null) {
@@ -1211,12 +931,12 @@ function pintar() {
           bloqueDerecho = `
             <div class="importe" style="color:${color}">${d.costeTotal.toFixed(2)} €</div>
             <div class="sub-importe">${precioFinal.toFixed(3)} €/l</div>
-            ${tieneDesc ? `<div class="precio-tachado" style="margin-left:0">${precioBase.toFixed(3)} €/l</div>` : ""}
+            ${tieneDesc ? `<div class="precio-tachado u-ml-0">${precioBase.toFixed(3)} €/l</div>` : ""}
           `;
         } else {
           bloqueDerecho = `
             <div class="importe" style="color:${color}">${precioFinal.toFixed(3)} €/l</div>
-            ${tieneDesc ? `<div class="precio-tachado" style="margin-left:0">${precioBase.toFixed(3)} €/l</div>` : ""}
+            ${tieneDesc ? `<div class="precio-tachado u-ml-0">${precioBase.toFixed(3)} €/l</div>` : ""}
             <div class="sub-importe">Total: ${d.costeTotal.toFixed(2)} €</div>
           `;
         }
@@ -1232,7 +952,7 @@ function pintar() {
           ${lineaCoche}
           <div class="meta">${textoAntiguedad(e, fuel)}</div>
         </div>
-        <div style="text-align:right; flex-shrink:0">
+        <div class="item-precios">
           ${bloqueDerecho}
         </div>
       `;
@@ -1517,7 +1237,7 @@ async function verEvolucion(ideess, codProvincia, idEstacion) {
   const cont = document.getElementById(`grafica-${ideess}`);
   if (!cont) return;
   const fuel = selCarb.value;
-  cont.innerHTML = `<small style="color:#666">Cargando histórico de 7 días…</small>`;
+  cont.innerHTML = `<small class="u-text-muted">Cargando histórico de 7 días…</small>`;
 
   try {
     const hoy = new Date();
@@ -1566,13 +1286,13 @@ async function verEvolucion(ideess, codProvincia, idEstacion) {
     }
 
     if (puntosReales.length === 0) {
-      cont.innerHTML = `<small style="color:#c62828">Sin datos históricos disponibles.</small>`;
+      cont.innerHTML = `<small class="u-text-danger">Sin datos históricos disponibles.</small>`;
       return;
     }
 
     cont.innerHTML = generarSvgGrafica(serie, puntosReales);
   } catch (e) {
-    cont.innerHTML = `<small style="color:#c62828">Error al cargar histórico.</small>`;
+    cont.innerHTML = `<small class="u-text-danger">Error al cargar histórico.</small>`;
   }
 }
 
@@ -1595,7 +1315,7 @@ function generarSvgGrafica(serieCompleta, puntosReales) {
   const polilinea = coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ");
 
   return `
-    <svg width="${w}" height="${h}" style="margin-top:6px;background:#f8f9fa;border:1px solid #ddd;border-radius:6px;display:block">
+    <svg width="${w}" height="${h}" class="grafica-precio">
       ${coords.length > 1
         ? `<polyline fill="none" stroke="#1565C0" stroke-width="2" stroke-dasharray="${sinCambios ? "4,3" : "none"}" points="${polilinea}" />`
         : ""}
@@ -1607,7 +1327,7 @@ function generarSvgGrafica(serieCompleta, puntosReales) {
         <text x="${xPos(s.idx)}" y="${h - 6}" font-size="8" text-anchor="middle" fill="${s.precio !== null ? "#555" : "#bbb"}">${s.etiqueta}</text>
       `).join("")}
     </svg>
-    ${sinCambios ? `<small style="color:#666;display:block;margin-top:2px;font-size:.72rem">Sin variaciones de precio en los días consultados.</small>` : ""}
+    ${sinCambios ? `<small class="grafica-nota">Sin variaciones de precio en los días consultados.</small>` : ""}
   `;
 }
 

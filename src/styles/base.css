@@ -1,0 +1,79 @@
+/* Reset, document and form-control defaults. */
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Forms */
+fieldset {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  background: var(--color-surface);
+  min-width: 0;
+  max-width: 100%;
+}
+
+legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: 0 4px;
+}
+
+label {
+  display: block;
+  font-size: 0.82rem;
+  margin: 6px 0 2px;
+  color: var(--color-text);
+}
+
+select,
+input[type='text'],
+input[type='number'] {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+}
+
+input[type='range'] {
+  width: 100%;
+}
+
+/* Buttons */
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 0.88rem;
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  width: 100%;
+  margin-top: 6px;
+}
+
+button.sec {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+button:hover {
+  opacity: 0.92;
+}
