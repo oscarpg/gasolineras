@@ -119,16 +119,25 @@ them into test resources), so both apps are validated against the same real samp
 
 Each phase ends with a working, tested build; mirrors how the web refactor was done.
 
-### Phase 0 — Spikes & setup (1–2 days)
+### Phase 0 — Spikes & setup ✅ done 2026-11-21
 
-- Create `android/` Gradle project, version catalog, Compose + M3, Hilt, ktlint/detekt, Android Lint.
-- Spike: fetch `FiltroProvincia/28` from a real device/emulator. **Verify the MITECO TLS
-  chain**. ✅ Done 2026-11-21: MITECO now uses a DigiCert chain (DigiCert Global Root G2),
-  trusted out of the box on API 26 and 36 emulators; no `network_security_config` needed.
-- Spike: MapLibre + OpenFreeMap rendering 1,000+ markers smoothly (GeoJSON symbol layer), light and dark styles.
-- Define the `MapRenderer` interface and `MapStyle` config (§3.1) before any map screen is written.
-- App id `es.gasolineras`, name, adaptive icon (reuse ⛽ identity), splash screen API.
-- **Done when:** empty app with theme runs on API 26 and API 36 emulators; CI builds it.
+- `android/` Gradle project (AGP 8.13, Kotlin 2.3, Compose M3, minSdk 26, targetSdk 36), Android Lint.
+  Deferred to Phase 3: Hilt, ktlint/detekt, splash screen.
+- `:map-api` (`MapRenderer`, `MapStyle`, §3.1) and `:map-maplibre` (MapLibre + OpenFreeMap).
+- Diagnostics app (MITECO, OpenFreeMap, location, map stress test, copyable report).
+- CI: lint, unit tests, debug APK, emulator tests on API 26 / 30 / 36.
+
+Results:
+
+| Check             | Emulators API 26 / 30 / 36                       | Pixel 10 Pro, Android 17 (API 37)          |
+| ----------------- | ------------------------------------------------ | ------------------------------------------ |
+| MITECO TLS + data | ✅ DigiCert chain trusted, 894 stations (Madrid) | ✅ 894 stations, 944 kB in 647 ms          |
+| OpenFreeMap       | ✅                                               | ✅ 164 ms                                  |
+| Location          | —                                                | ✅ precise fix in 1.5 s, ±16 m             |
+| Map, 894 markers  | —                                                | ✅ 119.9 fps, 0% janky frames, worst 10 ms |
+
+Conclusions: no `network_security_config` needed; GeoJSON-layer markers are smooth at 120 Hz,
+so clustering is optional rather than required.
 
 ### Phase 1 — Domain port (2–3 days)
 
