@@ -37,3 +37,31 @@ export type AgeFilter =
   | { mode: 'atMost'; days: number }
   | { mode: 'exactly'; days: number }
   | { mode: 'moreThan'; days: number };
+
+/** A saved car. */
+export interface Car extends CarSpecs {
+  id: string;
+  name: string;
+  fuel: FuelType;
+}
+
+/** A petrol station as reported by MITECO, normalised. */
+export interface Station {
+  /** Stable id: MITECO code (or sign) + coordinates. */
+  id: string;
+  /** MITECO station code (IDEESS); empty if missing. */
+  code: string;
+  provinceCode: string;
+  /** Date of the bulletin the prices come from, as MITECO writes it. */
+  bulletinDate: string;
+  /** Sign text ("Rótulo"). */
+  name: string;
+  address: string;
+  lat: number;
+  lon: number;
+  openingHours: string;
+  prices: FuelPrices;
+}
+
+/** One day of historical prices for a province: station code → prices it had that day. */
+export type HistoryPrices = Record<string, Partial<FuelPrices>>;

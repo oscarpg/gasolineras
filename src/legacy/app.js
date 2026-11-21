@@ -7,7 +7,7 @@
  * aliases/adapters so the rest of this file didn't have to change.
  *
  * This file shrinks in every phase and is deleted at the end of Phase 5:
- *   Phase 3 → fetch/cache code moves to services/ and storage/
+ *   Phase 3 → fetch/cache/prefs/GPS code moved to services/, storage/, platform/ ✅
  *   Phase 4 → globals and pintar()'s filtering move to state/
  *   Phase 5 → DOM rendering moves to ui/, strings to i18n/
  *
@@ -16,40 +16,96 @@
  */
 import { FUELS } from '../config/fuels';
 import { KNOWN_BRANDS } from '../config/brands';
-import {
-  CORS_RELAYS,
-  MITECO_PROVINCE_HISTORY_URL,
-  MITECO_PROVINCE_URL,
-  NOMINATIM_REVERSE_URL,
-  NOMINATIM_SEARCH_URL,
-  OSRM_ROUTE_URL
-} from '../config/endpoints';
 import { normalizeBrand } from '../domain/brands';
 import { colorForValue } from '../domain/colorScale';
 import { toMitecoDate } from '../domain/dates';
 import { distanceKm, distanceToRouteKm } from '../domain/geo';
-import { parseSpanishNumber } from '../domain/numbers';
 import { costBreakdown, effectivePrice } from '../domain/pricing';
-import { provinceCodeFromAddress } from '../domain/provinces';
 import { computeStaleness } from '../domain/staleness';
 import { ageFilterFromSelectValue, matchesAgeFilter, requiredHistoryDays } from '../domain/ageFilter';
 import { significantPricePoints } from '../domain/priceHistory';
+import { createHttpClient } from '../services/http';
+import { createMitecoService } from '../services/miteco';
+import { createGeocoder } from '../services/geocoding';
+import { createRouter } from '../services/routing';
+import { localStorageAdapter } from '../storage/adapter';
+import { createCache, removeKeysWithPrefix } from '../storage/cache';
+import { loadPreferences, savePreferences } from '../storage/preferences';
+import { browserGeoProvider } from '../platform/geolocation';
 
 /* ============ Alias de nombres antiguos ============ */
-const API_PROVINCIA = MITECO_PROVINCE_URL;
-const API_HIST_PROVINCIA = MITECO_PROVINCE_HISTORY_URL;
-const OSRM = OSRM_ROUTE_URL;
-const NOMINATIM_SEARCH = NOMINATIM_SEARCH_URL;
-const NOMINATIM_REVERSE = NOMINATIM_REVERSE_URL;
 const MARCAS_CONOCIDAS = KNOWN_BRANDS;
 
 const normalizarMarca = normalizeBrand;
 const colorPorValor = colorForValue;
-const numEs = parseSpanishNumber;
 const distKm = distanceKm;
 const distARutaKm = distanceToRouteKm;
-const extraerCodProvincia = provinceCodeFromAddress;
 const formatearFechaMiteco = toMitecoDate;
+
+/* ============ Servicios (Fase 3) ============ */
+// Se crean aquí hasta que main.ts sea el punto de composición (Fase 4/5).
+const almacenamiento = localStorageAdapter();
+// Cachés del formato antiguo (sin versión ni caducidad): se sustituyen por la nueva.
+removeKeysWithPrefix(almacenamiento, ["gasolineras_prov_", "gas_hist_"]);
+const cache = createCache(almacenamiento, { namespace: "gasolineras.cache.v2:" });
+cache.purgeExpired();
+const http = createHttpClient();
+const miteco = createMitecoService({ http, cache });
+const geocoder = createGeocoder({ http });
+const router = createRouter({ http });
+const gps = browserGeoProvider();
+
+/* ============ Adaptadores al formato antiguo ============ */
+// El resto del archivo usa aún nombres en español; estas funciones traducen
+// desde/hacia los tipos nuevos. Desaparecen en la Fase 4.
+function aEstacionLegacy(s) {
+  return {
+    id: s.id,
+    ideess: s.code,
+    codProvincia: s.provinceCode,
+    fechaMiteco: s.bulletinDate,
+    rotulo: s.name,
+    direccion: s.address,
+    lat: s.lat,
+    lon: s.lon,
+    horario: s.openingHours,
+    precios: { ...s.prices }
+  };
+}
+
+function prefsALegacy(p) {
+  return {
+    fuel: p.fuel,
+    antiguedad: p.ageFilterPreset,
+    antiguedadDias: p.ageFilterCustomDays,
+    searchRadius: p.searchRadiusKm,
+    radius: p.routeDetourKm,
+    soloRuta: p.routeOnly,
+    sortByRealCost: p.sortByTotalCost,
+    brands: p.brands,
+    discounts: Object.fromEntries(Object.entries(p.discounts).map(([m, d]) => [m, { tipo: d.type, valor: d.value }])),
+    cars: p.cars.map(c => ({ id: c.id, nombre: c.name, fuel: c.fuel, deposito: c.tankLitres, consumo: c.consumptionL100km })),
+    activeCarId: p.activeCarId ?? ""
+  };
+}
+
+function prefsDesdeLegacy(l) {
+  return {
+    schemaVersion: 2,
+    fuel: l.fuel,
+    ageFilterPreset: l.antiguedad,
+    ageFilterCustomDays: l.antiguedadDias,
+    searchRadiusKm: l.searchRadius,
+    routeDetourKm: l.radius,
+    routeOnly: l.soloRuta,
+    sortByTotalCost: l.sortByRealCost,
+    brands: l.brands,
+    discounts: Object.fromEntries(Object.entries(l.discounts).map(([m, d]) => [m, { type: d.tipo, value: d.valor }])),
+    cars: l.cars.map(c => ({ id: c.id, name: c.nombre, fuel: c.fuel, tankLitres: c.deposito, consumptionL100km: c.consumo })),
+    activeCarId: l.activeCarId || null,
+    locale: null
+  };
+}
 
 const iconoUsuario = L.divIcon({
   className: "marcador-usuario",
@@ -105,7 +161,7 @@ let calculandoAntiguedad = false;
 let userPos = null;
 let ruta = null;
 let capaEstaciones = null, capaRuta = null, marcadorUsuario = null;
-let prefs = JSON.parse(localStorage.getItem("gasolineras_prefs") || "{}");
+let prefs = prefsALegacy(loadPreferences(almacenamiento));
 
 const mapa = L.map("mapa").setView([40.4168, -3.7038], 6);
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -182,7 +238,7 @@ function guardarPrefs() {
     cars: coches,
     activeCarId: cocheActivoId
   };
-  localStorage.setItem("gasolineras_prefs", JSON.stringify(prefs));
+  savePreferences(almacenamiento, prefsDesdeLegacy(prefs));
 }
 
 function actualizarEstadoCheckboxCoste() {
@@ -398,60 +454,6 @@ document.getElementById("btnAddDesc").onclick = () => {
 /* ============ Utilidades ============ */
 function estado(msg) { document.getElementById("estado").textContent = msg; }
 
-/* ============ Descarga directa + proxies de respaldo ============ */
-async function fetchConProxy(url) {
-  const intentos = [
-    () => fetch(url, { headers: { "Accept": "application/json" } }),
-    () => fetch(url),
-    async () => {
-      const r = await fetch(CORS_RELAYS.allOrigins(url));
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      const data = await r.json();
-      return new Response(data.contents);
-    },
-    () => fetch(CORS_RELAYS.codeTabs(url))
-  ];
-
-  for (const ejecutarFetch of intentos) {
-    try {
-      const resp = await ejecutarFetch();
-      if (!resp.ok) throw new Error("HTTP " + resp.status);
-      const texto = (await resp.text()).trim();
-      if (!texto) throw new Error("Respuesta vacía");
-
-      if (texto.startsWith("<")) {
-        return xmlAEstaciones(texto);
-      }
-      return JSON.parse(texto);
-    } catch (e) {
-      console.warn("Intento de descarga falló:", e.message);
-    }
-  }
-  throw new Error("No se pudo descargar la información de las gasolineras.");
-}
-
-function decodificarTag(tag) {
-  return tag.replace(/_x([0-9A-Fa-f]{4})_/g,
-    (_, h) => String.fromCharCode(parseInt(h, 16)));
-}
-
-function xmlAEstaciones(texto) {
-  const doc = new DOMParser().parseFromString(texto, "application/xml");
-  if (doc.querySelector("parsererror")) throw new Error("XML mal formado");
-  const items = [...doc.querySelectorAll("EESSPrecio")];
-  if (items.length === 0) throw new Error("El XML no contiene estaciones");
-  return {
-    Fecha: doc.querySelector("Fecha")?.textContent || "",
-    ListaEESSPrecio: items.map(el => {
-      const obj = {};
-      for (const child of el.children) {
-        obj[decodificarTag(child.tagName)] = child.textContent;
-      }
-      return obj;
-    })
-  };
-}
-
 /* ============ Carga de gasolineras por provincia ============ */
 function diasHistoricoRequeridos() {
   return requiredHistoryDays(ageFilterFromSelectValue(selAntiguedad.value, +inpDiasDrawer.value || 3));
@@ -461,38 +463,12 @@ async function cargarProvincia(codProvincia, forzar = false) {
   if (!codProvincia) return;
   if (!forzar && provinciasCargadas.has(codProvincia)) return;
 
-  const hoy = new Date().toISOString().slice(0, 10);
-  const cacheKey = `gasolineras_prov_${codProvincia}`;
-  const cache = JSON.parse(localStorage.getItem(cacheKey) || "null");
-
-  if (!forzar && cache && cache.fecha === hoy && cache.datos?.[0]?.ideess !== undefined) {
-    incorporarEstaciones(cache.datos);
-    provinciasCargadas.add(codProvincia);
-    calcularAntiguedadPrecios(codProvincia, diasHistoricoRequeridos());
-    return;
+  if (forzar || !miteco.hasCachedProvince(codProvincia)) {
+    estado(`Descargando datos de la provincia (${codProvincia})…`);
   }
-
-  estado(`Descargando datos de la provincia (${codProvincia})…`);
   try {
-    const url = `${API_PROVINCIA}${codProvincia}`;
-    const json = await fetchConProxy(url);
-    const fechaMiteco = (json.Fecha || "").split(" ")[0] || formatearFechaMiteco(new Date());
-
-    const nuevas = (json.ListaEESSPrecio || []).map(e => ({
-      id: `${e["IDEESS"] || e["Rótulo"]}-${e["Latitud"]}-${e["Longitud (WGS84)"]}`,
-      ideess: e["IDEESS"] || "",
-      codProvincia,
-      fechaMiteco,
-      rotulo: e["Rótulo"] || "Sin nombre",
-      direccion: [e["Dirección"], e["Localidad"], e["Provincia"]].filter(Boolean).join(", "),
-      lat: numEs(e["Latitud"]),
-      lon: numEs(e["Longitud (WGS84)"]),
-      horario: e["Horario"] || "",
-      precios: Object.fromEntries(Object.entries(FUELS).map(([k, f]) => [k, numEs(e[f.mitecoField])]))
-    })).filter(e => e.lat !== null && e.lon !== null);
-
-    localStorage.setItem(cacheKey, JSON.stringify({ fecha: hoy, datos: nuevas }));
-    incorporarEstaciones(nuevas);
+    const lista = await miteco.getProvinceStations(codProvincia, { force: forzar });
+    incorporarEstaciones(lista.map(aEstacionLegacy));
     provinciasCargadas.add(codProvincia);
     calcularAntiguedadPrecios(codProvincia, diasHistoricoRequeridos());
   } catch (err) {
@@ -744,9 +720,7 @@ async function fijarOrigenConCoords(lat, lon, zoom = 13, codProvincia = null) {
   if (!codProvincia) {
     estado("Determinando provincia…");
     try {
-      const resp = await fetch(`${NOMINATIM_REVERSE}&lat=${lat}&lon=${lon}`);
-      const data = await resp.json();
-      codProvincia = extraerCodProvincia(data.address);
+      codProvincia = await geocoder.reverseProvince([lat, lon]);
     } catch (_) {}
   }
 
@@ -760,8 +734,8 @@ async function fijarOrigenConCoords(lat, lon, zoom = 13, codProvincia = null) {
 
 function pedirGps() {
   estado("Obteniendo ubicación GPS…");
-  navigator.geolocation.getCurrentPosition(
-    pos => fijarOrigenConCoords(pos.coords.latitude, pos.coords.longitude),
+  gps.getCurrentPosition().then(
+    ([lat, lon]) => fijarOrigenConCoords(lat, lon),
     err => estado("Error GPS: " + err.message + ". Usa Preferencias para buscar dirección.")
   );
 }
@@ -774,11 +748,9 @@ document.getElementById("btnDir").onclick = async () => {
   if (!q) return;
   estado("Buscando dirección…");
   try {
-    const r = await fetch(NOMINATIM_SEARCH + encodeURIComponent(q));
-    const res = await r.json();
-    if (res.length === 0) { estado("Dirección no encontrada"); return; }
-    const cod = extraerCodProvincia(res[0].address);
-    await fijarOrigenConCoords(+res[0].lat, +res[0].lon, 13, cod);
+    const lugar = await geocoder.search(q);
+    if (!lugar) { estado("Dirección no encontrada"); return; }
+    await fijarOrigenConCoords(lugar.latLng[0], lugar.latLng[1], 13, lugar.provinceCode);
     cerrarPreferencias();
   } catch (e) { estado("Error: " + e.message); }
 };
@@ -790,22 +762,18 @@ document.getElementById("btnRuta").onclick = async () => {
   if (!userPos) { estado("Indica primero tu ubicación de origen"); return; }
   estado("Calculando ruta…");
   try {
-    const r = await fetch(NOMINATIM_SEARCH + encodeURIComponent(q));
-    const res = await r.json();
-    if (res.length === 0) { estado("Destino no encontrado"); return; }
-    
-    const codDest = extraerCodProvincia(res[0].address);
+    const lugar = await geocoder.search(q);
+    if (!lugar) { estado("Destino no encontrado"); return; }
+
+    const codDest = lugar.provinceCode;
     if (codDest && !provinciasCargadas.has(codDest)) {
       await cargarProvincia(codDest);
     }
 
-    const dest = [+res[0].lat, +res[0].lon];
-    const url = `${OSRM}${userPos[1]},${userPos[0]};${dest[1]},${dest[0]}?overview=full&geometries=geojson`;
-    const rr = await fetch(url);
-    const rjson = await rr.json();
-    if (rjson.code !== "Ok") { estado("No se pudo calcular la ruta"); return; }
+    const puntos = await router.route(userPos, lugar.latLng);
+    if (!puntos) { estado("No se pudo calcular la ruta"); return; }
 
-    ruta = rjson.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+    ruta = puntos.map(([lat, lon]) => [lat, lon]);
     capaRuta.clearLayers();
     L.polyline(ruta, { color: "#1565C0", weight: 6 }).addTo(capaRuta);
     mapa.fitBounds(L.latLngBounds(ruta));
@@ -866,34 +834,8 @@ document.getElementById("btnActualizar").onclick = async () => {
 };
 
 /* ============ Histórico, Antigüedad y Gráfica ============ */
-async function obtenerHistoricoDiaProvincia(codProvincia, fechaStr) {
-  const cacheKey = `gas_hist_${codProvincia}_${fechaStr}`;
-  const cacheado = localStorage.getItem(cacheKey);
-  if (cacheado) return JSON.parse(cacheado);
-
-  const url = `${API_HIST_PROVINCIA}${fechaStr}/${codProvincia}`;
-  const json = await fetchConProxy(url);
-  const mapaDia = {};
-
-  for (const e of (json.ListaEESSPrecio || [])) {
-    const id = e["IDEESS"];
-    if (!id) continue;
-    mapaDia[id] = Object.fromEntries(
-      Object.entries(FUELS)
-        .map(([k, f]) => [k, numEs(e[f.mitecoField])])
-        .filter(([, val]) => val !== null)
-    );
-  }
-
-  try {
-    localStorage.setItem(cacheKey, JSON.stringify(mapaDia));
-  } catch (_) {
-    Object.keys(localStorage)
-      .filter(k => k.startsWith("gas_hist_"))
-      .slice(0, 5)
-      .forEach(k => localStorage.removeItem(k));
-  }
-  return mapaDia;
+function obtenerHistoricoDiaProvincia(codProvincia, fechaStr) {
+  return miteco.getHistoryDay(codProvincia, fechaStr);
 }
 
 async function calcularAntiguedadPrecios(codProvincia, maxDias = 4) {
@@ -1054,10 +996,10 @@ window.verEvolucion = verEvolucion;
 actualizarUICoches();
 actualizarUIDescuentos();
 
-if (navigator.geolocation) {
+if (gps.isAvailable()) {
   estado("Obteniendo tu ubicación…");
-  navigator.geolocation.getCurrentPosition(
-    pos => fijarOrigenConCoords(pos.coords.latitude, pos.coords.longitude),
+  gps.getCurrentPosition().then(
+    ([lat, lon]) => fijarOrigenConCoords(lat, lon),
     () => estado("Abre Preferencias (⚙️) o pulsa 📍 para indicar tu ubicación.")
   );
 } else {

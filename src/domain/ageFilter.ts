@@ -31,6 +31,26 @@ export function requiredHistoryDays(filter: AgeFilter): number {
   return Math.max(MIN_HISTORY_DAYS, Math.min(MAX_HISTORY_DAYS, filter.days + 1));
 }
 
+/** Values of the current "antigüedad" <select> (also what saved preferences store). */
+export const AGE_FILTER_PRESETS = [
+  'TODAS',
+  '0',
+  '1',
+  '2',
+  '3',
+  'MAX_X',
+  'EXACTO_1',
+  'EXACTO_2',
+  'MAS_3',
+  'MAS_X',
+] as const;
+
+export type AgeFilterPreset = (typeof AGE_FILTER_PRESETS)[number];
+
+export function isAgeFilterPreset(value: unknown): value is AgeFilterPreset {
+  return typeof value === 'string' && (AGE_FILTER_PRESETS as readonly string[]).includes(value);
+}
+
 /**
  * Converts the values of the current "antigüedad" <select> (also stored in saved
  * preferences) into an AgeFilter. Unknown values mean "all".
