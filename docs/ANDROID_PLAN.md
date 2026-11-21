@@ -176,13 +176,24 @@ Phone check (Pixel 10 Pro, Android 17, A Coruña): province 15 from both the pho
 (272 ms) and Nominatim (1.1 s); 291 stations downloaded in 615 ms, 52 ms from cache; 4/4 history
 days; 87 stations within 15 km; search, a 6,386-point route and preferences save all OK.
 
-### Phase 3 — State & ViewModel (2 days)
+### Phase 3 — State & ViewModel ✅ done 2026-11-21
 
-- `AppState` + pure transitions + selectors (`selectVisibleStations` reused from domain).
-- Effects as coroutines: load province(s) for the user's position (incl. neighbouring
-  provinces near borders, as the web does), history check sized by the age filter, route mode.
-- `MainViewModel` exposing `StateFlow<UiState>`; one-off events (snackbars) via `Channel`.
-- **Done when:** ViewModel tests cover GPS → province → stations → filtered rows, and route mode.
+- `:state` module, pure Kotlin/JVM: `AppState`, `Store` (`StateFlow`), pure transitions,
+  memoised `VisibleStationsSelector`, `countBrands`, `Effects` (province loading, background
+  history checks sized by the age filter, deeper checks on demand), debounced
+  `PreferencesPersister` (flushed in `onStop`), and `AppController` — the web
+  `locationController` without DOM: GPS/address → origin → province → stations, routes (loading
+  the destination province), refresh, statuses and errors with Retry, map events.
+- 42 JUnit tests: the web transition/effect/persistence tests plus the controller flows.
+- App: `MainViewModel` (`MainUiState` = state + visible rows + status), `LocationPositionProvider`,
+  ES/EN texts for statuses, errors and fuels (same wording as the web app), and a temporary
+  preview screen with the live list.
+- Decisions:
+  - Manual DI (`AppContainer`) instead of Hilt: a handful of objects, no annotation processing,
+    faster builds.
+  - Plan correction: the web app does **not** load neighbouring provinces; it loads the user's
+    province and, for routes, the destination's. Kept as is. Possible improvement: when the
+    search radius crosses a province border, also load the neighbouring province.
 
 ### Phase 4 — Core UI (5–7 days)
 
