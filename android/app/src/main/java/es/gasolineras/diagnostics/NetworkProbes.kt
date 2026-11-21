@@ -1,6 +1,7 @@
 package es.gasolineras.diagnostics
 
 import es.gasolineras.BuildConfig
+import es.gasolineras.core.domain.parseSpanishNumber
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -64,9 +65,6 @@ fun parseMitecoStations(body: String): Pair<String?, List<ProbeStation>> {
     }
     return root.optString("Fecha").takeIf { it.isNotEmpty() } to stations
 }
-
-fun parseSpanishNumber(text: String?): Double? =
-    text?.trim()?.takeIf { it.isNotEmpty() }?.replace(',', '.')?.toDoubleOrNull()
 
 class NetworkProbes(
     private val client: OkHttpClient = OkHttpClient.Builder()

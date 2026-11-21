@@ -54,6 +54,7 @@ android {
 kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
 
 dependencies {
+    implementation(project(":core"))
     implementation(project(":map-maplibre"))
 
     implementation(libs.androidx.core.ktx)

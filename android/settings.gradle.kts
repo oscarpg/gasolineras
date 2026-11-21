@@ -17,5 +17,6 @@ dependencyResolutionManagement {
 rootProject.name = "gasolineras"
 
 include(":app")
+include(":core")
 include(":map-api")
 include(":map-maplibre")

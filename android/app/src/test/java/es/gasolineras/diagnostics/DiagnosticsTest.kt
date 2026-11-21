@@ -24,14 +24,6 @@ class DiagnosticsTest {
     }
 
     @Test
-    fun `spanish numbers`() {
-        assertEquals(1.459, parseSpanishNumber(" 1,459 ")!!, 1e-9)
-        assertNull(parseSpanishNumber(""))
-        assertNull(parseSpanishNumber(null))
-        assertNull(parseSpanishNumber("n/a"))
-    }
-
-    @Test
     fun `frame stats`() {
         val stats = FrameMeter.summarize(listOf(16.0, 16.0, 16.0, 50.0), durationMs = 1000)
         assertEquals(4, stats.frames)

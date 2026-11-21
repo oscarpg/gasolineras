@@ -29,12 +29,14 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew --stacktrace testDebugUnitTest lintDebug assembleDebug
+      - run: ./gradlew --stacktrace :core:test testDebugUnitTest lintDebug assembleDebug
+      - name: Name the APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/gasolineras-test.apk
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: gasolineras-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: android/app/build/outputs/apk/debug/gasolineras-test.apk
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -43,6 +45,44 @@ jobs:
           path: |
             android/app/build/reports/
             android/app/build/test-results/
+            android/core/build/reports/
+            android/core/build/test-results/
+
+  # One fixed download page for the latest test build:
+  # https://github.com/<owner>/<repo>/releases/tag/android-test-build
+  publish-test-build:
+    name: Publish test build
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: gasolineras-debug-apk
+          path: apk
+      - name: Move the test-build tag to this commit
+        run: |
+          git tag -f android-test-build
+          git push -f origin refs/tags/android-test-build
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-test-build
+          name: Android test build
+          prerelease: true
+          make_latest: false
+          body: |
+            Latest debug build of the Android app (not for production).
+            Branch `${{ github.ref_name }}`, commit ${{ github.sha }}.
+
+            Install: download `gasolineras-test.apk` on the phone and open it,
+            or from a PC run `adb install -r gasolineras-test.apk`.
+          files: apk/gasolineras-test.apk
 
   emulator:
     name: Emulator tests (API ${{ matrix.api }})
