@@ -160,4 +160,8 @@
     <string name="offline_banner">Sin conexión: se muestran los precios guardados.</string>
     <string name="a11y_station">%1$s, %2$s euros por litro, a %3$s km</string>
     <string name="a11y_station_no_distance">%1$s, %2$s euros por litro</string>
+    <string name="widget_description">Las gasolineras más baratas cerca de ti</string>
+    <string name="widget_no_origin">Abre la app para fijar tu ubicación.</string>
+    <string name="widget_no_data">Sin datos todavía.</string>
+    <string name="widget_updated">Actualizado %1$s</string>
 </resources>

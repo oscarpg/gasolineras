@@ -159,4 +159,8 @@
     <string name="offline_banner">Offline: showing saved prices.</string>
     <string name="a11y_station">%1$s, %2$s euros per litre, %3$s km away</string>
     <string name="a11y_station_no_distance">%1$s, %2$s euros per litre</string>
+    <string name="widget_description">The cheapest petrol stations near you</string>
+    <string name="widget_no_origin">Open the app to set your location.</string>
+    <string name="widget_no_data">No data yet.</string>
+    <string name="widget_updated">Updated %1$s</string>
 </resources>

@@ -18,6 +18,7 @@ import es.gasolineras.ui.AppLocales
 import es.gasolineras.ui.main.MainScreen
 import es.gasolineras.ui.settings.SettingsScreen
 import android.content.Context
+import android.content.Intent
 import es.gasolineras.ui.theme.GasolinerasTheme
 
 class MainActivity : ComponentActivity() {
@@ -36,6 +37,7 @@ class MainActivity : ComponentActivity() {
                 mainViewModel.setLocale(system)
             }
         }
+        handleWidgetTap(intent)
         setContent {
             GasolinerasTheme {
                 val diagnostics: DiagnosticsViewModel = viewModel()
@@ -70,9 +72,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleWidgetTap(intent)
+    }
+
+    /** A station tapped on the home-screen widget. */
+    private fun handleWidgetTap(intent: Intent?) {
+        intent?.getStringExtra(EXTRA_STATION_ID)?.let { id ->
+            intent.removeExtra(EXTRA_STATION_ID)
+            mainViewModel.openStationWhenAvailable(id)
+        }
+    }
+
     override fun onStop() {
         super.onStop()
         mainViewModel.flush()
+    }
+
+    companion object {
+        const val EXTRA_STATION_ID = "station_id"
     }
 
     private enum class Screen { MAIN, SETTINGS, DIAGNOSTICS, MAP_TEST }

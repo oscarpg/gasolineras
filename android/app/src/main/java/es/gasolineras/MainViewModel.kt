@@ -22,6 +22,8 @@ import es.gasolineras.state.setBrandSelected
 import es.gasolineras.state.setCustomAgeDays
 import es.gasolineras.state.setDiscount
 import es.gasolineras.state.updateCar
+import es.gasolineras.widget.WidgetStore
+import es.gasolineras.widget.WidgetUpdater
 import java.util.UUID
 import es.gasolineras.core.domain.LatLng
 import es.gasolineras.core.domain.Station
@@ -83,6 +85,19 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     )
     private val persister = PreferencesPersister(store, viewModelScope, { savePreferences(container.preferencesStorage, it) }).start()
     private val selector = VisibleStationsSelector()
+    private val widgetStore = WidgetStore(application)
+    private val widgetUpdater = WidgetUpdater(application, container)
+
+    @Volatile private var pendingStationId: String? = null
+
+    /** Opens a station's details as soon as it is in the list (e.g. tapped on the widget). */
+    fun openStationWhenAvailable(id: String) {
+        pendingStationId = id
+        if (ui.value.visible.rows.any { it.station.id == id }) {
+            pendingStationId = null
+            selectStation(id)
+        }
+    }
 
     val mapEvents = controller.mapEvents
 
@@ -117,6 +132,25 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             store.state.map { it.userPosition }.distinctUntilChanged().collect { p ->
                 saved[KEY_ORIGIN_LAT] = p?.lat
                 saved[KEY_ORIGIN_LON] = p?.lon
+                if (p != null) withContext(Dispatchers.IO) { widgetStore.saveOrigin(p) } // the widget's origin
+            }
+        }
+        viewModelScope.launch {
+            // Keep the home-screen widget in step with the list being shown.
+            ui.map { it.visible.rows to it.app.preferences.fuel }.distinctUntilChanged().collectLatest { (rows, fuel) ->
+                if (rows.isEmpty()) return@collectLatest
+                delay(WIDGET_DEBOUNCE_MS)
+                runCatching { widgetUpdater.publish(rows, fuel) }
+            }
+        }
+        viewModelScope.launch {
+            // A station tapped on the widget opens once its province is loaded.
+            ui.collect { state ->
+                val id = pendingStationId ?: return@collect
+                if (state.visible.rows.any { it.station.id == id }) {
+                    pendingStationId = null
+                    selectStation(id)
+                }
             }
         }
         viewModelScope.launch {
@@ -251,6 +285,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     private companion object {
         const val COVERAGE_DEBOUNCE_MS = 600L
         const val SHOW_ON_MAP_ZOOM = 16.0
+        const val WIDGET_DEBOUNCE_MS = 2_000L
         const val KEY_ORIGIN_LAT = "origin_lat"
         const val KEY_ORIGIN_LON = "origin_lon"
         val SPAIN = CameraTarget(GeoPoint(40.2, -3.7), 5.2)
