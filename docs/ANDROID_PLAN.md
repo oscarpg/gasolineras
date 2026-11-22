@@ -252,13 +252,18 @@ Not done, and why:
 - Screenshot tests: low value for a single developer compared with the UI tests above.
 - Cold-start measurement: to be done on the phone with the signed release APK (Phase 8).
 
-### Phase 7 — Home-screen widget (2–3 days)
+### Phase 7 — Home-screen widget ✅ done 2026-11-22
 
-- Jetpack Glance widget (resizable: small = best price + brand; medium = top 3 with distance).
-- Data: last known location + active car's fuel (or chosen fuel), stations from the daily cache; refresh with a periodic `WorkManager` job (e.g. every 3 h, unmetered not required) and on app open.
-- Tap a row → opens the app on that station; refresh button; "location unavailable" / "no data" states.
-- Respects dynamic colour and dark mode; strings in ES/EN.
-- **Done when:** widget updates after a price refresh and survives reboot; works with only "approximate location".
+- Jetpack Glance widget, resizable: small = cheapest station; medium = top 3 with distance and
+  "updated N min ago"; green→red prices; refresh button; tapping a station opens its details in the
+  app (once its province is loaded), tapping the header opens the app.
+- Same rules as the app (fuel, radius, brands, discounts, car, neighbouring provinces).
+- Updates: from the app when its list changes (exactly what the app shows), every 3 h in the
+  background with a connection (WorkManager; scheduled when the first widget is added, cancelled
+  when the last one is removed), and from the refresh button. The last good prices stay if a
+  download fails. Messages for "no origin yet", "no data" and "no stations match".
+- Decision: the widget uses the origin last used in the app (saved on the device) instead of
+  background location — no "allow all the time" permission, works with approximate location.
 
 ### Phase 8 — APK release (1–2 days)
 
