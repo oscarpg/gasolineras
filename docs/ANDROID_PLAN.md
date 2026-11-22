@@ -197,21 +197,31 @@ days; 87 stations within 15 km; search, a 6,386-point route and preferences save
     province outlines (`ProvinceShapes`, es-atlas, CC BY 4.0 © IGN; ~170 kB, offline), which also
     give the province when geocoding fails. Changing the radius or detour loads what's newly reached.
 
-### Phase 4 — Core UI (5–7 days)
+### Phase 4 — Core UI ✅ done 2026-11-22 (large-screen layout moved to Phase 6)
 
-- Theme (M3, dynamic colour, dark mode, typography), edge-to-edge, predictive back.
-- Map screen: markers coloured by metric, selected-marker state, route polyline, attribution.
-- Location permission flow (rationale, approximate-only, denied → manual search).
-- Results bottom sheet: fuel chips, sort toggle, rows (price, discount badge, distance/detour, total cost, price-age tag), empty/loading/error states, pull-to-refresh.
-- Station detail sheet with Navigate / Share, 7-day price chart.
-- Destination search → route mode, clear route.
-- **Done when:** the full happy path from `docs/SMOKE_TEST.md` works on device.
+- `MainScreen`: full-screen MapLibre map (dark style in dark mode) with green→red price markers,
+  user position and route; floating search bar (search key = origin, arrow = route, ⋮ menu with
+  Preferences, refresh and diagnostics); my-location FAB; "route active" chip.
+- `ResultsSheet` (`BottomSheetScaffold`): summary/status, history progress, fuel chips, sort switch,
+  errors with Retry, station list.
+- `StationDetailSheet`: price and discount, distance/detour + round trip, tank + trip cost, price
+  age, hours, 7-day Canvas chart, all fuel prices, Directions (`geo:` intent) and Share.
+- Performance (from phone feedback "opening a station lags"): selected marker in its own layer,
+  marker GeoJSON built off the main thread and only when the list changes; MITECO cache reads on
+  `Dispatchers.IO` with an in-memory LRU of decoded provinces/history days.
+- Not needed: marker clustering (894 markers at 120 fps). Pull-to-refresh replaced by the menu entry.
 
-### Phase 5 — Settings & i18n (3 days)
+### Phase 5 — Settings & i18n ✅ done 2026-11-22
 
-- Settings screens: fuel, age filter (options + custom days), radius, detour, route-only, brands multi-select, per-brand discounts, cars CRUD + active car, language.
-- All strings in `values/strings.xml` (es) and `values-en/`, plurals, number/currency formatting with `Locale`.
-- **Done when:** every preference persists across process death; ES/EN fully translated.
+- `SettingsScreen`: fuel, max distance and route detour sliders, route-only, price-age options
+  with custom days, cars (activate/add/edit/delete), brands with counts, per-brand discounts,
+  language, About with data attributions (MITECO, OSM/OpenFreeMap, IGN CC BY 4.0, Nominatim, OSRM).
+- Decisions:
+  - Per-app language without AppCompat: `LocaleManager` on Android 13+ (kept in sync with system
+    settings), context wrapping on older versions; the choice is also saved in preferences.
+  - `updateCar` edits a car in place and keeps its id (the web app saves by name, so a rename
+    there creates a second car).
+- All strings ES/EN with the web app's wording; preferences persist (debounced, flushed in `onStop`).
 
 ### Phase 6 — Hardening & quality (3 days)
 
