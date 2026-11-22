@@ -22,6 +22,8 @@ import es.gasolineras.state.setBrandSelected
 import es.gasolineras.state.setCustomAgeDays
 import es.gasolineras.state.setDiscount
 import es.gasolineras.state.updateCar
+import es.gasolineras.state.Status
+import es.gasolineras.state.toggleFavourite
 import es.gasolineras.widget.WidgetStore
 import es.gasolineras.widget.WidgetUpdater
 import java.util.UUID
@@ -90,6 +92,9 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
 
     @Volatile private var pendingStationId: String? = null
 
+    /** Set by user actions that change the list; the map then zooms to show the origin and the cheapest stations. */
+    @Volatile private var fitPending = false
+
     /** Opens a station's details as soon as it is in the list (e.g. tapped on the widget). */
     fun openStationWhenAvailable(id: String) {
         pendingStationId = id
@@ -148,6 +153,21 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                 }
         }
         viewModelScope.launch {
+            // After a new origin or a filter change, show the origin and the 3 cheapest stations.
+            ui.collect { state ->
+                if (!fitPending || state.controller.status != Status.Ready) return@collect
+                val rows = state.visible.rows
+                val origin = state.app.userPosition
+                if (rows.isEmpty() || state.app.route != null || origin == null) {
+                    if (state.app.loadedProvinces.isNotEmpty()) fitPending = false
+                    return@collect
+                }
+                fitPending = false
+                val points = (if (state.app.favouritesOnly) emptyList() else listOf(origin)) + rows.take(FIT_STATIONS).map { it.station.station.position }
+                mutableCamera.value = fitCamera(points)
+            }
+        }
+        viewModelScope.launch {
             // A station tapped on the widget opens once its province is loaded.
             ui.collect { state ->
                 val id = pendingStationId ?: return@collect
@@ -160,7 +180,10 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         viewModelScope.launch {
             controller.mapEvents.collect { event ->
                 when (event) {
-                    is MapEvent.ShowUserPosition -> mutableCamera.value = CameraTarget(event.position.toGeo(), event.zoom)
+                    is MapEvent.ShowUserPosition -> {
+                        mutableCamera.value = CameraTarget(event.position.toGeo(), event.zoom)
+                        fitPending = true
+                    }
                     is MapEvent.ShowRoute -> mutableCamera.value = fitCamera(event.points)
                     MapEvent.ClearRoute -> store.value.userPosition?.let { mutableCamera.value = CameraTarget(it.toGeo(), 13.0) }
                 }
@@ -198,38 +221,61 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     fun clearRoute() = controller.clearRoute()
     fun dismissError() = controller.clearError()
 
-    fun setFuel(fuel: FuelType) = store.update { it.setFuel(fuel) }
+    fun setFuel(fuel: FuelType) = userChange { it.setFuel(fuel) }
     fun setSortByTotalCost(on: Boolean) = store.update { it.updatePreferences { p -> p.copy(sortByTotalCost = on) } }
 
     /* ---------- settings ---------- */
 
     fun setAgeFilterOption(option: AgeFilterOption) {
-        store.update { it.updatePreferences { p -> p.copy(ageFilterOption = option) } }
+        userChange { it.updatePreferences { p -> p.copy(ageFilterOption = option) } }
         viewModelScope.launch { effects.ensureHistoryForFilter() }
     }
 
     fun setCustomAgeDays(days: Int) {
-        store.update { it.setCustomAgeDays(days) }
+        userChange { it.setCustomAgeDays(days) }
         viewModelScope.launch { effects.ensureHistoryForFilter() }
     }
 
-    fun setSearchRadius(km: Double) = store.update { it.updatePreferences { p -> p.copy(searchRadiusKm = km.coerceIn(MIN_SEARCH_RADIUS_KM, MAX_SEARCH_RADIUS_KM)) } }
+    fun setSearchRadius(km: Double) = userChange { it.updatePreferences { p -> p.copy(searchRadiusKm = km.coerceIn(MIN_SEARCH_RADIUS_KM, MAX_SEARCH_RADIUS_KM)) } }
     fun setRouteDetour(km: Double) = store.update { it.updatePreferences { p -> p.copy(routeDetourKm = km.coerceIn(MIN_ROUTE_DETOUR_KM, MAX_ROUTE_DETOUR_KM)) } }
     fun setRouteOnly(on: Boolean) = store.update { it.updatePreferences { p -> p.copy(routeOnly = on) } }
 
-    fun selectCar(id: String) = store.update { it.selectCar(id) }
+    fun selectCar(id: String) = userChange { it.selectCar(id) }
+
+    private fun userChange(change: (AppState) -> AppState) {
+        fitPending = true
+        store.update(change)
+    }
+
+    /* ---------- favourites and empty results ---------- */
+
+    fun toggleFavourite(id: String) {
+        val station = store.value.stations.firstOrNull { it.id == id } ?: return
+        store.update { it.toggleFavourite(station) }
+    }
+
+    fun setFavouritesOnly(on: Boolean) {
+        fitPending = true
+        viewModelScope.launch { controller.showFavourites(on) }
+    }
+
+    /** "Nothing matches": 10 km more. */
+    fun widenSearch() = setSearchRadius(store.value.preferences.searchRadiusKm + WIDEN_STEP_KM)
+
+    /** "Nothing matches": no price-age or brand filter. */
+    fun clearFilters() = userChange { s -> s.updatePreferences { it.copy(ageFilterOption = AgeFilterOption.ALL, brands = emptySet()) } }
 
     /** No active car: prices per litre only, any fuel. */
-    fun clearCar() = store.update { it.updatePreferences { p -> p.copy(activeCarId = null) } }
+    fun clearCar() = userChange { it.updatePreferences { p -> p.copy(activeCarId = null) } }
     fun addCar(input: CarInput) = store.update { it.saveCar(input, newId = "car_" + UUID.randomUUID().toString().take(8)) }
     fun updateCar(id: String, input: CarInput) = store.update { it.updateCar(id, input) }
     fun deleteCar(id: String) = store.update { it.deleteCar(id) }
 
-    fun setAllBrands(all: Boolean, present: List<String>) = store.update { it.setAllBrands(all, present) }
-    fun setBrandSelected(brand: String, selected: Boolean) = store.update { it.setBrandSelected(brand, selected) }
+    fun setAllBrands(all: Boolean, present: List<String>) = userChange { it.setAllBrands(all, present) }
+    fun setBrandSelected(brand: String, selected: Boolean) = userChange { it.setBrandSelected(brand, selected) }
 
     /** No brand ticked: no brand filter (all shown) until the user ticks some. */
-    fun clearBrands() = store.update { it.setAllBrands(true, emptyList()) }
+    fun clearBrands() = userChange { it.setAllBrands(true, emptyList()) }
 
     fun setDiscount(brand: String, discount: Discount) = store.update { it.setDiscount(brand, discount) }
     fun removeDiscount(brand: String) = store.update { it.removeDiscount(brand) }
@@ -293,6 +339,8 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         const val COVERAGE_DEBOUNCE_MS = 600L
         const val SHOW_ON_MAP_ZOOM = 16.0
         const val WIDGET_DEBOUNCE_MS = 2_000L
+        const val FIT_STATIONS = 3
+        const val WIDEN_STEP_KM = 10.0
         const val KEY_ORIGIN_LAT = "origin_lat"
         const val KEY_ORIGIN_LON = "origin_lon"
         val SPAIN = CameraTarget(GeoPoint(40.2, -3.7), 5.2)
@@ -313,6 +361,6 @@ fun fitCamera(points: List<LatLng>): CameraTarget {
     val maxLon = points.maxOf { it.lon }
     val latSpan = maxOf(maxLat - minLat, 0.005)
     val lonSpan = maxOf(maxLon - minLon, 0.005)
-    val zoom = minOf(ln(360.0 / lonSpan) / ln(2.0), ln(170.0 / latSpan) / ln(2.0)) - 0.8
+    val zoom = minOf(ln(360.0 / lonSpan) / ln(2.0), ln(170.0 / latSpan) / ln(2.0)) - 1.0
     return CameraTarget(GeoPoint((minLat + maxLat) / 2, (minLon + maxLon) / 2), zoom.coerceIn(3.0, 15.0))
 }

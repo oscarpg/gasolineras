@@ -270,6 +270,15 @@ Widget feedback (2026-11-22): two widgets in the picker ("Cheapest station", res
 age filters and discounts (ignores routes and "sort by total cost"); the active car is named when
 there is more than one; car chips in the results sheet switch car in one tap.
 
+More feedback (2026-11-22):
+
+- Empty-looking map: after a new origin or a user filter change, the map zooms to show the origin
+  and the 3 cheapest stations (never on background updates). With no results: "Widen to N km" and
+  "Clear filters" buttons.
+- Favourites (Android only, saved with preferences): heart in station details, heart in the list,
+  "♥ Favourites (N)" chip that shows only favourites wherever they are (their provinces are loaded;
+  radius and route don't apply).
+
 ### Phase 8 — APK release (1–2 days)
 
 - GitHub Actions `android.yml` (path filter `android/**`, `tests/fixtures/**`): lint, detekt, unit tests, `assembleRelease` on every PR.

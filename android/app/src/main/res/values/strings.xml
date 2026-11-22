@@ -169,4 +169,12 @@
     <string name="widget_list_label">Top 3 gasolineras</string>
     <string name="widget_list_description">Las 3 gasolineras más baratas cerca de ti, con distancia</string>
     <string name="widget_car_fuel">%1$s · %2$s</string>
+    <string name="fav_add">Añadir a favoritas</string>
+    <string name="fav_remove">Quitar de favoritas</string>
+    <string name="fav_chip">Favoritas (%1$d)</string>
+    <string name="fav_summary">%1$d favoritas</string>
+    <string name="fav_none">Aún no tienes favoritas. Ábrelas desde una gasolinera con el corazón.</string>
+    <string name="empty_widen">Ampliar a %1$d km</string>
+    <string name="empty_clear_filters">Quitar filtros</string>
+    <string name="a11y_favourite">favorita</string>
 </resources>

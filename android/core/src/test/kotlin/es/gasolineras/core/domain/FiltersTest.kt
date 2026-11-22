@@ -29,7 +29,8 @@ class FiltersTest {
         car: CarSpecs? = null,
         discounts: Map<String, Discount> = emptyMap(),
         sortByTotalCost: Boolean = false,
-    ) = VisibilityCriteria(fuel, brands, ageFilter, staleness, userPosition, route, searchRadiusKm, routeDetourKm, routeOnly, car, discounts, sortByTotalCost)
+        onlyIds: Set<String>? = null,
+    ) = VisibilityCriteria(fuel, brands, ageFilter, staleness, userPosition, route, searchRadiusKm, routeDetourKm, routeOnly, car, discounts, sortByTotalCost, onlyIds)
 
     private fun ids(r: VisibleStations) = r.rows.map { it.station.id }
 
@@ -139,6 +140,12 @@ class FiltersTest {
         // Same price and the same total cost needs the same distance: then load order decides
         val s = listOf(branded("x", lat = north(3.0)), branded("y", lat = north(3.0)), branded("z", lat = north(1.0)))
         assertEquals(listOf("z", "x", "y"), ids(selectVisibleStations(s, criteria(car = car, sortByTotalCost = true))))
+    }
+
+    @Test fun `only the given ids, wherever they are`() {
+        val r = selectVisibleStations(stations, criteria(onlyIds = setOf("c", "a")))
+        assertEquals(listOf("c", "a"), ids(r)) // c is 20 km away, beyond the radius
+        assertEquals(20.0, r.rows[0].distanceFromUserKm!!, 0.01)
     }
 
     @Test fun `colours the best row green and the worst red`() {

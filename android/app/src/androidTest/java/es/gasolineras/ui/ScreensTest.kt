@@ -59,7 +59,7 @@ class ScreensTest {
         var opened: String? = null
         compose.setContent {
             GasolinerasTheme {
-                ResultsSheet(ui, online = true, onFuel = {}, onCar = {}, onSortByTotalCost = {}, onStation = { opened = it }, onRetry = {}, onDismissError = {})
+                ResultsSheet(ui, online = true, onFuel = {}, onCar = {}, onFavouritesOnly = {}, onWiden = {}, onClearFilters = {}, onSortByTotalCost = {}, onStation = { opened = it }, onRetry = {}, onDismissError = {})
             }
         }
         compose.onNodeWithText(context.getString(R.string.preview_summary_radius, 2, 15)).assertIsDisplayed()
@@ -75,7 +75,7 @@ class ScreensTest {
     fun offlineBannerAppearsWithoutConnection() {
         compose.setContent {
             GasolinerasTheme {
-                ResultsSheet(ui, online = false, onFuel = {}, onCar = {}, onSortByTotalCost = {}, onStation = {}, onRetry = {}, onDismissError = {})
+                ResultsSheet(ui, online = false, onFuel = {}, onCar = {}, onFavouritesOnly = {}, onWiden = {}, onClearFilters = {}, onSortByTotalCost = {}, onStation = {}, onRetry = {}, onDismissError = {})
             }
         }
         compose.onNodeWithText(context.getString(R.string.offline_banner)).assertIsDisplayed()
@@ -88,7 +88,7 @@ class ScreensTest {
         val history = (6 downTo 0).map { PriceDay(LocalDate.of(2026, 11, 21).minusDays(it.toLong()), if (it > 3) 1.479 else 1.459) }
         compose.setContent {
             GasolinerasTheme {
-                StationDetailSheet(row, FuelType.GASOLINA_95, loadHistory = { history }, onShowOnMap = { shownOnMap = true }, onDismiss = {})
+                StationDetailSheet(row, FuelType.GASOLINA_95, loadHistory = { history }, favourite = false, onToggleFavourite = {}, onShowOnMap = { shownOnMap = true }, onDismiss = {})
             }
         }
         // The price appears as the headline and again in the all-fuels list

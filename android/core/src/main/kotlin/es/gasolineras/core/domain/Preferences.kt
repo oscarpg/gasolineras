@@ -2,6 +2,9 @@ package es.gasolineras.core.domain
 
 enum class AppLocale(val tag: String) { ES("es"), EN("en") }
 
+/** A saved favourite: enough to find it again (its province is loaded when favourites are shown). */
+data class FavouriteStation(val id: String, val provinceCode: String, val brand: String)
+
 /** Everything the user chooses that survives a restart. Same fields as the web app's schema v3. */
 data class Preferences(
     val fuel: FuelType = FuelType.DEFAULT,
@@ -24,7 +27,11 @@ data class Preferences(
     val activeCarId: String? = null,
     /** UI language; null = follow the system. */
     val locale: AppLocale? = null,
+    /** Favourite stations (Android only; not part of the web app's preferences). */
+    val favourites: List<FavouriteStation> = emptyList(),
 ) {
+    val favouriteIds: Set<String> get() = favourites.mapTo(HashSet()) { it.id }
+
     val ageFilter: AgeFilter get() = ageFilterOption.toFilter(ageFilterCustomDays)
     val activeCar: Car? get() = cars.firstOrNull { it.id == activeCarId }
 

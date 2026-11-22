@@ -22,10 +22,10 @@ class VisibleStationsSelector {
 
     @Synchronized
     fun select(s: AppState): VisibleStations {
-        val inputs = listOf<Any?>(s.stations, s.staleness, s.preferences, s.userPosition, s.route)
+        val inputs = listOf<Any?>(s.stations, s.staleness, s.preferences, s.userPosition, s.route, s.favouritesOnly)
         val previous = lastInputs
-        if (previous != null && previous.indices.all { previous[it] === inputs[it] }) return lastResult!!
-        val result = compute(s.stations, s.staleness, s.preferences, s.userPosition, s.route)
+        if (previous != null && previous.indices.all { previous[it] === inputs[it] || (inputs[it] is Boolean && previous[it] == inputs[it]) }) return lastResult!!
+        val result = compute(s.stations, s.staleness, s.preferences, s.userPosition, if (s.favouritesOnly) null else s.route, s.favouritesOnly)
         lastInputs = inputs
         lastResult = result
         return result
@@ -37,6 +37,7 @@ class VisibleStationsSelector {
         p: Preferences,
         userPosition: LatLng?,
         route: List<LatLng>?,
+        favouritesOnly: Boolean,
     ) = selectVisibleStations(
         stations,
         VisibilityCriteria(
@@ -52,6 +53,7 @@ class VisibleStationsSelector {
             car = p.activeCar,
             discounts = p.discounts,
             sortByTotalCost = p.sortByTotalCost,
+            onlyIds = if (favouritesOnly) p.favouriteIds else null,
         ),
     )
 }

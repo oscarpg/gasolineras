@@ -5,6 +5,7 @@ import es.gasolineras.core.domain.AppLocale
 import es.gasolineras.core.domain.Car
 import es.gasolineras.core.domain.Discount
 import es.gasolineras.core.domain.DiscountType
+import es.gasolineras.core.domain.FavouriteStation
 import es.gasolineras.core.domain.FuelType
 import es.gasolineras.core.domain.MAX_CUSTOM_AGE_DAYS
 import es.gasolineras.core.domain.MAX_ROUTE_DETOUR_KM
@@ -133,6 +134,11 @@ object PreferencesCodec {
                 "en" -> AppLocale.EN
                 else -> null
             },
+            favourites = (p["favourites"] as? JsonArray)?.mapNotNull { f ->
+                val o = f as? JsonObject ?: return@mapNotNull null
+                val id = nonEmptyString(o["id"]) ?: return@mapNotNull null
+                FavouriteStation(id, o["province"].str.orEmpty(), o["brand"].str.orEmpty())
+            }?.distinctBy { it.id }.orEmpty(),
         )
     }
 
@@ -217,6 +223,17 @@ object PreferencesCodec {
         }
         put("activeCarId", p.activeCarId)
         put("locale", p.locale?.tag)
+        putJsonArray("favourites") {
+            p.favourites.forEach { f ->
+                add(
+                    buildJsonObject {
+                        put("id", f.id)
+                        put("province", f.provinceCode)
+                        put("brand", f.brand)
+                    },
+                )
+            }
+        }
     }.toString()
 
     /** Parses saved JSON; null for missing or corrupted text. */

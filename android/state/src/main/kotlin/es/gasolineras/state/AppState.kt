@@ -29,6 +29,8 @@ data class AppState(
     /** Origin chosen by GPS or address search. */
     val userPosition: LatLng? = null,
     val route: List<LatLng>? = null,
+    /** Show only favourite stations (wherever they are) instead of those within the radius or route. */
+    val favouritesOnly: Boolean = false,
 )
 
 /**

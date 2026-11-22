@@ -3,6 +3,7 @@ package es.gasolineras.state
 import es.gasolineras.core.domain.BrandedStation
 import es.gasolineras.core.domain.Car
 import es.gasolineras.core.domain.Discount
+import es.gasolineras.core.domain.FavouriteStation
 import es.gasolineras.core.domain.FuelType
 import es.gasolineras.core.domain.LatLng
 import es.gasolineras.core.domain.MAX_CUSTOM_AGE_DAYS
@@ -87,6 +88,19 @@ fun AppState.setBrandSelected(brand: String, selected: Boolean): AppState = upda
     val others = it.brands - brand
     it.copy(brands = if (selected) others + brand else others)
 }
+
+/* ---------- favourites ---------- */
+
+/** Adds the station to favourites, or removes it if it already is one. */
+fun AppState.toggleFavourite(station: BrandedStation): AppState = updatePreferences { p ->
+    if (p.favourites.any { it.id == station.id }) {
+        p.copy(favourites = p.favourites.filter { it.id != station.id })
+    } else {
+        p.copy(favourites = p.favourites + FavouriteStation(station.id, station.station.provinceCode, station.brand))
+    }
+}
+
+fun AppState.setFavouritesOnly(on: Boolean): AppState = copy(favouritesOnly = on)
 
 /* ---------- stations ---------- */
 

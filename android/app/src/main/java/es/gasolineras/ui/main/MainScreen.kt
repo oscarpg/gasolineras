@@ -107,6 +107,9 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
             online = online,
             onFuel = viewModel::setFuel,
             onCar = { id -> if (id == null) viewModel.clearCar() else viewModel.selectCar(id) },
+            onFavouritesOnly = viewModel::setFavouritesOnly,
+            onWiden = viewModel::widenSearch,
+            onClearFilters = viewModel::clearFilters,
             onSortByTotalCost = viewModel::setSortByTotalCost,
             onStation = { viewModel.selectStation(it) },
             onRetry = { ui.controller.error?.retry?.invoke() },
@@ -176,6 +179,8 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
             row = selectedRow,
             fuel = ui.app.preferences.fuel,
             loadHistory = { viewModel.priceHistory(selectedRow.station.station, ui.app.preferences.fuel) },
+            favourite = selectedRow.station.id in ui.app.preferences.favouriteIds,
+            onToggleFavourite = { viewModel.toggleFavourite(selectedRow.station.id) },
             onShowOnMap = {
                 viewModel.showSelectedOnMap()
                 if (!wide) scope.launch { scaffoldState.bottomSheetState.partialExpand() }

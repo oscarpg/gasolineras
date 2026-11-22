@@ -14,7 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
@@ -37,7 +44,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import es.gasolineras.MainUiState
 import es.gasolineras.R
+import es.gasolineras.core.domain.AgeFilterOption
 import es.gasolineras.core.domain.FuelType
+import es.gasolineras.core.domain.MAX_SEARCH_RADIUS_KM
 import es.gasolineras.core.domain.PriceStaleness
 import es.gasolineras.core.domain.StationRow
 import es.gasolineras.state.HistoryStatus
@@ -56,6 +65,9 @@ fun ResultsSheet(
     online: Boolean,
     onFuel: (FuelType) -> Unit,
     onCar: (String?) -> Unit,
+    onFavouritesOnly: (Boolean) -> Unit,
+    onWiden: () -> Unit,
+    onClearFilters: () -> Unit,
     onSortByTotalCost: (Boolean) -> Unit,
     onStation: (String) -> Unit,
     onRetry: () -> Unit,
@@ -77,7 +89,9 @@ fun ResultsSheet(
             Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
                 val status = statusText(ui.controller.status)
                 Text(
-                    status ?: if (ui.app.route != null) {
+                    status ?: if (ui.app.favouritesOnly) {
+                        stringResource(R.string.fav_summary, ui.visible.rows.size)
+                    } else if (ui.app.route != null) {
                         stringResource(R.string.preview_summary_route, ui.visible.rows.size)
                     } else {
                         stringResource(R.string.preview_summary_radius, ui.visible.rows.size, prefs.searchRadiusKm.toInt())
@@ -93,6 +107,12 @@ fun ResultsSheet(
                 Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                FilterChip(
+                    selected = ui.app.favouritesOnly,
+                    onClick = { onFavouritesOnly(!ui.app.favouritesOnly) },
+                    label = { Text(stringResource(R.string.fav_chip, prefs.favourites.size)) },
+                    leadingIcon = { Icon(if (ui.app.favouritesOnly) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                )
                 FuelType.entries.forEach { fuel ->
                     FilterChip(selected = prefs.fuel == fuel, onClick = { onFuel(fuel) }, label = { Text(stringResource(fuel.label())) })
                 }
@@ -127,29 +147,55 @@ fun ResultsSheet(
                 }
             }
             if (statusText(ui.controller.status) == null && ui.visible.rows.isEmpty()) {
-                Text(stringResource(R.string.preview_none), Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
+                if (ui.app.favouritesOnly) {
+                    Text(stringResource(R.string.fav_none), Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
+                } else if (ui.app.userPosition != null) {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text(stringResource(R.string.preview_none), style = MaterialTheme.typography.bodyMedium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                            if (ui.app.route == null && prefs.searchRadiusKm < MAX_SEARCH_RADIUS_KM) {
+                                FilledTonalButton(onClick = onWiden) {
+                                    Text(stringResource(R.string.empty_widen, minOf(MAX_SEARCH_RADIUS_KM, prefs.searchRadiusKm + 10).toInt()))
+                                }
+                            }
+                            if (prefs.brands.isNotEmpty() || prefs.ageFilterOption != AgeFilterOption.ALL) {
+                                OutlinedButton(onClick = onClearFilters) { Text(stringResource(R.string.empty_clear_filters)) }
+                            }
+                        }
+                    }
+                }
             }
             HorizontalDivider(Modifier.padding(top = 8.dp))
         }
+        val favourites = prefs.favouriteIds
         items(ui.visible.rows, key = { it.station.id }) { row ->
-            StationRowItem(row, sortedByTotalCost = ui.visible.sortedByTotalCost, onClick = { onStation(row.station.id) })
+            StationRowItem(row, favourite = row.station.id in favourites, sortedByTotalCost = ui.visible.sortedByTotalCost, onClick = { onStation(row.station.id) })
         }
     }
 }
 
 @Composable
-private fun StationRowItem(row: StationRow, sortedByTotalCost: Boolean, onClick: () -> Unit) {
+private fun StationRowItem(row: StationRow, favourite: Boolean, sortedByTotalCost: Boolean, onClick: () -> Unit) {
     val s = row.station.station
     val dark = isSystemInDarkTheme()
     val distance = row.routeDetourKm ?: row.distanceFromUserKm
-    val description = if (distance != null) {
-        stringResource(R.string.a11y_station, row.station.brand, price(row.finalPrice), km(distance))
-    } else {
-        stringResource(R.string.a11y_station_no_distance, row.station.brand, price(row.finalPrice))
-    }
+    val description = (
+        if (distance != null) {
+            stringResource(R.string.a11y_station, row.station.brand, price(row.finalPrice), km(distance))
+        } else {
+            stringResource(R.string.a11y_station_no_distance, row.station.brand, price(row.finalPrice))
+        }
+        ) + if (favourite) ", " + stringResource(R.string.a11y_favourite) else ""
     ListItem(
         modifier = Modifier.clickable(onClick = onClick).clearAndSetSemantics { contentDescription = description; role = Role.Button },
-        headlineContent = { Text(row.station.brand, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        headlineContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (favourite) {
+                    Icon(Icons.Filled.Favorite, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp).padding(end = 4.dp))
+                }
+                Text(row.station.brand, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        },
         supportingContent = {
             Column {
                 Text(

@@ -168,4 +168,12 @@
     <string name="widget_list_label">Top 3 stations</string>
     <string name="widget_list_description">The 3 cheapest stations near you, with distance</string>
     <string name="widget_car_fuel">%1$s · %2$s</string>
+    <string name="fav_add">Add to favourites</string>
+    <string name="fav_remove">Remove from favourites</string>
+    <string name="fav_chip">Favourites (%1$d)</string>
+    <string name="fav_summary">%1$d favourites</string>
+    <string name="fav_none">No favourites yet. Add one with the heart in a station's details.</string>
+    <string name="empty_widen">Widen to %1$d km</string>
+    <string name="empty_clear_filters">Clear filters</string>
+    <string name="a11y_favourite">favourite</string>
 </resources>

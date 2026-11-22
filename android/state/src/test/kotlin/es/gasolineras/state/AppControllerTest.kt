@@ -217,6 +217,28 @@ class AppControllerTest {
         assertEquals(3.0 + PROVINCE_MARGIN_KM, detour, 0.0)
     }
 
+    @Test fun `favourites show wherever they are, loading their provinces`() = runTest {
+        val w = world()
+        w.controller.requestGps()
+        advanceUntilIdle()
+        val t = w.miteco.stationsByProvince.getValue("45").single()
+        w.store.update { it.addStations(listOf(t)) } // as if it had been seen on a trip
+        val branded = w.store.value.stations.first { it.id == "T" }
+        w.store.update { it.toggleFavourite(branded).markProvinceLoaded("45") }
+        w.store.update { it.copy(stations = it.stations.filter { s -> s.id != "T" }, loadedProvinces = listOf("28")) } // a new day: not loaded
+
+        w.controller.showFavourites(true)
+        advanceUntilIdle()
+        assertTrue("45" in w.store.value.loadedProvinces)
+        assertEquals(listOf("T"), w.visibleIds()) // 55 km away, beyond the radius
+
+        w.controller.showFavourites(false)
+        assertEquals(listOf("B", "A"), w.visibleIds())
+
+        w.store.update { it.toggleFavourite(branded) }
+        assertEquals(emptyList<String>(), w.store.value.preferences.favourites)
+    }
+
     @Test fun `a route needs an origin first`() = runTest {
         val w = world()
         assertFalse(w.controller.calculateRoute("Toledo"))

@@ -16,12 +16,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -66,6 +69,8 @@ fun StationDetailSheet(
     row: StationRow,
     fuel: FuelType,
     loadHistory: suspend () -> List<PriceDay>,
+    favourite: Boolean,
+    onToggleFavourite: () -> Unit,
     onShowOnMap: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -86,7 +91,16 @@ fun StationDetailSheet(
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).navigationBarsPadding().padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(row.station.brand, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(row.station.brand, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                IconToggleButton(checked = favourite, onCheckedChange = { onToggleFavourite() }) {
+                    Icon(
+                        if (favourite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = stringResource(if (favourite) R.string.fav_remove else R.string.fav_add),
+                        tint = if (favourite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             Text(s.address.ifEmpty { s.name.ifEmpty { stringResource(R.string.station_unnamed) } }, style = MaterialTheme.typography.bodyMedium)
 
             Row(verticalAlignment = androidx.compose.ui.Alignment.Bottom) {

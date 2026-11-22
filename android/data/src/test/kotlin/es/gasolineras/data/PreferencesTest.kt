@@ -141,6 +141,15 @@ class PreferencesTest {
         assertEquals(migrated, loadPreferences(storage))
     }
 
+    @Test fun `favourites round-trip and invalid ones are dropped`() {
+        val storage = MemoryStorage()
+        val prefs = migrated.copy(favourites = listOf(es.gasolineras.core.domain.FavouriteStation("1-40,4--3,7", "28", "REPSOL")))
+        assertTrue(savePreferences(storage, prefs))
+        assertEquals(prefs, loadPreferences(storage))
+        val p = PreferencesCodec.sanitize(json("""{"favourites":[{"id":"a","province":"15","brand":"X"},{"id":""},"junk",{"id":"a"}]}"""))
+        assertEquals(listOf("a"), p.favourites.map { it.id })
+    }
+
     @Test fun `reports failure instead of throwing when storage is full`() =
         assertFalse(savePreferences(MemoryStorage(10), migrated))
 }

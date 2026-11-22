@@ -257,6 +257,17 @@ class AppController(
         settle()
     }
 
+    /** Shows only favourites (loading their provinces if needed), or goes back to the normal list. */
+    suspend fun showFavourites(on: Boolean) {
+        store.update { it.setFavouritesOnly(on) }
+        if (!on) return
+        clearError()
+        for (code in store.value.preferences.favourites.map { it.provinceCode }.filter { it.isNotEmpty() }.distinct()) {
+            if (code !in store.value.loadedProvinces) loadProvince(code)
+        }
+        settle()
+    }
+
     /** Uses a known origin (e.g. restored after the app was closed in the background) without asking GPS. */
     fun restoreOrigin(position: LatLng) {
         scope.launch { setOrigin(position) }

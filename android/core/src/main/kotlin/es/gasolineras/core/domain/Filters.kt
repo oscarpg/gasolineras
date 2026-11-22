@@ -18,6 +18,8 @@ data class VisibilityCriteria(
     val car: CarSpecs? = null,
     val discounts: Map<String, Discount> = emptyMap(),
     val sortByTotalCost: Boolean = false,
+    /** When set, only these station ids, wherever they are (favourites): radius and route don't apply. */
+    val onlyIds: Set<String>? = null,
 )
 
 data class StationRow(
@@ -59,6 +61,7 @@ fun selectVisibleStations(stations: List<BrandedStation>, c: VisibilityCriteria)
 
     val rows = stations.mapNotNull { branded ->
         val station = branded.station
+        if (c.onlyIds != null && branded.id !in c.onlyIds) return@mapNotNull null
         if (c.brands.isNotEmpty() && branded.brand !in c.brands) return@mapNotNull null
 
         val basePrice = station.prices[c.fuel] ?: return@mapNotNull null
@@ -70,7 +73,9 @@ fun selectVisibleStations(stations: List<BrandedStation>, c: VisibilityCriteria)
         val routeDetourKm = c.route?.let { distanceToRouteKm(position, it) }
         val distanceFromUserKm = c.userPosition?.let { distanceKm(position, it) }
 
-        val inRange = if (routeDetourKm != null) {
+        val inRange = if (c.onlyIds != null) {
+            true
+        } else if (routeDetourKm != null) {
             routeDetourKm <= routeLimit
         } else {
             distanceFromUserKm != null && distanceFromUserKm <= c.searchRadiusKm
