@@ -290,7 +290,8 @@ distance = detour on a route; colours keep showing price); a directions button o
 
 ### Phase 8 — APK release (set up 2026-11-22)
 
-- `.github/workflows/android-release.yml`: on a tag `android-vX.Y.Z` it checks the signing secrets,
+- `.github/workflows/android-release.yml`: on a tag `android-vX.Y.Z` (or a manual run with the
+  version, which creates that tag on the chosen commit) it checks the signing secrets,
   runs the tests, builds the minified release APK signed with the repository keystore
   (`versionName` from the tag, `versionCode` from the run number), verifies the signature with
   `apksigner` and publishes `gasolineras-X.Y.Z.apk` on a GitHub Release with

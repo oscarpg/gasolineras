@@ -65,7 +65,8 @@ A native Android version lives in `android/` (Kotlin, Jetpack Compose, Material 
 - **Test builds:** every push publishes a debug build to the
   [android-test-build](https://github.com/oscarpg/gasolineras/releases/tag/android-test-build)
   pre-release (app id `es.gasolineras.debug`, installs alongside the release).
-- **Publishing a release:** push a tag `android-vX.Y.Z`; `.github/workflows/android-release.yml`
+- **Publishing a release:** push a tag `android-vX.Y.Z`, or run the "Android release" workflow from
+  the Actions tab with the version `X.Y.Z` (it creates the tag); `.github/workflows/android-release.yml`
   runs the tests, builds and signs the APK and creates the GitHub Release. Signing uses the
   repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`
   and `ANDROID_KEY_PASSWORD`.
