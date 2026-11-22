@@ -3,7 +3,25 @@ package es.gasolineras
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import es.gasolineras.core.domain.AgeFilterOption
+import es.gasolineras.core.domain.AppLocale
+import es.gasolineras.core.domain.Discount
 import es.gasolineras.core.domain.FuelType
+import es.gasolineras.core.domain.MAX_ROUTE_DETOUR_KM
+import es.gasolineras.core.domain.MAX_SEARCH_RADIUS_KM
+import es.gasolineras.core.domain.MIN_ROUTE_DETOUR_KM
+import es.gasolineras.core.domain.MIN_SEARCH_RADIUS_KM
+import es.gasolineras.state.CarInput
+import es.gasolineras.state.deleteCar
+import es.gasolineras.state.removeDiscount
+import es.gasolineras.state.saveCar
+import es.gasolineras.state.selectCar
+import es.gasolineras.state.setAllBrands
+import es.gasolineras.state.setBrandSelected
+import es.gasolineras.state.setCustomAgeDays
+import es.gasolineras.state.setDiscount
+import es.gasolineras.state.updateCar
+import java.util.UUID
 import es.gasolineras.core.domain.LatLng
 import es.gasolineras.core.domain.Station
 import es.gasolineras.core.domain.daysBefore
@@ -126,6 +144,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setFuel(fuel: FuelType) = store.update { it.setFuel(fuel) }
     fun setSortByTotalCost(on: Boolean) = store.update { it.updatePreferences { p -> p.copy(sortByTotalCost = on) } }
+
+    /* ---------- settings ---------- */
+
+    fun setAgeFilterOption(option: AgeFilterOption) {
+        store.update { it.updatePreferences { p -> p.copy(ageFilterOption = option) } }
+        viewModelScope.launch { effects.ensureHistoryForFilter() }
+    }
+
+    fun setCustomAgeDays(days: Int) {
+        store.update { it.setCustomAgeDays(days) }
+        viewModelScope.launch { effects.ensureHistoryForFilter() }
+    }
+
+    fun setSearchRadius(km: Double) = store.update { it.updatePreferences { p -> p.copy(searchRadiusKm = km.coerceIn(MIN_SEARCH_RADIUS_KM, MAX_SEARCH_RADIUS_KM)) } }
+    fun setRouteDetour(km: Double) = store.update { it.updatePreferences { p -> p.copy(routeDetourKm = km.coerceIn(MIN_ROUTE_DETOUR_KM, MAX_ROUTE_DETOUR_KM)) } }
+    fun setRouteOnly(on: Boolean) = store.update { it.updatePreferences { p -> p.copy(routeOnly = on) } }
+
+    fun selectCar(id: String) = store.update { it.selectCar(id) }
+    fun addCar(input: CarInput) = store.update { it.saveCar(input, newId = "car_" + UUID.randomUUID().toString().take(8)) }
+    fun updateCar(id: String, input: CarInput) = store.update { it.updateCar(id, input) }
+    fun deleteCar(id: String) = store.update { it.deleteCar(id) }
+
+    fun setAllBrands(all: Boolean, present: List<String>) = store.update { it.setAllBrands(all, present) }
+    fun setBrandSelected(brand: String, selected: Boolean) = store.update { it.setBrandSelected(brand, selected) }
+
+    fun setDiscount(brand: String, discount: Discount) = store.update { it.setDiscount(brand, discount) }
+    fun removeDiscount(brand: String) = store.update { it.removeDiscount(brand) }
+
+    /** Saves the language right away (the activity is recreated to apply it). */
+    fun setLocale(locale: AppLocale?) {
+        store.update { it.updatePreferences { p -> p.copy(locale = locale) } }
+        persister.flush()
+    }
 
     fun selectStation(id: String?, moveCamera: Boolean = true) {
         mutableSelected.value = id

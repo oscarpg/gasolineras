@@ -53,6 +53,17 @@ fun AppState.saveCar(input: CarInput, newId: String): AppState = updatePreferenc
     p.copy(cars = cars, activeCarId = existing?.id ?: newId, fuel = input.fuel)
 }
 
+/**
+ * Edits a car in place, keeping its id (so a renamed car stays active). If it is the active car,
+ * its fuel becomes the selected fuel.
+ */
+fun AppState.updateCar(id: String, input: CarInput): AppState = updatePreferences { p ->
+    val cars = p.cars.map {
+        if (it.id == id) it.copy(name = input.name, fuel = input.fuel, tankLitres = input.tankLitres, consumptionL100km = input.consumptionL100km) else it
+    }
+    p.copy(cars = cars, fuel = if (p.activeCarId == id) input.fuel else p.fuel)
+}
+
 /** Removes a car. If it was active, the first remaining car (if any) becomes active, with its fuel. */
 fun AppState.deleteCar(id: String): AppState = updatePreferences { p ->
     val cars = p.cars.filter { it.id != id }

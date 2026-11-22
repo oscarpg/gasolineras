@@ -50,6 +50,16 @@ class TransitionsTest {
         assertEquals("c1", s.preferences.activeCarId)
     }
 
+    @Test fun `editing a car keeps its id, even when renamed, and updates the fuel if it is active`() {
+        val s = state(Preferences(cars = listOf(LEON, VAN), activeCarId = "c1")).updateCar("c1", CarInput("León FR", FuelType.GASOLINA_98, 50.0, 6.5))
+        assertEquals(listOf("c1", "c2"), s.preferences.cars.map { it.id })
+        assertEquals("León FR", s.preferences.cars[0].name)
+        assertEquals("c1", s.preferences.activeCarId)
+        assertEquals(FuelType.GASOLINA_98, s.preferences.fuel)
+        // editing an inactive car leaves the selected fuel alone
+        assertEquals(FuelType.GASOLINA_98, s.updateCar("c2", CarInput("Furgo", FuelType.GLP, 60.0, 9.0)).preferences.fuel)
+    }
+
     @Test fun `deleting the active car activates the next one with its fuel`() {
         val s = state(Preferences(cars = listOf(LEON, VAN), activeCarId = "c1")).deleteCar("c1")
         assertEquals(listOf(VAN), s.preferences.cars)

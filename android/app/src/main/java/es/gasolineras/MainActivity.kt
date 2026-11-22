@@ -14,23 +14,46 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import es.gasolineras.diagnostics.DiagnosticsScreen
 import es.gasolineras.diagnostics.DiagnosticsViewModel
 import es.gasolineras.diagnostics.MapTestScreen
+import es.gasolineras.ui.AppLocales
 import es.gasolineras.ui.main.MainScreen
+import es.gasolineras.ui.settings.SettingsScreen
+import android.content.Context
 import es.gasolineras.ui.theme.GasolinerasTheme
 
 class MainActivity : ComponentActivity() {
     private val mainViewModel: MainViewModel by viewModels()
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocales.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // Android 13+: the language may have been changed in system settings.
+        AppLocales.systemChoice(this).let { system ->
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU && system != mainViewModel.ui.value.app.preferences.locale) {
+                mainViewModel.setLocale(system)
+            }
+        }
         setContent {
             GasolinerasTheme {
                 val diagnostics: DiagnosticsViewModel = viewModel()
                 var screen by rememberSaveable { mutableStateOf(Screen.MAIN) }
-                if (screen == Screen.DIAGNOSTICS) BackHandler { screen = Screen.MAIN }
+                if (screen == Screen.DIAGNOSTICS || screen == Screen.SETTINGS) BackHandler { screen = Screen.MAIN }
                 if (screen == Screen.MAP_TEST) BackHandler { screen = Screen.DIAGNOSTICS }
                 when (screen) {
-                    Screen.MAIN -> MainScreen(mainViewModel, MapModule.renderer, onOpenDiagnostics = { screen = Screen.DIAGNOSTICS })
+                    Screen.MAIN -> MainScreen(
+                        mainViewModel,
+                        MapModule.renderer,
+                        onOpenSettings = { screen = Screen.SETTINGS },
+                        onOpenDiagnostics = { screen = Screen.DIAGNOSTICS },
+                    )
+                    Screen.SETTINGS -> SettingsScreen(
+                        mainViewModel,
+                        onLocaleChosen = { AppLocales.apply(this@MainActivity, it) },
+                        onBack = { screen = Screen.MAIN },
+                    )
                     Screen.DIAGNOSTICS -> DiagnosticsScreen(
                         diagnostics,
                         onOpenMapTest = { screen = Screen.MAP_TEST },
@@ -52,5 +75,5 @@ class MainActivity : ComponentActivity() {
         mainViewModel.flush()
     }
 
-    private enum class Screen { MAIN, DIAGNOSTICS, MAP_TEST }
+    private enum class Screen { MAIN, SETTINGS, DIAGNOSTICS, MAP_TEST }
 }

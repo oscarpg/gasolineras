@@ -67,7 +67,7 @@ private val SHEET_PEEK = 200.dp
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenDiagnostics: () -> Unit) {
+fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: () -> Unit, onOpenDiagnostics: () -> Unit) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val camera by viewModel.camera.collectAsStateWithLifecycle()
     val selectedId by viewModel.selectedStationId.collectAsStateWithLifecycle()
@@ -115,6 +115,7 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenDiagnostic
                     onSearch = viewModel::searchAddress,
                     onRoute = viewModel::calculateRoute,
                     onRefresh = { viewModel.refresh() },
+                    onOpenSettings = onOpenSettings,
                     onOpenDiagnostics = onOpenDiagnostics,
                 )
                 if (ui.app.route != null) {
@@ -159,6 +160,7 @@ private fun SearchBar(
     onSearch: (String) -> Unit,
     onRoute: (String) -> Unit,
     onRefresh: () -> Unit,
+    onOpenSettings: () -> Unit,
     onOpenDiagnostics: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -215,6 +217,10 @@ private fun SearchBar(
                             focus.clearFocus()
                         })
                     }
+                    DropdownMenuItem(text = { Text(stringResource(R.string.settings_open)) }, onClick = {
+                        menu = false
+                        onOpenSettings()
+                    })
                     DropdownMenuItem(text = { Text(stringResource(R.string.preview_refresh)) }, onClick = {
                         menu = false
                         onRefresh()
