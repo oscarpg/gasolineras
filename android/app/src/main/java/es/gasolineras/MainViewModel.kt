@@ -2,6 +2,7 @@ package es.gasolineras
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import es.gasolineras.core.domain.AgeFilterOption
 import es.gasolineras.core.domain.AppLocale
@@ -71,7 +72,7 @@ data class MainUiState(val app: AppState, val visible: VisibleStations, val cont
  * Wires the :state module to the app: store, effects, the location/route controller and
  * preference saving. Screens read [ui] and call the actions below.
  */
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+class MainViewModel(application: Application, private val saved: SavedStateHandle) : AndroidViewModel(application) {
     private val container = (application as GasolinerasApp).container
 
     private val store = Store(createInitialState(loadPreferences(container.preferencesStorage)))
@@ -84,6 +85,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val selector = VisibleStationsSelector()
 
     val mapEvents = controller.mapEvents
+
+    /** False while the device has no internet connection (the list then shows cached prices). */
+    val online: StateFlow<Boolean> = container.connectivity.online
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), container.connectivity.isOnline())
 
     /** Where the map should be. Changed by location/route events and by selecting a station. */
     private val mutableCamera = MutableStateFlow(SPAIN)
@@ -108,6 +113,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
 
     init {
+        viewModelScope.launch {
+            store.state.map { it.userPosition }.distinctUntilChanged().collect { p ->
+                saved[KEY_ORIGIN_LAT] = p?.lat
+                saved[KEY_ORIGIN_LON] = p?.lon
+            }
+        }
         viewModelScope.launch {
             controller.mapEvents.collect { event ->
                 when (event) {
@@ -136,7 +147,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun start() {
         if (started) return
         started = true
-        controller.start()
+        // After Android closed the app in the background, go back to the origin the user had.
+        val lat = saved.get<Double>(KEY_ORIGIN_LAT)
+        val lon = saved.get<Double>(KEY_ORIGIN_LON)
+        if (lat != null && lon != null) controller.restoreOrigin(LatLng(lat, lon)) else controller.start()
     }
 
     fun requestGps() = controller.requestGps()
@@ -237,6 +251,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private companion object {
         const val COVERAGE_DEBOUNCE_MS = 600L
         const val SHOW_ON_MAP_ZOOM = 16.0
+        const val KEY_ORIGIN_LAT = "origin_lat"
+        const val KEY_ORIGIN_LON = "origin_lon"
         val SPAIN = CameraTarget(GeoPoint(40.2, -3.7), 5.2)
     }
 }

@@ -61,6 +61,15 @@ class AppControllerTest {
         assertEquals(HistoryStatus.Kind.DONE, w.store.value.historyStatus?.kind)
     }
 
+    @Test fun `a restored origin loads its stations without asking GPS`() = runTest {
+        val w = world()
+        w.gps.position = null // GPS would fail
+        w.controller.restoreOrigin(home)
+        advanceUntilIdle()
+        assertNull(w.controller.state.value.error)
+        assertEquals(listOf("B", "A"), w.visibleIds())
+    }
+
     @Test fun `without geolocation it says so and waits`() = runTest {
         val w = world()
         w.gps.available = false

@@ -34,7 +34,7 @@ jobs:
         # Retry once when dependency downloads fail (Maven Central sometimes drops CI runners).
         run: |
           set -o pipefail
-          tasks=":core:test :data:test :state:test testDebugUnitTest lintDebug assembleDebug"
+          tasks=":core:test :data:test :state:test testDebugUnitTest lintDebug assembleDebug assembleRelease"
           ./gradlew --stacktrace $tasks 2>&1 | tee build.log || {
             if grep -q "Could not resolve\|Could not find\|Could not GET\|Could not download" build.log; then
               echo "::warning::Dependency download failed, retrying once"

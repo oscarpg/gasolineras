@@ -20,6 +20,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,6 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,6 +53,7 @@ import es.gasolineras.ui.text.textColor
 @Composable
 fun ResultsSheet(
     ui: MainUiState,
+    online: Boolean,
     onFuel: (FuelType) -> Unit,
     onSortByTotalCost: (Boolean) -> Unit,
     onStation: (String) -> Unit,
@@ -57,6 +63,16 @@ fun ResultsSheet(
     val prefs = ui.app.preferences
     LazyColumn(contentPadding = WindowInsets.navigationBars.asPaddingValues()) {
         item {
+            if (!online) {
+                Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), shape = MaterialTheme.shapes.small) {
+                    Text(
+                        stringResource(R.string.offline_banner),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
+            }
             Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
                 val status = statusText(ui.controller.status)
                 Text(
@@ -112,8 +128,14 @@ fun ResultsSheet(
 private fun StationRowItem(row: StationRow, sortedByTotalCost: Boolean, onClick: () -> Unit) {
     val s = row.station.station
     val dark = isSystemInDarkTheme()
+    val distance = row.routeDetourKm ?: row.distanceFromUserKm
+    val description = if (distance != null) {
+        stringResource(R.string.a11y_station, row.station.brand, price(row.finalPrice), km(distance))
+    } else {
+        stringResource(R.string.a11y_station_no_distance, row.station.brand, price(row.finalPrice))
+    }
     ListItem(
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier.clickable(onClick = onClick).clearAndSetSemantics { contentDescription = description; role = Role.Button },
         headlineContent = { Text(row.station.brand, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
             Column {

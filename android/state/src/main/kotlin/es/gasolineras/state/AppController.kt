@@ -257,6 +257,11 @@ class AppController(
         settle()
     }
 
+    /** Uses a known origin (e.g. restored after the app was closed in the background) without asking GPS. */
+    fun restoreOrigin(position: LatLng) {
+        scope.launch { setOrigin(position) }
+    }
+
     /** First location attempt when the app opens. */
     fun start() {
         if (!gps.isAvailable()) {

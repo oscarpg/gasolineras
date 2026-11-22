@@ -2,6 +2,7 @@ package es.gasolineras
 
 import android.content.Context
 import es.gasolineras.data.AndroidGeocoder
+import es.gasolineras.data.ConnectivityMonitor
 import es.gasolineras.data.LocationRepository
 import es.gasolineras.data.geo.FallbackGeocoder
 import es.gasolineras.data.geo.Geocoder
@@ -45,4 +46,6 @@ class AppContainer(context: Context) {
     val preferencesStorage = FileStorage(File(app.filesDir, "preferences"))
 
     val location = LocationRepository(app)
+
+    val connectivity = ConnectivityMonitor(app)
 }

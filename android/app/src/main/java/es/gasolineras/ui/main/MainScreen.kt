@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -48,6 +51,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import es.gasolineras.MainViewModel
@@ -62,6 +67,8 @@ import es.gasolineras.ui.text.toColor
 import kotlinx.coroutines.launch
 
 private val SHEET_PEEK = 200.dp
+private val SIDE_PANEL_WIDTH = 400.dp
+private const val WIDE_LAYOUT_DP = 600
 
 /**
  * The app's main screen: full-screen map with price markers, a search bar for an address or a
@@ -91,20 +98,23 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
         )
     }
 
-    BottomSheetScaffold(
-        scaffoldState = scaffoldState,
-        sheetPeekHeight = SHEET_PEEK,
-        sheetContent = {
-            ResultsSheet(
-                ui = ui,
-                onFuel = viewModel::setFuel,
-                onSortByTotalCost = viewModel::setSortByTotalCost,
-                onStation = { viewModel.selectStation(it) },
-                onRetry = { ui.controller.error?.retry?.invoke() },
-                onDismissError = viewModel::dismissError,
-            )
-        },
-    ) {
+    val online by viewModel.online.collectAsStateWithLifecycle()
+    val wide = LocalConfiguration.current.screenWidthDp >= WIDE_LAYOUT_DP
+
+    val results: @Composable () -> Unit = {
+        ResultsSheet(
+            ui = ui,
+            online = online,
+            onFuel = viewModel::setFuel,
+            onSortByTotalCost = viewModel::setSortByTotalCost,
+            onStation = { viewModel.selectStation(it) },
+            onRetry = { ui.controller.error?.retry?.invoke() },
+            onDismissError = viewModel::dismissError,
+        )
+    }
+
+    // The map with its overlays; [bottomInset] keeps markers and the button clear of the sheet.
+    val mapArea: @Composable (bottomInset: Dp) -> Unit = { bottomInset ->
         Box(Modifier.fillMaxSize()) {
             renderer.Map(
                 content = content,
@@ -113,7 +123,7 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
                 onMarkerClick = { viewModel.selectStation(it, moveCamera = false) }, // reopens details of a highlighted station too
                 onCameraIdle = {},
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 72.dp, bottom = SHEET_PEEK),
+                contentPadding = PaddingValues(top = 72.dp, bottom = bottomInset),
             )
             Column(Modifier.statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
                 SearchBar(
@@ -134,11 +144,29 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
             }
             FloatingActionButton(
                 onClick = { gpsPermission.launch(locationPermissions) },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = SHEET_PEEK + 16.dp),
+                modifier = Modifier.align(Alignment.BottomEnd)
+                    .then(if (bottomInset == 0.dp) Modifier.navigationBarsPadding() else Modifier) // no sheet below it
+                    .padding(end = 16.dp, bottom = bottomInset + 16.dp),
             ) {
                 Icon(Icons.Filled.LocationOn, contentDescription = stringResource(R.string.preview_my_location))
             }
         }
+    }
+
+    if (wide) {
+        // Tablets, foldables and landscape: list beside the map.
+        Row(Modifier.fillMaxSize()) {
+            Surface(tonalElevation = 1.dp, modifier = Modifier.width(SIDE_PANEL_WIDTH).fillMaxHeight()) {
+                Column(Modifier.statusBarsPadding().padding(top = 8.dp)) { results() }
+            }
+            Box(Modifier.weight(1f)) { mapArea(0.dp) }
+        }
+    } else {
+        BottomSheetScaffold(
+            scaffoldState = scaffoldState,
+            sheetPeekHeight = SHEET_PEEK,
+            sheetContent = { results() },
+        ) { mapArea(SHEET_PEEK) }
     }
 
     val selectedRow = selectedId?.let { id -> ui.visible.rows.firstOrNull { it.station.id == id } }
@@ -149,7 +177,7 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
             loadHistory = { viewModel.priceHistory(selectedRow.station.station, ui.app.preferences.fuel) },
             onShowOnMap = {
                 viewModel.showSelectedOnMap()
-                scope.launch { scaffoldState.bottomSheetState.partialExpand() }
+                if (!wide) scope.launch { scaffoldState.bottomSheetState.partialExpand() }
             },
             onDismiss = { viewModel.selectStation(null) },
         )

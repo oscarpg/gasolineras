@@ -156,4 +156,7 @@
     <string name="brands_select_none">Deselect all</string>
     <string name="brands_none_selected">No brand ticked: all are shown until you tick one.</string>
     <string name="detail_show_on_map">Show on map</string>
+    <string name="offline_banner">Offline: showing saved prices.</string>
+    <string name="a11y_station">%1$s, %2$s euros per litre, %3$s km away</string>
+    <string name="a11y_station_no_distance">%1$s, %2$s euros per litre</string>
 </resources>

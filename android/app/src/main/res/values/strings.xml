@@ -157,4 +157,7 @@
     <string name="brands_select_none">Desmarcar todas</string>
     <string name="brands_none_selected">Ninguna marca marcada: se muestran todas hasta que marques alguna.</string>
     <string name="detail_show_on_map">Ver en el mapa</string>
+    <string name="offline_banner">Sin conexión: se muestran los precios guardados.</string>
+    <string name="a11y_station">%1$s, %2$s euros por litro, a %3$s km</string>
+    <string name="a11y_station_no_distance">%1$s, %2$s euros por litro</string>
 </resources>
