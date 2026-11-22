@@ -223,6 +223,14 @@ days; 87 stations within 15 km; search, a 6,386-point route and preferences save
     there creates a second car).
 - All strings ES/EN with the web app's wording; preferences persist (debounced, flushed in `onStop`).
 
+### Changes requested after Phase 5 (2026-11-22)
+
+- Brands: "Deselect all" / "Select all" buttons; the checklist stays open while choosing (nothing
+  ticked = no filter, as on the web).
+- Station details: "Show on map" next to Directions and Share (zooms to the station, keeps it highlighted).
+- Sorting: equal prices (or total costs) go nearer first — smaller detour on a route, then distance
+  from the user. Differs from the web app, which keeps load order for ties.
+
 ### Phase 6 — Hardening & quality (3 days)
 
 - Accessibility: TalkBack labels, 48dp targets, contrast of marker text (reuse `textColorFor`), font scaling to 200%.

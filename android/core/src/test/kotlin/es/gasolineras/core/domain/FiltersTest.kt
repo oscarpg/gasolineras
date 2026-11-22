@@ -114,6 +114,33 @@ class FiltersTest {
         assertEquals(listOf("x", "y", "z"), ids(selectVisibleStations(s, criteria())))
     }
 
+    @Test fun `equal prices go nearer first`() {
+        val s = listOf(
+            branded("far", lat = north(9.0)),
+            branded("near", lat = north(2.0)),
+            branded("mid", lat = north(5.0)),
+            branded("cheaper-but-far", lat = north(12.0), prices = prices(GASOLINA_95 to 1.45)),
+        )
+        assertEquals(listOf("cheaper-but-far", "near", "mid", "far"), ids(selectVisibleStations(s, criteria())))
+    }
+
+    @Test fun `on a route, equal prices go by smaller detour first`() {
+        val route = listOf(home, LatLng(40.4 + 30 / 111.32, -3.7))
+        val s = listOf(
+            branded("off-2km", lat = 40.5, lon = lonOffset(40.5, 2.0)),
+            branded("on-route-far", lat = north(25.0)),
+            branded("off-1km", lat = 40.45, lon = lonOffset(40.45, 1.0)),
+        )
+        assertEquals(listOf("on-route-far", "off-1km", "off-2km"), ids(selectVisibleStations(s, criteria(route = route))))
+    }
+
+    @Test fun `equal total costs go nearer first`() {
+        val car = SimpleCarSpecs(tankLitres = 50.0, consumptionL100km = 6.0)
+        // Same price and the same total cost needs the same distance: then load order decides
+        val s = listOf(branded("x", lat = north(3.0)), branded("y", lat = north(3.0)), branded("z", lat = north(1.0)))
+        assertEquals(listOf("z", "x", "y"), ids(selectVisibleStations(s, criteria(car = car, sortByTotalCost = true))))
+    }
+
     @Test fun `colours the best row green and the worst red`() {
         val s = listOf(1.5, 1.6, 1.7).mapIndexed { i, p -> branded("s$i", lat = north(1.0), prices = prices(GASOLINA_95 to p)) }
         assertEquals(

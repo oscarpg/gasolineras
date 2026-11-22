@@ -49,8 +49,9 @@ data class VisibleStations(
  *
  * A station is shown when it matches the brand filter, sells the fuel, passes the age filter,
  * and is within the search radius (or, with a route, within the detour limit of the route).
- * Rows are sorted by €/l, or by total cost when a car is selected and that option is on;
- * the sort is stable.
+ * Rows are sorted by €/l, or by total cost when a car is selected and that option is on.
+ * Equal values go nearer first (detour from the route, then distance from the user); the sort is
+ * otherwise stable. (The web app keeps load order for ties.)
  */
 fun selectVisibleStations(stations: List<BrandedStation>, c: VisibilityCriteria): VisibleStations {
     val sortedByTotalCost = c.car != null && c.sortByTotalCost
@@ -85,7 +86,13 @@ fun selectVisibleStations(stations: List<BrandedStation>, c: VisibilityCriteria)
     fun metricOf(r: PartialRow): Double =
         if (sortedByTotalCost && r.cost.totalCost != null) r.cost.totalCost else r.finalPrice
 
-    val sorted = rows.sortedBy(::metricOf) // stable
+    // Equal price (or total cost): nearer first — smaller detour on a route, then distance from the user.
+    // Remaining ties keep load order (the sort is stable).
+    val sorted = rows.sortedWith(
+        compareBy<PartialRow> { metricOf(it) }
+            .thenBy { it.routeDetourKm ?: Double.MAX_VALUE }
+            .thenBy { it.distanceFromUserKm ?: Double.MAX_VALUE },
+    )
     val min = sorted.firstOrNull()?.let(::metricOf) ?: 0.0
     val max = sorted.lastOrNull()?.let(::metricOf) ?: 0.0
 
