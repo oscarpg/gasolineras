@@ -54,6 +54,7 @@ class VisibleStationsSelector {
             discounts = p.discounts,
             sortByTotalCost = p.sortByTotalCost,
             onlyIds = if (favouritesOnly) p.favouriteIds else null,
+            sortByDistance = p.sortByDistance,
         ),
     )
 }

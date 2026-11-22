@@ -225,6 +225,14 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     fun setFuel(fuel: FuelType) = userChange { it.setFuel(fuel) }
     fun setSortByTotalCost(on: Boolean) = store.update { it.updatePreferences { p -> p.copy(sortByTotalCost = on) } }
 
+    enum class SortOrder { PRICE, DISTANCE, TOTAL_COST }
+
+    fun setSortOrder(order: SortOrder) = store.update {
+        it.updatePreferences { p ->
+            p.copy(sortByDistance = order == SortOrder.DISTANCE, sortByTotalCost = order == SortOrder.TOTAL_COST)
+        }
+    }
+
     /* ---------- settings ---------- */
 
     fun setAgeFilterOption(option: AgeFilterOption) {

@@ -30,7 +30,8 @@ class FiltersTest {
         discounts: Map<String, Discount> = emptyMap(),
         sortByTotalCost: Boolean = false,
         onlyIds: Set<String>? = null,
-    ) = VisibilityCriteria(fuel, brands, ageFilter, staleness, userPosition, route, searchRadiusKm, routeDetourKm, routeOnly, car, discounts, sortByTotalCost, onlyIds)
+        sortByDistance: Boolean = false,
+    ) = VisibilityCriteria(fuel, brands, ageFilter, staleness, userPosition, route, searchRadiusKm, routeDetourKm, routeOnly, car, discounts, sortByTotalCost, onlyIds, sortByDistance)
 
     private fun ids(r: VisibleStations) = r.rows.map { it.station.id }
 
@@ -146,6 +147,20 @@ class FiltersTest {
         val r = selectVisibleStations(stations, criteria(onlyIds = setOf("c", "a")))
         assertEquals(listOf("c", "a"), ids(r)) // c is 20 km away, beyond the radius
         assertEquals(20.0, r.rows[0].distanceFromUserKm!!, 0.01)
+    }
+
+    @Test fun `sorts by distance, keeping price colours`() {
+        val s = listOf(
+            branded("far-cheap", lat = north(9.0), prices = prices(GASOLINA_95 to 1.40)),
+            branded("near-dear", lat = north(1.0), prices = prices(GASOLINA_95 to 1.60)),
+            branded("mid", lat = north(5.0), prices = prices(GASOLINA_95 to 1.50)),
+        )
+        val r = selectVisibleStations(s, criteria(sortByDistance = true, car = SimpleCarSpecs(50.0, 6.0), sortByTotalCost = true))
+        assertEquals(listOf("near-dear", "mid", "far-cheap"), ids(r))
+        assertTrue(r.sortedByDistance)
+        assertEquals(false, r.sortedByTotalCost)
+        // the cheapest is still green, wherever it is in the list
+        assertEquals(120, r.rows.last().color.hue)
     }
 
     @Test fun `colours the best row green and the worst red`() {

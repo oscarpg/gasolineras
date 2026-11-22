@@ -182,4 +182,8 @@
     <string name="filters_button_count">Filtros (%1$d)</string>
     <string name="filters_reset">Restablecer</string>
     <string name="menu_open">Abrir menú</string>
+    <string name="sort_label">Ordenar:</string>
+    <string name="sort_price">€/l</string>
+    <string name="sort_distance">Distancia</string>
+    <string name="sort_total">Coste total</string>
 </resources>

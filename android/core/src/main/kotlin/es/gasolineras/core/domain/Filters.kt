@@ -20,6 +20,8 @@ data class VisibilityCriteria(
     val sortByTotalCost: Boolean = false,
     /** When set, only these station ids, wherever they are (favourites): radius and route don't apply. */
     val onlyIds: Set<String>? = null,
+    /** Nearest first (detour on a route); colours still show the price. */
+    val sortByDistance: Boolean = false,
 )
 
 data class StationRow(
@@ -43,6 +45,8 @@ data class VisibleStations(
     val rows: List<StationRow>,
     /** True when rows are ranked by total cost (requires a car). */
     val sortedByTotalCost: Boolean,
+    /** True when rows are ranked by distance. */
+    val sortedByDistance: Boolean = false,
 )
 
 /**
@@ -91,18 +95,26 @@ fun selectVisibleStations(stations: List<BrandedStation>, c: VisibilityCriteria)
     fun metricOf(r: PartialRow): Double =
         if (sortedByTotalCost && r.cost.totalCost != null) r.cost.totalCost else r.finalPrice
 
+    fun distanceOf(r: PartialRow): Double = r.routeDetourKm ?: r.distanceFromUserKm ?: Double.MAX_VALUE
+
     // Equal price (or total cost): nearer first — smaller detour on a route, then distance from the user.
-    // Remaining ties keep load order (the sort is stable).
-    val sorted = rows.sortedWith(
-        compareBy<PartialRow> { metricOf(it) }
-            .thenBy { it.routeDetourKm ?: Double.MAX_VALUE }
-            .thenBy { it.distanceFromUserKm ?: Double.MAX_VALUE },
-    )
-    val min = sorted.firstOrNull()?.let(::metricOf) ?: 0.0
-    val max = sorted.lastOrNull()?.let(::metricOf) ?: 0.0
+    // By distance: nearest first, then cheapest. Remaining ties keep load order (the sort is stable).
+    val sorted = if (c.sortByDistance) {
+        rows.sortedWith(compareBy<PartialRow> { distanceOf(it) }.thenBy { metricOf(it) })
+    } else {
+        rows.sortedWith(
+            compareBy<PartialRow> { metricOf(it) }
+                .thenBy { it.routeDetourKm ?: Double.MAX_VALUE }
+                .thenBy { it.distanceFromUserKm ?: Double.MAX_VALUE },
+        )
+    }
+    // Colours always rank the price (or total cost), whatever the order.
+    val min = sorted.minOfOrNull(::metricOf) ?: 0.0
+    val max = sorted.maxOfOrNull(::metricOf) ?: 0.0
 
     return VisibleStations(
-        sortedByTotalCost = sortedByTotalCost,
+        sortedByTotalCost = sortedByTotalCost && !c.sortByDistance,
+        sortedByDistance = c.sortByDistance,
         rows = sorted.map { r ->
             val metric = metricOf(r)
             StationRow(

@@ -181,4 +181,8 @@
     <string name="filters_button_count">Filters (%1$d)</string>
     <string name="filters_reset">Reset</string>
     <string name="menu_open">Open menu</string>
+    <string name="sort_label">Sort:</string>
+    <string name="sort_price">€/l</string>
+    <string name="sort_distance">Distance</string>
+    <string name="sort_total">Total cost</string>
 </resources>

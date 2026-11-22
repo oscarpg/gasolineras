@@ -19,6 +19,8 @@ data class Preferences(
     val routeOnly: Boolean = false,
     /** Sort by tank + trip cost instead of €/l. */
     val sortByTotalCost: Boolean = false,
+    /** Sort by distance (detour on a route) instead of €/l; wins over [sortByTotalCost]. Android only. */
+    val sortByDistance: Boolean = false,
     /** Brands to show; empty = all. */
     val brands: Set<String> = emptySet(),
     /** Discount per brand. */

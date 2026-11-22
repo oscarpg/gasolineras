@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
@@ -29,13 +30,16 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -44,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import es.gasolineras.MainUiState
+import es.gasolineras.MainViewModel
 import es.gasolineras.R
 import es.gasolineras.core.domain.AgeFilterOption
 import es.gasolineras.core.domain.FuelType
@@ -71,7 +76,7 @@ fun ResultsSheet(
     onOpenFilters: () -> Unit,
     onWiden: () -> Unit,
     onClearFilters: () -> Unit,
-    onSortByTotalCost: (Boolean) -> Unit,
+    onSortOrder: (MainViewModel.SortOrder) -> Unit,
     onStation: (String) -> Unit,
     onRetry: () -> Unit,
     onDismissError: () -> Unit,
@@ -140,10 +145,24 @@ fun ResultsSheet(
                     }
                 }
             }
-            if (prefs.activeCar != null) {
-                Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.preview_sort_cost), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    Switch(checked = prefs.sortByTotalCost, onCheckedChange = onSortByTotalCost)
+            // Sort order: price (default), distance, or total cost when a car is active.
+            val order = when {
+                prefs.sortByDistance -> MainViewModel.SortOrder.DISTANCE
+                prefs.sortByTotalCost && prefs.activeCar != null -> MainViewModel.SortOrder.TOTAL_COST
+                else -> MainViewModel.SortOrder.PRICE
+            }
+            Row(
+                Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(R.string.sort_label), style = MaterialTheme.typography.labelLarge)
+                listOfNotNull(
+                    MainViewModel.SortOrder.PRICE to R.string.sort_price,
+                    MainViewModel.SortOrder.DISTANCE to R.string.sort_distance,
+                    (MainViewModel.SortOrder.TOTAL_COST to R.string.sort_total).takeIf { prefs.activeCar != null },
+                ).forEach { (o, label) ->
+                    FilterChip(selected = order == o, onClick = { onSortOrder(o) }, label = { Text(stringResource(label)) })
                 }
             }
             ui.controller.error?.let { shown ->
@@ -189,6 +208,9 @@ fun ResultsSheet(
 private fun StationRowItem(row: StationRow, favourite: Boolean, sortedByTotalCost: Boolean, onClick: () -> Unit) {
     val s = row.station.station
     val dark = isSystemInDarkTheme()
+    val context = LocalContext.current
+    val navigateLabel = stringResource(R.string.detail_navigate)
+    val navigate = { openDirections(context, row.station.station.lat, row.station.station.lon, row.station.brand) }
     val distance = row.routeDetourKm ?: row.distanceFromUserKm
     val description = (
         if (distance != null) {
@@ -198,7 +220,11 @@ private fun StationRowItem(row: StationRow, favourite: Boolean, sortedByTotalCos
         }
         ) + if (favourite) ", " + stringResource(R.string.a11y_favourite) else ""
     ListItem(
-        modifier = Modifier.clickable(onClick = onClick).clearAndSetSemantics { contentDescription = description; role = Role.Button },
+        modifier = Modifier.clickable(onClick = onClick).clearAndSetSemantics {
+            contentDescription = description
+            role = Role.Button
+            customActions = listOf(CustomAccessibilityAction(navigateLabel) { navigate(); true })
+        },
         headlineContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (favourite) {
@@ -226,6 +252,7 @@ private fun StationRowItem(row: StationRow, favourite: Boolean, sortedByTotalCos
             }
         },
         trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     "${price(row.finalPrice)} €",
@@ -237,6 +264,11 @@ private fun StationRowItem(row: StationRow, favourite: Boolean, sortedByTotalCos
                     Text("${price(row.basePrice)} €", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (sortedByTotalCost) row.cost.totalCost?.let { Text("${euros(it)} €", style = MaterialTheme.typography.bodySmall) }
+            }
+                // Directions without opening the details
+                IconButton(onClick = navigate) {
+                    Icon(painterResource(R.drawable.ic_directions), contentDescription = navigateLabel, tint = MaterialTheme.colorScheme.primary)
+                }
             }
         },
     )

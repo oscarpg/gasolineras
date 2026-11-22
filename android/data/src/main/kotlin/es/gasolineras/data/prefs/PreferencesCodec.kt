@@ -125,6 +125,7 @@ object PreferencesCodec {
             routeDetourKm = (positive(p["routeDetourKm"]) ?: d.routeDetourKm).coerceIn(MIN_ROUTE_DETOUR_KM, MAX_ROUTE_DETOUR_KM),
             routeOnly = isTrue(p["routeOnly"]),
             sortByTotalCost = isTrue(p["sortByTotalCost"]),
+            sortByDistance = isTrue(p["sortByDistance"]),
             brands = (p["brands"] as? JsonArray)?.mapNotNull { it.str }?.toCollection(LinkedHashSet()) ?: emptySet(),
             discounts = sanitizeDiscounts(p["discounts"]),
             cars = sanitizeCars(p["cars"]),
@@ -199,6 +200,7 @@ object PreferencesCodec {
         put("routeDetourKm", p.routeDetourKm)
         put("routeOnly", p.routeOnly)
         put("sortByTotalCost", p.sortByTotalCost)
+        put("sortByDistance", p.sortByDistance)
         putJsonArray("brands") { p.brands.forEach { add(JsonPrimitive(it)) } }
         putJsonObject("discounts") {
             p.discounts.forEach { (brand, d) ->

@@ -284,6 +284,10 @@ of ⋮; a "Filters (N)" button next to the list summary opens the station filter
 route only, price age, brands, Reset); Preferences keeps the one-time setup (cars, discounts,
 language, About). Fuel, car and favourites chips stay in the list for one-tap changes.
 
+List actions (2026-11-22): sort chips "€/l · Distance · Total cost" (total cost only with a car;
+distance = detour on a route; colours keep showing price); a directions button on every list row
+(also a TalkBack action) opens the maps app without opening the details.
+
 ### Phase 8 — APK release (1–2 days)
 
 - GitHub Actions `android.yml` (path filter `android/**`, `tests/fixtures/**`): lint, detekt, unit tests, `assembleRelease` on every PR.

@@ -120,7 +120,7 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
             onOpenFilters = { showFilters = true },
             onWiden = viewModel::widenSearch,
             onClearFilters = viewModel::clearFilters,
-            onSortByTotalCost = viewModel::setSortByTotalCost,
+            onSortOrder = viewModel::setSortOrder,
             onStation = { viewModel.selectStation(it) },
             onRetry = { ui.controller.error?.retry?.invoke() },
             onDismissError = viewModel::dismissError,
