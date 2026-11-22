@@ -3,6 +3,8 @@ package es.gasolineras.widget
 import android.content.Context
 import es.gasolineras.core.domain.FuelType
 import es.gasolineras.core.domain.LatLng
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -31,6 +33,34 @@ data class WidgetSnapshot(
 }
 
 /**
+ * The current snapshot as observable state, so a running widget session redraws when it changes
+ * (Glance only recomposes on update; it doesn't run provideGlance again).
+ */
+object WidgetSnapshots {
+    private val state = MutableStateFlow<WidgetSnapshot?>(null)
+
+    @Volatile private var loaded = false
+
+    /** Loads the saved snapshot once per process (call off the main thread). */
+    fun flow(context: Context): StateFlow<WidgetSnapshot?> {
+        if (!loaded) {
+            synchronized(this) {
+                if (!loaded) {
+                    state.value = WidgetStore(context).readSnapshot()
+                    loaded = true
+                }
+            }
+        }
+        return state
+    }
+
+    internal fun publish(snapshot: WidgetSnapshot) {
+        loaded = true
+        state.value = snapshot
+    }
+}
+
+/**
  * Small JSON files in filesDir: the last origin the app used (widgets can't get a fresh fix in
  * the background without the "all the time" location permission) and the last snapshot.
  */
@@ -44,6 +74,7 @@ class WidgetStore(context: Context) {
     fun readOrigin(): LatLng? = read(originFile)?.let { runCatching { JSONObject(it).let { o -> LatLng(o.getDouble("lat"), o.getDouble("lon")) } }.getOrNull() }
 
     fun saveSnapshot(s: WidgetSnapshot) {
+        WidgetSnapshots.publish(s)
         val items = JSONArray()
         s.items.forEach { i ->
             items.put(

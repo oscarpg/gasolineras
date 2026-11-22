@@ -186,4 +186,5 @@
     <string name="sort_price">€/l</string>
     <string name="sort_distance">Distancia</string>
     <string name="sort_total">Coste total</string>
+    <string name="widget_loading">Cargando…</string>
 </resources>

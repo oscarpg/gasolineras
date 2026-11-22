@@ -3,6 +3,8 @@ package es.gasolineras.widget
 import android.content.Context
 import android.text.format.DateUtils
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -53,8 +55,12 @@ class GasolinerasWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(setOf(SMALL, MEDIUM))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val snapshot = withContext(Dispatchers.IO) { WidgetStore(context).readSnapshot() }
-        provideContent { GlanceTheme { Content(snapshot, alwaysList = false) } }
+        val snapshots = withContext(Dispatchers.IO) { WidgetSnapshots.flow(context) }
+        if (snapshots.value == null) WidgetWork.refreshNow(context)
+        provideContent {
+            val snapshot by snapshots.collectAsState()
+            GlanceTheme { Content(snapshot, alwaysList = false) }
+        }
     }
 
     companion object {
@@ -70,8 +76,12 @@ class GasolinerasListWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val snapshot = withContext(Dispatchers.IO) { WidgetStore(context).readSnapshot() }
-        provideContent { GlanceTheme { Content(snapshot, alwaysList = true) } }
+        val snapshots = withContext(Dispatchers.IO) { WidgetSnapshots.flow(context) }
+        if (snapshots.value == null) WidgetWork.refreshNow(context)
+        provideContent {
+            val snapshot by snapshots.collectAsState()
+            GlanceTheme { Content(snapshot, alwaysList = true) }
+        }
     }
 }
 
@@ -103,8 +113,8 @@ private fun Content(snapshot: WidgetSnapshot?, alwaysList: Boolean) {
         }
         Spacer(GlanceModifier.height(4.dp))
         when {
-            snapshot == null || snapshot.state == WidgetSnapshot.State.NO_ORIGIN ->
-                Message(context.getString(R.string.widget_no_origin), onSurface)
+            snapshot == null -> Message(context.getString(R.string.widget_loading), onSurface)
+            snapshot.state == WidgetSnapshot.State.NO_ORIGIN -> Message(context.getString(R.string.widget_no_origin), onSurface)
             snapshot.state == WidgetSnapshot.State.NO_DATA -> Message(context.getString(R.string.widget_no_data), onSurface)
             snapshot.items.isEmpty() -> Message(context.getString(R.string.preview_none), onSurface)
             else -> {

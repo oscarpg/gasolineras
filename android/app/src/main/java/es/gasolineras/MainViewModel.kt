@@ -350,8 +350,11 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         past + PriceDay(today, station.prices[fuel])
     }
 
-    /** Saves pending preference changes now (call when the app goes to the background). */
-    fun flush() = persister.flush()
+    /** Saves pending preference changes now and refreshes the widget (call when the app goes to the background). */
+    fun flush() {
+        persister.flush()
+        viewModelScope.launch { runCatching { widgetUpdater.publish(store.value) } }
+    }
 
     override fun onCleared() {
         persister.stop()
