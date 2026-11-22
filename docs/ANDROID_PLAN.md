@@ -288,13 +288,19 @@ List actions (2026-11-22): sort chips "€/l · Distance · Total cost" (total c
 distance = detour on a route; colours keep showing price); a directions button on every list row
 (also a TalkBack action) opens the maps app without opening the details.
 
-### Phase 8 — APK release (1–2 days)
+### Phase 8 — APK release (set up 2026-11-22)
 
-- GitHub Actions `android.yml` (path filter `android/**`, `tests/fixtures/**`): lint, detekt, unit tests, `assembleRelease` on every PR.
-- On tag `android-v*`: build a **signed release APK** (keystore + passwords as repository secrets), attach it to a GitHub Release with changelog. `versionName` from the tag, `versionCode` from the run number.
-- In-app "About": version, data sources and OSM/OpenFreeMap attribution, link to releases page.
-- README section: how to install the APK (allow "install unknown apps"), and how to update.
-- Keep the build Play-ready (R8, signing config, privacy policy page on GitHub Pages) so publishing later is only adding `bundleRelease` + the Play listing.
+- `.github/workflows/android-release.yml`: on a tag `android-vX.Y.Z` it checks the signing secrets,
+  runs the tests, builds the minified release APK signed with the repository keystore
+  (`versionName` from the tag, `versionCode` from the run number), verifies the signature with
+  `apksigner` and publishes `gasolineras-X.Y.Z.apk` on a GitHub Release with
+  `android/RELEASE_NOTES.md`. The keystore is decoded to the runner's temp dir and deleted after.
+- Signing secrets (added by the owner, never in the repo): `ANDROID_KEYSTORE_BASE64`,
+  `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. Without them, release
+  builds stay unsigned (CI checks still build them).
+- The regular Android workflow ignores tags; the debug test build keeps its own pre-release and app
+  id (`es.gasolineras.debug`), so it installs alongside the release.
+- README: install/update instructions and how to publish.
 
 ### Phase 9 — Later, optional
 

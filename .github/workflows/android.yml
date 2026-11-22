@@ -2,6 +2,7 @@ name: Android
 
 on:
   push:
+    branches: ['**'] # not tags: releases use android-release.yml
     paths: ['android/**', 'tests/fixtures/**', '.github/workflows/android.yml']
   pull_request:
     paths: ['android/**', 'tests/fixtures/**', '.github/workflows/android.yml']
