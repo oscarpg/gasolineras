@@ -8,8 +8,7 @@ import android.widget.Toast
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -17,10 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import es.gasolineras.PriceDay
 import es.gasolineras.R
@@ -50,6 +51,8 @@ import es.gasolineras.ui.text.label
 import es.gasolineras.ui.text.price
 import es.gasolineras.ui.text.textColor
 
+private val ACTION_PADDING = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+
 private sealed interface ChartState {
     data object Loading : ChartState
     data class Ready(val days: List<PriceDay>) : ChartState
@@ -57,7 +60,7 @@ private sealed interface ChartState {
 }
 
 /** Details of one station: prices, distance and cost, price age, 7-day chart, directions and share. */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StationDetailSheet(
     row: StationRow,
@@ -123,15 +126,20 @@ fun StationDetailSheet(
             }
             if (s.openingHours.isNotEmpty()) Text(stringResource(R.string.detail_hours, s.openingHours), style = MaterialTheme.typography.bodyMedium)
 
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { openDirections(context, s.lat, s.lon, row.station.brand) }) { Text(stringResource(R.string.detail_navigate)) }
-                OutlinedButton(onClick = onShowOnMap) {
-                    Icon(Icons.Filled.Place, contentDescription = null)
-                    Text("  " + stringResource(R.string.detail_show_on_map))
+            // One row: two equal buttons and a compact share button.
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Button(
+                    onClick = { openDirections(context, s.lat, s.lon, row.station.brand) },
+                    contentPadding = ACTION_PADDING,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(R.string.detail_navigate), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                OutlinedButton(onClick = { share(context, row, fuel) }) {
-                    Icon(Icons.Filled.Share, contentDescription = null)
-                    Text("  " + stringResource(R.string.detail_share))
+                OutlinedButton(onClick = onShowOnMap, contentPadding = ACTION_PADDING, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.detail_show_on_map), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                FilledTonalIconButton(onClick = { share(context, row, fuel) }) {
+                    Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.detail_share))
                 }
             }
 
