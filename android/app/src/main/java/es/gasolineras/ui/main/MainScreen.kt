@@ -39,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -58,6 +59,7 @@ import es.gasolineras.map.api.MapMarker
 import es.gasolineras.map.api.MapRenderer
 import es.gasolineras.ui.text.price
 import es.gasolineras.ui.text.toColor
+import kotlinx.coroutines.launch
 
 private val SHEET_PEEK = 200.dp
 
@@ -71,6 +73,9 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val camera by viewModel.camera.collectAsStateWithLifecycle()
     val selectedId by viewModel.selectedStationId.collectAsStateWithLifecycle()
+    val detailOpen by viewModel.detailOpen.collectAsStateWithLifecycle()
+    val scaffoldState = rememberBottomSheetScaffoldState()
+    val scope = rememberCoroutineScope()
     val locationPermissions = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
     val startPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { viewModel.start() }
     val gpsPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { viewModel.requestGps() }
@@ -87,7 +92,7 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
     }
 
     BottomSheetScaffold(
-        scaffoldState = rememberBottomSheetScaffoldState(),
+        scaffoldState = scaffoldState,
         sheetPeekHeight = SHEET_PEEK,
         sheetContent = {
             ResultsSheet(
@@ -105,7 +110,7 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
                 content = content,
                 camera = camera,
                 darkTheme = isSystemInDarkTheme(),
-                onMarkerClick = { viewModel.selectStation(it, moveCamera = false) },
+                onMarkerClick = { viewModel.selectStation(it, moveCamera = false) }, // reopens details of a highlighted station too
                 onCameraIdle = {},
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 72.dp, bottom = SHEET_PEEK),
@@ -137,11 +142,15 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
     }
 
     val selectedRow = selectedId?.let { id -> ui.visible.rows.firstOrNull { it.station.id == id } }
-    if (selectedRow != null) {
+    if (selectedRow != null && detailOpen) {
         StationDetailSheet(
             row = selectedRow,
             fuel = ui.app.preferences.fuel,
             loadHistory = { viewModel.priceHistory(selectedRow.station.station, ui.app.preferences.fuel) },
+            onShowOnMap = {
+                viewModel.showSelectedOnMap()
+                scope.launch { scaffoldState.bottomSheetState.partialExpand() }
+            },
             onDismiss = { viewModel.selectStation(null) },
         )
     }

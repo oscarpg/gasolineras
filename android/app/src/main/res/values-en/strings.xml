@@ -155,4 +155,5 @@
     <string name="brands_select_all">Select all</string>
     <string name="brands_select_none">Deselect all</string>
     <string name="brands_none_selected">No brand ticked: all are shown until you tick one.</string>
+    <string name="detail_show_on_map">Show on map</string>
 </resources>

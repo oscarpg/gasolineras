@@ -93,6 +93,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val mutableSelected = MutableStateFlow<String?>(null)
     val selectedStationId: StateFlow<String?> = mutableSelected.asStateFlow()
 
+    /** Whether the selected station's details are showing (it stays highlighted on the map when not). */
+    private val mutableDetailOpen = MutableStateFlow(false)
+    val detailOpen: StateFlow<Boolean> = mutableDetailOpen.asStateFlow()
+
     val ui: StateFlow<MainUiState> = combine(store.state, controller.state) { app, controllerState ->
         MainUiState(app, selector.select(app), controllerState)
     }
@@ -183,9 +187,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectStation(id: String?, moveCamera: Boolean = true) {
         mutableSelected.value = id
+        mutableDetailOpen.value = id != null
         if (id == null || !moveCamera) return
+        centreOn(id, maxOf(14.0, mutableCamera.value.zoom))
+    }
+
+    /** Closes the details and zooms the map in on the selected station, which stays highlighted. */
+    fun showSelectedOnMap() {
+        val id = mutableSelected.value ?: return
+        mutableDetailOpen.value = false
+        centreOn(id, SHOW_ON_MAP_ZOOM)
+    }
+
+    private fun centreOn(id: String, zoom: Double) {
         store.value.stations.firstOrNull { it.id == id }?.let { s ->
-            mutableCamera.value = CameraTarget(GeoPoint(s.station.lat, s.station.lon), maxOf(14.0, mutableCamera.value.zoom))
+            mutableCamera.value = CameraTarget(GeoPoint(s.station.lat, s.station.lon), zoom)
         }
     }
 
@@ -220,6 +236,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private companion object {
         const val COVERAGE_DEBOUNCE_MS = 600L
+        const val SHOW_ON_MAP_ZOOM = 16.0
         val SPAIN = CameraTarget(GeoPoint(40.2, -3.7), 5.2)
     }
 }

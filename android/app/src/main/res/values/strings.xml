@@ -156,4 +156,5 @@
     <string name="brands_select_all">Marcar todas</string>
     <string name="brands_select_none">Desmarcar todas</string>
     <string name="brands_none_selected">Ninguna marca marcada: se muestran todas hasta que marques alguna.</string>
+    <string name="detail_show_on_map">Ver en el mapa</string>
 </resources>

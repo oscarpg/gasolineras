@@ -8,6 +8,8 @@ import android.widget.Toast
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,12 +57,13 @@ private sealed interface ChartState {
 }
 
 /** Details of one station: prices, distance and cost, price age, 7-day chart, directions and share. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun StationDetailSheet(
     row: StationRow,
     fuel: FuelType,
     loadHistory: suspend () -> List<PriceDay>,
+    onShowOnMap: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -119,8 +123,12 @@ fun StationDetailSheet(
             }
             if (s.openingHours.isNotEmpty()) Text(stringResource(R.string.detail_hours, s.openingHours), style = MaterialTheme.typography.bodyMedium)
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = { openDirections(context, s.lat, s.lon, row.station.brand) }) { Text(stringResource(R.string.detail_navigate)) }
+                OutlinedButton(onClick = onShowOnMap) {
+                    Icon(Icons.Filled.Place, contentDescription = null)
+                    Text("  " + stringResource(R.string.detail_show_on_map))
+                }
                 OutlinedButton(onClick = { share(context, row, fuel) }) {
                     Icon(Icons.Filled.Share, contentDescription = null)
                     Text("  " + stringResource(R.string.detail_share))
