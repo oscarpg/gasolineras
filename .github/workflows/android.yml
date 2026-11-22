@@ -131,7 +131,8 @@ jobs:
           target: google_apis
           disable-animations: true
           working-directory: android
-          script: ./gradlew connectedDebugAndroidTest; status=$?; echo "::group::Diagnostics log"; adb logcat -d -s GasolinerasDiag:I; echo "::endgroup::"; exit $status
+          # Retries once when dependency downloads fail (rate limits); real test failures are not retried.
+          script: ./gradlew connectedDebugAndroidTest > gradle.log 2>&1; status=$?; cat gradle.log; if [ $status -ne 0 ] && grep -qE "Could not (GET|download|resolve|find)" gradle.log; then echo "::warning::Dependency download failed, retrying once"; ./gradlew --refresh-dependencies connectedDebugAndroidTest; status=$?; fi; echo "::group::Diagnostics log"; adb logcat -d -s GasolinerasDiag:I; echo "::endgroup::"; exit $status
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
