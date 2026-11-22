@@ -36,11 +36,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,6 +78,8 @@ fun SettingsScreen(viewModel: MainViewModel, onLocaleChosen: (AppLocale?) -> Uni
     val brands = remember(ui.app.stations) { countBrands(ui.app.stations) }
     var carDialog by remember { mutableStateOf<CarDialogTarget?>(null) }
     var discountDialog by remember { mutableStateOf(false) }
+    // The checklist stays open while choosing, even with nothing ticked (= no filter).
+    var chooseBrands by rememberSaveable { mutableStateOf(prefs.brands.isNotEmpty()) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
@@ -171,11 +175,23 @@ fun SettingsScreen(viewModel: MainViewModel, onLocaleChosen: (AppLocale?) -> Uni
                 item { Note(R.string.brands_waiting) }
             } else {
                 item {
-                    SwitchRow(stringResource(R.string.brands_all, brands.size), prefs.brands.isEmpty()) { all ->
+                    SwitchRow(stringResource(R.string.brands_all, brands.size), !chooseBrands) { all ->
+                        chooseBrands = !all
                         viewModel.setAllBrands(all, brands.map { it.first })
                     }
                 }
-                if (prefs.brands.isNotEmpty()) {
+                if (chooseBrands) {
+                    item {
+                        Row(Modifier.padding(horizontal = 8.dp)) {
+                            TextButton(onClick = { viewModel.setAllBrands(false, brands.map { it.first }) }) {
+                                Text(stringResource(R.string.brands_select_all))
+                            }
+                            TextButton(onClick = { viewModel.clearBrands() }) {
+                                Text(stringResource(R.string.brands_select_none))
+                            }
+                        }
+                        if (prefs.brands.isEmpty()) Note(R.string.brands_none_selected)
+                    }
                     brands.forEach { (brand, count) ->
                         item(key = "brand-$brand") {
                             Row(

@@ -169,6 +169,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setAllBrands(all: Boolean, present: List<String>) = store.update { it.setAllBrands(all, present) }
     fun setBrandSelected(brand: String, selected: Boolean) = store.update { it.setBrandSelected(brand, selected) }
 
+    /** No brand ticked: no brand filter (all shown) until the user ticks some. */
+    fun clearBrands() = store.update { it.setAllBrands(true, emptyList()) }
+
     fun setDiscount(brand: String, discount: Discount) = store.update { it.setDiscount(brand, discount) }
     fun removeDiscount(brand: String) = store.update { it.removeDiscount(brand) }
 

@@ -153,4 +153,7 @@
     <string name="about_title">Acerca de</string>
     <string name="about_data">Precios: Ministerio para la Transición Ecológica (MITECO). Mapa: © OpenStreetMap, OpenFreeMap. Límites provinciales: © Instituto Geográfico Nacional (CC BY 4.0). Direcciones: Nominatim. Rutas: OSRM.</string>
     <string name="about_version">Versión %1$s</string>
+    <string name="brands_select_all">Marcar todas</string>
+    <string name="brands_select_none">Desmarcar todas</string>
+    <string name="brands_none_selected">Ninguna marca marcada: se muestran todas hasta que marques alguna.</string>
 </resources>
