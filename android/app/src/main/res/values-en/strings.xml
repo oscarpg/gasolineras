@@ -176,4 +176,9 @@
     <string name="empty_widen">Widen to %1$d km</string>
     <string name="empty_clear_filters">Clear filters</string>
     <string name="a11y_favourite">favourite</string>
+    <string name="filters_title">Filters</string>
+    <string name="filters_button">Filters</string>
+    <string name="filters_button_count">Filters (%1$d)</string>
+    <string name="filters_reset">Reset</string>
+    <string name="menu_open">Open menu</string>
 </resources>

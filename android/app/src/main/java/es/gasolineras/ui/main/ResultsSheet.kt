@@ -5,6 +5,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -50,6 +51,7 @@ import es.gasolineras.core.domain.MAX_SEARCH_RADIUS_KM
 import es.gasolineras.core.domain.PriceStaleness
 import es.gasolineras.core.domain.StationRow
 import es.gasolineras.state.HistoryStatus
+import es.gasolineras.ui.settings.activeFilterCount
 import es.gasolineras.ui.text.errorText
 import es.gasolineras.ui.text.euros
 import es.gasolineras.ui.text.km
@@ -66,6 +68,7 @@ fun ResultsSheet(
     onFuel: (FuelType) -> Unit,
     onCar: (String?) -> Unit,
     onFavouritesOnly: (Boolean) -> Unit,
+    onOpenFilters: () -> Unit,
     onWiden: () -> Unit,
     onClearFilters: () -> Unit,
     onSortByTotalCost: (Boolean) -> Unit,
@@ -88,6 +91,8 @@ fun ResultsSheet(
             }
             Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
                 val status = statusText(ui.controller.status)
+                val filters = activeFilterCount(prefs)
+                Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     status ?: if (ui.app.favouritesOnly) {
                         stringResource(R.string.fav_summary, ui.visible.rows.size)
@@ -97,7 +102,13 @@ fun ResultsSheet(
                         stringResource(R.string.preview_summary_radius, ui.visible.rows.size, prefs.searchRadiusKm.toInt())
                     },
                     style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
                 )
+                    // Station filters, next to the list they affect
+                    FilledTonalButton(onClick = onOpenFilters, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
+                        Text(if (filters > 0) stringResource(R.string.filters_button_count, filters) else stringResource(R.string.filters_button))
+                    }
+                }
                 ui.app.historyStatus?.takeIf { it.kind == HistoryStatus.Kind.LOADING }?.let {
                     Text(stringResource(R.string.preview_history_loading, it.days), style = MaterialTheme.typography.bodySmall)
                     LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 4.dp))

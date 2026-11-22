@@ -69,7 +69,7 @@ import es.gasolineras.state.countBrands
 import es.gasolineras.ui.text.label
 import kotlin.math.roundToInt
 
-/** All preferences, grouped like the web app's drawer: fuel, distance, price age, cars, brands, discounts, language. */
+/** One-time setup: cars, discounts, language and About. Station filters live in [FiltersSheet]. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(viewModel: MainViewModel, onLocaleChosen: (AppLocale?) -> Unit, onBack: () -> Unit) {
@@ -78,8 +78,6 @@ fun SettingsScreen(viewModel: MainViewModel, onLocaleChosen: (AppLocale?) -> Uni
     val brands = remember(ui.app.stations) { countBrands(ui.app.stations) }
     var carDialog by remember { mutableStateOf<CarDialogTarget?>(null) }
     var discountDialog by remember { mutableStateOf(false) }
-    // The checklist stays open while choosing, even with nothing ticked (= no filter).
-    var chooseBrands by rememberSaveable { mutableStateOf(prefs.brands.isNotEmpty()) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
@@ -95,53 +93,6 @@ fun SettingsScreen(viewModel: MainViewModel, onLocaleChosen: (AppLocale?) -> Uni
         },
     ) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = WindowInsets.navigationBars.asPaddingValues()) {
-            // Fuel
-            item { SectionTitle(R.string.settings_fuel) }
-            item {
-                FlowRow(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FuelType.entries.forEach { fuel ->
-                        FilterChip(selected = prefs.fuel == fuel, onClick = { viewModel.setFuel(fuel) }, label = { Text(stringResource(fuel.label())) })
-                    }
-                }
-                if (prefs.activeCar != null) Note(R.string.settings_fuel_car_note)
-            }
-
-            // Distance and route
-            item { SectionTitle(R.string.settings_distance) }
-            item {
-                LabeledSlider(
-                    label = stringResource(R.string.settings_radius, prefs.searchRadiusKm.roundToInt()),
-                    value = prefs.searchRadiusKm,
-                    range = MIN_SEARCH_RADIUS_KM..MAX_SEARCH_RADIUS_KM,
-                    onChange = viewModel::setSearchRadius,
-                )
-                LabeledSlider(
-                    label = stringResource(R.string.settings_detour, prefs.routeDetourKm.roundToInt()),
-                    value = prefs.routeDetourKm,
-                    range = MIN_ROUTE_DETOUR_KM..MAX_ROUTE_DETOUR_KM,
-                    onChange = viewModel::setRouteDetour,
-                )
-                SwitchRow(stringResource(R.string.settings_route_only), prefs.routeOnly, viewModel::setRouteOnly)
-            }
-
-            // Price age
-            item { SectionTitle(R.string.settings_age) }
-            AgeFilterOption.entries.forEach { option ->
-                item(key = "age-${option.id}") {
-                    RadioRow(stringResource(option.label()), prefs.ageFilterOption == option) { viewModel.setAgeFilterOption(option) }
-                }
-            }
-            if (prefs.ageFilterOption.isCustom) {
-                item {
-                    LabeledSlider(
-                        label = stringResource(R.string.settings_custom_days, prefs.ageFilterCustomDays),
-                        value = prefs.ageFilterCustomDays.toDouble(),
-                        range = MIN_CUSTOM_AGE_DAYS.toDouble()..MAX_CUSTOM_AGE_DAYS.toDouble(),
-                        onChange = { viewModel.setCustomAgeDays(it.roundToInt()) },
-                    )
-                }
-            }
-
             // Cars
             item { SectionTitle(R.string.cars_title) }
             if (prefs.cars.isEmpty()) item { Note(R.string.cars_none) }
@@ -166,45 +117,6 @@ fun SettingsScreen(viewModel: MainViewModel, onLocaleChosen: (AppLocale?) -> Uni
             item {
                 OutlinedButton(onClick = { carDialog = CarDialogTarget(null) }, modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text(stringResource(R.string.cars_add))
-                }
-            }
-
-            // Brands
-            item { SectionTitle(R.string.brands_title) }
-            if (brands.isEmpty()) {
-                item { Note(R.string.brands_waiting) }
-            } else {
-                item {
-                    SwitchRow(stringResource(R.string.brands_all, brands.size), !chooseBrands) { all ->
-                        chooseBrands = !all
-                        viewModel.setAllBrands(all, brands.map { it.first })
-                    }
-                }
-                if (chooseBrands) {
-                    item {
-                        Row(Modifier.padding(horizontal = 8.dp)) {
-                            TextButton(onClick = { viewModel.setAllBrands(false, brands.map { it.first }) }) {
-                                Text(stringResource(R.string.brands_select_all))
-                            }
-                            TextButton(onClick = { viewModel.clearBrands() }) {
-                                Text(stringResource(R.string.brands_select_none))
-                            }
-                        }
-                        if (prefs.brands.isEmpty()) Note(R.string.brands_none_selected)
-                    }
-                    brands.forEach { (brand, count) ->
-                        item(key = "brand-$brand") {
-                            Row(
-                                Modifier.fillMaxWidth()
-                                    .toggleable(value = brand in prefs.brands, role = Role.Checkbox) { viewModel.setBrandSelected(brand, it) }
-                                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Checkbox(checked = brand in prefs.brands, onCheckedChange = null)
-                                Text(stringResource(R.string.brands_count, brand, count), modifier = Modifier.padding(start = 12.dp))
-                            }
-                        }
-                    }
                 }
             }
 
@@ -286,7 +198,7 @@ fun SettingsScreen(viewModel: MainViewModel, onLocaleChosen: (AppLocale?) -> Uni
 private class CarDialogTarget(val car: Car?)
 
 @Composable
-private fun SectionTitle(text: Int) {
+internal fun SectionTitle(text: Int) {
     HorizontalDivider(Modifier.padding(top = 8.dp))
     Text(
         stringResource(text),
@@ -297,7 +209,7 @@ private fun SectionTitle(text: Int) {
 }
 
 @Composable
-private fun Note(text: Int) = Text(
+internal fun Note(text: Int) = Text(
     stringResource(text),
     style = MaterialTheme.typography.bodySmall,
     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -305,7 +217,7 @@ private fun Note(text: Int) = Text(
 )
 
 @Composable
-private fun RadioRow(text: String, selected: Boolean, onClick: () -> Unit) {
+internal fun RadioRow(text: String, selected: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().selectable(selected = selected, role = Role.RadioButton, onClick = onClick).padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -316,7 +228,7 @@ private fun RadioRow(text: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SwitchRow(text: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun SwitchRow(text: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Switch, onValueChange = onChange).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -328,7 +240,7 @@ private fun SwitchRow(text: String, checked: Boolean, onChange: (Boolean) -> Uni
 
 /** Slider over whole numbers in [range]. */
 @Composable
-private fun LabeledSlider(label: String, value: Double, range: ClosedFloatingPointRange<Double>, onChange: (Double) -> Unit) {
+internal fun LabeledSlider(label: String, value: Double, range: ClosedFloatingPointRange<Double>, onChange: (Double) -> Unit) {
     Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
         Text(label, style = MaterialTheme.typography.bodyMedium)
         Slider(
@@ -345,7 +257,7 @@ internal fun number(v: Double): String =
     if (v == Math.floor(v)) v.toLong().toString() else String.format(java.util.Locale.getDefault(), "%.1f", v)
 
 @androidx.annotation.StringRes
-private fun AgeFilterOption.label(): Int = when (this) {
+internal fun AgeFilterOption.label(): Int = when (this) {
     AgeFilterOption.ALL -> R.string.age_all
     AgeFilterOption.UPDATED_TODAY -> R.string.age_updatedToday
     AgeFilterOption.AT_MOST_1 -> R.string.age_atMost1

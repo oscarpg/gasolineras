@@ -177,4 +177,9 @@
     <string name="empty_widen">Ampliar a %1$d km</string>
     <string name="empty_clear_filters">Quitar filtros</string>
     <string name="a11y_favourite">favorita</string>
+    <string name="filters_title">Filtros</string>
+    <string name="filters_button">Filtros</string>
+    <string name="filters_button_count">Filtros (%1$d)</string>
+    <string name="filters_reset">Restablecer</string>
+    <string name="menu_open">Abrir menú</string>
 </resources>

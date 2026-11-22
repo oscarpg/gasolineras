@@ -279,6 +279,11 @@ More feedback (2026-11-22):
   "♥ Favourites (N)" chip that shows only favourites wherever they are (their provinces are loaded;
   radius and route don't apply).
 
+Navigation (2026-11-22): ☰ menu (side drawer: Filters, Preferences, Refresh, Diagnostics) instead
+of ⋮; a "Filters (N)" button next to the list summary opens the station filters (distance, detour,
+route only, price age, brands, Reset); Preferences keeps the one-time setup (cars, discounts,
+language, About). Fuel, car and favourites chips stay in the list for one-tap changes.
+
 ### Phase 8 — APK release (1–2 days)
 
 - GitHub Actions `android.yml` (path filter `android/**`, `tests/fixtures/**`): lint, detekt, unit tests, `assembleRelease` on every PR.

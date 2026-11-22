@@ -8,6 +8,7 @@ import es.gasolineras.core.domain.AgeFilterOption
 import es.gasolineras.core.domain.AppLocale
 import es.gasolineras.core.domain.Discount
 import es.gasolineras.core.domain.FuelType
+import es.gasolineras.core.domain.Preferences
 import es.gasolineras.core.domain.MAX_ROUTE_DETOUR_KM
 import es.gasolineras.core.domain.MAX_SEARCH_RADIUS_KM
 import es.gasolineras.core.domain.MIN_ROUTE_DETOUR_KM
@@ -261,6 +262,19 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
 
     /** "Nothing matches": 10 km more. */
     fun widenSearch() = setSearchRadius(store.value.preferences.searchRadiusKm + WIDEN_STEP_KM)
+
+    /** Filters back to their defaults (distance, detour, route only, price age, brands). */
+    fun resetFilters() = userChange { s ->
+        s.updatePreferences {
+            it.copy(
+                searchRadiusKm = Preferences.DEFAULT.searchRadiusKm,
+                routeDetourKm = Preferences.DEFAULT.routeDetourKm,
+                routeOnly = false,
+                ageFilterOption = AgeFilterOption.ALL,
+                brands = emptySet(),
+            )
+        }
+    }
 
     /** "Nothing matches": no price-age or brand filter. */
     fun clearFilters() = userChange { s -> s.updatePreferences { it.copy(ageFilterOption = AgeFilterOption.ALL, brands = emptySet()) } }

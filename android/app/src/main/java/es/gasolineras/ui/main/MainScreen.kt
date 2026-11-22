@@ -21,12 +21,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -37,6 +34,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.rememberDrawerState
+import es.gasolineras.ui.settings.FiltersSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -99,6 +106,8 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
     }
 
     val online by viewModel.online.collectAsStateWithLifecycle()
+    var showFilters by rememberSaveable { mutableStateOf(false) }
+    val drawer = rememberDrawerState(DrawerValue.Closed)
     val wide = LocalConfiguration.current.screenWidthDp >= WIDE_LAYOUT_DP
 
     val results: @Composable () -> Unit = {
@@ -108,6 +117,7 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
             onFuel = viewModel::setFuel,
             onCar = { id -> if (id == null) viewModel.clearCar() else viewModel.selectCar(id) },
             onFavouritesOnly = viewModel::setFavouritesOnly,
+            onOpenFilters = { showFilters = true },
             onWiden = viewModel::widenSearch,
             onClearFilters = viewModel::clearFilters,
             onSortByTotalCost = viewModel::setSortByTotalCost,
@@ -133,9 +143,7 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
                 SearchBar(
                     onSearch = viewModel::searchAddress,
                     onRoute = viewModel::calculateRoute,
-                    onRefresh = { viewModel.refresh() },
-                    onOpenSettings = onOpenSettings,
-                    onOpenDiagnostics = onOpenDiagnostics,
+                    onOpenMenu = { scope.launch { drawer.open() } },
                 )
                 if (ui.app.route != null) {
                     AssistChip(
@@ -157,6 +165,44 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
         }
     }
 
+    // ☰ menu: filters, preferences, refresh and diagnostics. Swipe-to-open is off so the map can pan.
+    ModalNavigationDrawer(
+        drawerState = drawer,
+        gesturesEnabled = drawer.isOpen,
+        drawerContent = {
+            ModalDrawerSheet {
+                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 28.dp, vertical = 20.dp))
+                val close: (() -> Unit) -> Unit = { action -> scope.launch { drawer.close() }; action() }
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.filters_title)) },
+                    selected = false,
+                    onClick = { close { showFilters = true } },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.settings_open)) },
+                    icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+                    selected = false,
+                    onClick = { close(onOpenSettings) },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.preview_refresh)) },
+                    icon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
+                    selected = false,
+                    onClick = { close { viewModel.refresh() } },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.diag_title)) },
+                    icon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                    selected = false,
+                    onClick = { close(onOpenDiagnostics) },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+            }
+        },
+    ) {
     if (wide) {
         // Tablets, foldables and landscape: list beside the map.
         Row(Modifier.fillMaxSize()) {
@@ -171,6 +217,11 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
             sheetPeekHeight = SHEET_PEEK,
             sheetContent = { results() },
         ) { mapArea(SHEET_PEEK) }
+    }
+    }
+
+    if (showFilters) {
+        FiltersSheet(app = ui.app, viewModel = viewModel, onDismiss = { showFilters = false })
     }
 
     val selectedRow = selectedId?.let { id -> ui.visible.rows.firstOrNull { it.station.id == id } }
@@ -202,24 +253,23 @@ private fun StationRow.toMarker() = MapMarker(
 private fun SearchBar(
     onSearch: (String) -> Unit,
     onRoute: (String) -> Unit,
-    onRefresh: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenDiagnostics: () -> Unit,
+    onOpenMenu: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    var menu by remember { mutableStateOf(false) }
     val focus = LocalFocusManager.current
     Surface(shape = MaterialTheme.shapes.extraLarge, tonalElevation = 6.dp, shadowElevation = 6.dp, modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onOpenMenu, modifier = Modifier.padding(start = 4.dp)) {
+                Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.menu_open))
+            }
             TextField(
                 value = query,
                 onValueChange = { query = it },
                 placeholder = { Text(stringResource(R.string.main_search_hint)) },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 trailingIcon = if (query.isNotEmpty()) {
                     { IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.main_clear_search)) } }
                 } else {
-                    null
+                    { Icon(Icons.Filled.Search, contentDescription = null) }
                 },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -243,35 +293,6 @@ private fun SearchBar(
                     focus.clearFocus()
                 }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.main_route_here))
-                }
-            }
-            Box {
-                IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.main_more)) }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    if (query.isNotBlank()) {
-                        DropdownMenuItem(text = { Text(stringResource(R.string.main_use_as_origin)) }, onClick = {
-                            menu = false
-                            onSearch(query)
-                            focus.clearFocus()
-                        })
-                        DropdownMenuItem(text = { Text(stringResource(R.string.main_route_here)) }, onClick = {
-                            menu = false
-                            onRoute(query)
-                            focus.clearFocus()
-                        })
-                    }
-                    DropdownMenuItem(text = { Text(stringResource(R.string.settings_open)) }, onClick = {
-                        menu = false
-                        onOpenSettings()
-                    })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.preview_refresh)) }, onClick = {
-                        menu = false
-                        onRefresh()
-                    })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.diag_title)) }, onClick = {
-                        menu = false
-                        onOpenDiagnostics()
-                    })
                 }
             }
         }
