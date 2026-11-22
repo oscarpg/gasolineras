@@ -24,6 +24,8 @@ data class WidgetSnapshot(
     val items: List<WidgetItem> = emptyList(),
     /** When the prices were computed (epoch ms). */
     val updatedAt: Long = 0,
+    /** Active car's name, shown when the user has more than one car. */
+    val carName: String? = null,
 ) {
     enum class State { READY, NO_ORIGIN, NO_DATA }
 }
@@ -49,7 +51,11 @@ class WidgetStore(context: Context) {
                     .put("km", i.distanceKm ?: JSONObject.NULL),
             )
         }
-        write(snapshotFile, JSONObject().put("state", s.state.name).put("fuel", s.fuel.name).put("updatedAt", s.updatedAt).put("items", items).toString())
+        write(
+            snapshotFile,
+            JSONObject().put("state", s.state.name).put("fuel", s.fuel.name).put("updatedAt", s.updatedAt)
+                .put("car", s.carName ?: JSONObject.NULL).put("items", items).toString(),
+        )
     }
 
     fun readSnapshot(): WidgetSnapshot? = read(snapshotFile)?.let { text ->
@@ -60,6 +66,7 @@ class WidgetStore(context: Context) {
                 state = WidgetSnapshot.State.valueOf(o.getString("state")),
                 fuel = FuelType.fromId(o.getString("fuel")) ?: FuelType.DEFAULT,
                 updatedAt = o.getLong("updatedAt"),
+                carName = if (o.has("car") && !o.isNull("car")) o.getString("car") else null,
                 items = (0 until items.length()).map { k ->
                     val i = items.getJSONObject(k)
                     WidgetItem(i.getString("id"), i.getString("brand"), i.getDouble("price"), if (i.isNull("km")) null else i.getDouble("km"), i.getInt("hue"))

@@ -1,5 +1,7 @@
 package es.gasolineras.widget
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -30,7 +32,12 @@ object WidgetWork {
         WorkManager.getInstance(context).enqueueUniqueWork(ONE_OFF, ExistingWorkPolicy.REPLACE, request)
     }
 
-    fun cancel(context: Context) {
+    /** Stops background refreshes once neither widget is on the home screen. */
+    fun cancelIfNoWidgets(context: Context) {
+        val manager = AppWidgetManager.getInstance(context)
+        val remaining = listOf(GasolinerasWidgetReceiver::class.java, GasolinerasListWidgetReceiver::class.java)
+            .sumOf { manager.getAppWidgetIds(ComponentName(context, it)).size }
+        if (remaining > 0) return
         WorkManager.getInstance(context).cancelUniqueWork(PERIODIC)
         WorkManager.getInstance(context).cancelUniqueWork(ONE_OFF)
     }

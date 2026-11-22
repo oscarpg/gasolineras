@@ -54,20 +54,31 @@ class GasolinerasWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val snapshot = withContext(Dispatchers.IO) { WidgetStore(context).readSnapshot() }
-        provideContent { GlanceTheme { Content(snapshot) } }
+        provideContent { GlanceTheme { Content(snapshot, alwaysList = false) } }
     }
 
     companion object {
-        val SMALL = DpSize(120.dp, 60.dp)
-        val MEDIUM = DpSize(250.dp, 140.dp)
+        val SMALL = DpSize(110.dp, 50.dp)
+        /** Two cells tall on most launchers. */
+        val MEDIUM = DpSize(180.dp, 100.dp)
         val STATION_ID = ActionParameters.Key<String>(MainActivity.EXTRA_STATION_ID)
     }
 }
 
+/** "Top 3" widget: always the list with distances. */
+class GasolinerasListWidget : GlanceAppWidget() {
+    override val sizeMode = SizeMode.Exact
+
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val snapshot = withContext(Dispatchers.IO) { WidgetStore(context).readSnapshot() }
+        provideContent { GlanceTheme { Content(snapshot, alwaysList = true) } }
+    }
+}
+
 @Composable
-private fun Content(snapshot: WidgetSnapshot?) {
+private fun Content(snapshot: WidgetSnapshot?, alwaysList: Boolean) {
     val context = LocalContext.current
-    val medium = LocalSize.current.height >= GasolinerasWidget.MEDIUM.height
+    val medium = alwaysList || LocalSize.current.height >= GasolinerasWidget.MEDIUM.height
     val onSurface = GlanceTheme.colors.onSurface
     val muted = GlanceTheme.colors.onSurfaceVariant
     Column(
@@ -76,8 +87,12 @@ private fun Content(snapshot: WidgetSnapshot?) {
         // Header: fuel and refresh
         Row(GlanceModifier.fillMaxWidth().clickable(actionStartActivity<MainActivity>()), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                snapshot?.let { context.getString(it.fuel.label()) } ?: context.getString(R.string.app_name),
+                snapshot?.let { s ->
+                    val fuel = context.getString(s.fuel.label())
+                    s.carName?.let { car -> context.getString(R.string.widget_car_fuel, car, fuel) } ?: fuel
+                } ?: context.getString(R.string.app_name),
                 style = TextStyle(color = muted, fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                maxLines = 1,
                 modifier = GlanceModifier.defaultWeight(),
             )
             Text(
@@ -156,6 +171,21 @@ class GasolinerasWidgetReceiver : GlanceAppWidgetReceiver() {
 
     override fun onDisabled(context: Context) {
         super.onDisabled(context)
-        WidgetWork.cancel(context)
+        WidgetWork.cancelIfNoWidgets(context)
+    }
+}
+
+class GasolinerasListWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = GasolinerasListWidget()
+
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        WidgetWork.schedule(context)
+        WidgetWork.refreshNow(context)
+    }
+
+    override fun onDisabled(context: Context) {
+        super.onDisabled(context)
+        WidgetWork.cancelIfNoWidgets(context)
     }
 }

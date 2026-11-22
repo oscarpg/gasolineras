@@ -164,4 +164,9 @@
     <string name="widget_no_origin">Abre la app para fijar tu ubicación.</string>
     <string name="widget_no_data">Sin datos todavía.</string>
     <string name="widget_updated">Actualizado %1$s</string>
+    <string name="cars_none_chip">Sin coche</string>
+    <string name="widget_small_label">Gasolinera más barata</string>
+    <string name="widget_list_label">Top 3 gasolineras</string>
+    <string name="widget_list_description">Las 3 gasolineras más baratas cerca de ti, con distancia</string>
+    <string name="widget_car_fuel">%1$s · %2$s</string>
 </resources>

@@ -163,4 +163,9 @@
     <string name="widget_no_origin">Open the app to set your location.</string>
     <string name="widget_no_data">No data yet.</string>
     <string name="widget_updated">Updated %1$s</string>
+    <string name="cars_none_chip">No car</string>
+    <string name="widget_small_label">Cheapest station</string>
+    <string name="widget_list_label">Top 3 stations</string>
+    <string name="widget_list_description">The 3 cheapest stations near you, with distance</string>
+    <string name="widget_car_fuel">%1$s · %2$s</string>
 </resources>

@@ -265,6 +265,11 @@ Not done, and why:
 - Decision: the widget uses the origin last used in the app (saved on the device) instead of
   background location — no "allow all the time" permission, works with approximate location.
 
+Widget feedback (2026-11-22): two widgets in the picker ("Cheapest station", resizable, and
+"Top 3 stations"); the widget always ranks by price per litre near the origin with the fuel, brand,
+age filters and discounts (ignores routes and "sort by total cost"); the active car is named when
+there is more than one; car chips in the results sheet switch car in one tap.
+
 ### Phase 8 — APK release (1–2 days)
 
 - GitHub Actions `android.yml` (path filter `android/**`, `tests/fixtures/**`): lint, detekt, unit tests, `assembleRelease` on every PR.

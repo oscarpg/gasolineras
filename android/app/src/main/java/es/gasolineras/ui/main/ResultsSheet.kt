@@ -55,6 +55,7 @@ fun ResultsSheet(
     ui: MainUiState,
     online: Boolean,
     onFuel: (FuelType) -> Unit,
+    onCar: (String?) -> Unit,
     onSortByTotalCost: (Boolean) -> Unit,
     onStation: (String) -> Unit,
     onRetry: () -> Unit,
@@ -94,6 +95,18 @@ fun ResultsSheet(
             ) {
                 FuelType.entries.forEach { fuel ->
                     FilterChip(selected = prefs.fuel == fuel, onClick = { onFuel(fuel) }, label = { Text(stringResource(fuel.label())) })
+                }
+            }
+            if (prefs.cars.isNotEmpty()) {
+                // One tap to switch car (and its fuel), or to drop it.
+                Row(
+                    Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilterChip(selected = prefs.activeCarId == null, onClick = { onCar(null) }, label = { Text(stringResource(R.string.cars_none_chip)) })
+                    prefs.cars.forEach { car ->
+                        FilterChip(selected = prefs.activeCarId == car.id, onClick = { onCar(car.id) }, label = { Text(car.name) })
+                    }
                 }
             }
             if (prefs.activeCar != null) {

@@ -137,11 +137,15 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         }
         viewModelScope.launch {
             // Keep the home-screen widget in step with the list being shown.
-            ui.map { it.visible.rows to it.app.preferences.fuel }.distinctUntilChanged().collectLatest { (rows, fuel) ->
-                if (rows.isEmpty()) return@collectLatest
-                delay(WIDGET_DEBOUNCE_MS)
-                runCatching { widgetUpdater.publish(rows, fuel) }
-            }
+            store.state
+                .distinctUntilChanged { a, b ->
+                    a.stations === b.stations && a.staleness === b.staleness && a.preferences === b.preferences && a.userPosition == b.userPosition
+                }
+                .collectLatest { app ->
+                    if (app.stations.isEmpty() || app.userPosition == null) return@collectLatest
+                    delay(WIDGET_DEBOUNCE_MS)
+                    runCatching { widgetUpdater.publish(app) }
+                }
         }
         viewModelScope.launch {
             // A station tapped on the widget opens once its province is loaded.
@@ -214,6 +218,9 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     fun setRouteOnly(on: Boolean) = store.update { it.updatePreferences { p -> p.copy(routeOnly = on) } }
 
     fun selectCar(id: String) = store.update { it.selectCar(id) }
+
+    /** No active car: prices per litre only, any fuel. */
+    fun clearCar() = store.update { it.updatePreferences { p -> p.copy(activeCarId = null) } }
     fun addCar(input: CarInput) = store.update { it.saveCar(input, newId = "car_" + UUID.randomUUID().toString().take(8)) }
     fun updateCar(id: String, input: CarInput) = store.update { it.updateCar(id, input) }
     fun deleteCar(id: String) = store.update { it.deleteCar(id) }

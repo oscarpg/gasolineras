@@ -106,6 +106,7 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenSettings: 
             ui = ui,
             online = online,
             onFuel = viewModel::setFuel,
+            onCar = { id -> if (id == null) viewModel.clearCar() else viewModel.selectCar(id) },
             onSortByTotalCost = viewModel::setSortByTotalCost,
             onStation = { viewModel.selectStation(it) },
             onRetry = { ui.controller.error?.retry?.invoke() },
