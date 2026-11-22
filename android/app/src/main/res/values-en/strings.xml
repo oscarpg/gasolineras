@@ -172,7 +172,7 @@
     <string name="fav_remove">Remove from favourites</string>
     <string name="fav_chip">Favourites (%1$d)</string>
     <string name="fav_summary">%1$d favourites</string>
-    <string name="fav_none">No favourites yet. Add one with the heart in a station's details.</string>
+    <string name="fav_none">No favourites yet. Add one with the heart in a station\'s details.</string>
     <string name="empty_widen">Widen to %1$d km</string>
     <string name="empty_clear_filters">Clear filters</string>
     <string name="a11y_favourite">favourite</string>
