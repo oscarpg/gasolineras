@@ -1,7 +1,9 @@
 package es.gasolineras.map.maplibre
 
 import androidx.compose.foundation.layout.PaddingValues
+import android.graphics.RectF
 import androidx.compose.runtime.Composable
+import kotlin.math.hypot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.DisposableEffect
@@ -104,10 +106,19 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
                 m.uiSettings.isRotateGesturesEnabled = false
                 m.uiSettings.isTiltGesturesEnabled = false
                 m.addOnMapClickListener { point ->
-                    val screen = m.projection.toScreenLocation(point)
-                    val id = m.queryRenderedFeatures(screen, SELECTED_LAYER, MARKER_LAYER)
-                        .firstOrNull()
-                        ?.getStringProperty(PROP_ID)
+                    // Fingers are bigger than markers: look around the tap and take the nearest marker.
+                    val tap = m.projection.toScreenLocation(point)
+                    val r = TAP_RADIUS_DP * density.density
+                    val area = RectF(tap.x - r, tap.y - r, tap.x + r, tap.y + r)
+                    val id = m.queryRenderedFeatures(area, SELECTED_LAYER, MARKER_LAYER, LABEL_LAYER)
+                        .mapNotNull { f ->
+                            val p = f.geometry() as? Point ?: return@mapNotNull null
+                            val id = f.getStringProperty(PROP_ID) ?: return@mapNotNull null
+                            val at = m.projection.toScreenLocation(LatLng(p.latitude(), p.longitude()))
+                            id to hypot(at.x - tap.x, at.y - tap.y)
+                        }
+                        .minByOrNull { it.second }
+                        ?.first
                     if (id != null) currentOnMarkerClick(id)
                     id != null
                 }
@@ -204,7 +215,7 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         s.addLayer(
             CircleLayer(MARKER_LAYER, MARKER_SOURCE).withProperties(
                 circleColor(toColor(get(PROP_COLOR))),
-                circleRadius(7f),
+                circleRadius(9f),
                 circleStrokeColor("#FFFFFF"),
                 circleStrokeWidth(2f),
             ),
@@ -253,6 +264,9 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         const val USER_LAYER = "gas-user-dot"
         const val ROUTE_COLOR = "#1A73E8"
         const val CAMERA_ANIMATION_MS = 600
+
+        /** How far from the tap (dp) a marker still counts as tapped: about a fingertip. */
+        const val TAP_RADIUS_DP = 24f
     }
 }
 
