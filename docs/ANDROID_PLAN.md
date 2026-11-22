@@ -231,14 +231,26 @@ days; 87 stations within 15 km; search, a 6,386-point route and preferences save
 - Sorting: equal prices (or total costs) go nearer first — smaller detour on a route, then distance
   from the user. Differs from the web app, which keeps load order for ties.
 
-### Phase 6 — Hardening & quality (3 days)
+### Phase 6 — Hardening & quality ✅ done 2026-11-22
 
-- Accessibility: TalkBack labels, 48dp targets, contrast of marker text (reuse `textColorFor`), font scaling to 200%.
-- Large screens/foldables: list-detail layout on width ≥ 600dp (sheet becomes side panel).
-- Offline banner, timeouts/retries, process-death restore (`SavedStateHandle`).
-- R8/minify rules, Baseline Profile for startup, StrictMode in debug.
-- Compose UI tests for main flows; optional screenshot tests (Roborazzi/Paparazzi).
-- **Done when:** no lint errors, cold start < 1.5 s on a mid-range device, UI tests green.
+Done:
+
+- Offline: `ConnectivityMonitor`; "Offline: showing saved prices" banner (cached data keeps working).
+- Large screens (≥ 600 dp: tablets, foldables, landscape): results in a side panel beside the map.
+- Accessibility: each station row reads as one sentence (brand, €/l, distance); bigger map tap
+  area (24 dp, nearest marker, labels count) and larger markers.
+- Process death: the origin is kept in `SavedStateHandle` and restored without asking GPS.
+- StrictMode (debug builds) logs main-thread disk/network work and leaks.
+- CI builds the minified release APK (R8) on every push; Compose UI tests run on API 26/30/36.
+- CI resilience: Google's Maven Central mirror first, short HTTP timeouts, one retry on download
+  errors, job time limits.
+
+Not done, and why:
+
+- Baseline Profile: needs a macrobenchmark module and runs on a physical device; start-up is
+  already quick on the test phone. Revisit if start-up feels slow on older devices.
+- Screenshot tests: low value for a single developer compared with the UI tests above.
+- Cold-start measurement: to be done on the phone with the signed release APK (Phase 8).
 
 ### Phase 7 — Home-screen widget (2–3 days)
 
