@@ -69,7 +69,7 @@ fun MapTestScreen(
     }
 
     val content = remember(markers, selectedId) {
-        MapContent(markers = markers.map { if (it.id == selectedId) it.copy(selected = true) else it })
+        MapContent(markers = markers, selectedId = selectedId)
     }
 
     Scaffold(

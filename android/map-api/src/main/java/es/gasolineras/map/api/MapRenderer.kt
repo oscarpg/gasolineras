@@ -22,7 +22,6 @@ data class MapMarker(
     /** Short text drawn next to the marker (e.g. the price). */
     val label: String,
     val color: Color,
-    val selected: Boolean = false,
 )
 
 @Immutable
@@ -38,7 +37,10 @@ data class MapStyle(
 /** Everything a map screen passes to the renderer. */
 @Immutable
 data class MapContent(
+    /** Keep the same list instance while it doesn't change: renderers redraw markers only when it does. */
     val markers: List<MapMarker> = emptyList(),
+    /** Highlighted marker. Changing it doesn't redraw the other markers. */
+    val selectedId: String? = null,
     val route: List<GeoPoint>? = null,
     val userPosition: GeoPoint? = null,
 )

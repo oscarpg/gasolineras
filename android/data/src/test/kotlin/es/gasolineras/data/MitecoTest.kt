@@ -178,6 +178,34 @@ class MitecoTest {
         assertTrue(s.urls[0].endsWith("EstacionesTerrestresHist/FiltroProvincia/20-11-2026/28"))
     }
 
+    @Test fun `keeps decoded data in memory and checks the cache without reading it`() = runTest {
+        val reads = mutableListOf<String>()
+        val storage = object : es.gasolineras.data.storage.KeyValueStorage by MemoryStorage() {
+            val inner = MemoryStorage()
+            override fun getItem(key: String) = inner.getItem(key).also { reads += key }
+            override fun setItem(key: String, value: String) = inner.setItem(key, value)
+            override fun removeItem(key: String) = inner.removeItem(key)
+            override fun keys() = inner.keys()
+            override fun contains(key: String) = inner.contains(key)
+        }
+        val cache = Cache(storage, "t:")
+        val first = MitecoRepository(cache, listOf({ _ -> samplePayload(3) }), now = { LocalDateTime.of(2026, 11, 21, 10, 0) }, scope = backgroundScope)
+        first.getProvinceStations("28")
+        first.getHistoryDay("28", "20-11-2026")
+        reads.clear() // the first lookups found nothing and downloaded
+        first.getProvinceStations("28")
+        first.getHistoryDay("28", "20-11-2026")
+        assertEquals(emptyList<String>(), reads) // served from memory
+
+        // A new instance (app restart) reads each file once, then uses memory
+        val second = MitecoRepository(cache, listOf({ _ -> error("no network needed") }), now = { LocalDateTime.of(2026, 11, 21, 12, 0) }, scope = backgroundScope)
+        assertTrue(second.hasCachedProvince("28"))
+        assertEquals(emptyList<String>(), reads) // hasCachedProvince doesn't read the file
+        assertEquals(3, second.getProvinceStations("28").size)
+        assertEquals(3, second.getProvinceStations("28").size)
+        assertEquals(1, reads.count { it.startsWith("t:stations:28") })
+    }
+
     @Test fun `falls back to the next attempt when one fails or returns garbage`() = runTest {
         val repo = MitecoRepository(
             cache = Cache(MemoryStorage(), "t:"),

@@ -87,6 +87,9 @@ class Cache(
 
     fun delete(key: String) = storage.removeItem(fullKey(key))
 
+    /** Whether an entry exists, without reading it (it may still turn out to be expired or unreadable). */
+    fun contains(key: String): Boolean = storage.contains(fullKey(key))
+
     /** Removes expired and unreadable entries; returns how many were removed. */
     fun purgeExpired(): Int {
         var removed = 0

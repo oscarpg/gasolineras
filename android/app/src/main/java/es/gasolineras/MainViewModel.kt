@@ -14,7 +14,7 @@ import es.gasolineras.state.MapEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.time.LocalDate
@@ -139,7 +139,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * The station's price for [fuel] over the last 6 days plus today (oldest first);
      * a null price means that day's data is missing. Past days come from the daily cache when possible.
      */
-    suspend fun priceHistory(station: Station, fuel: FuelType): List<PriceDay> = coroutineScope {
+    suspend fun priceHistory(station: Station, fuel: FuelType): List<PriceDay> = withContext(Dispatchers.Default) {
         val today = LocalDate.now()
         val past = (6 downTo 1).map { n ->
             val date = daysBefore(today, n)

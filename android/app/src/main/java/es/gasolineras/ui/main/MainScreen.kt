@@ -79,7 +79,8 @@ fun MainScreen(viewModel: MainViewModel, renderer: MapRenderer, onOpenDiagnostic
     val markers = remember(ui.visible) { ui.visible.rows.map { it.toMarker() } }
     val content = remember(markers, selectedId, ui.app.route, ui.app.userPosition) {
         MapContent(
-            markers = markers.map { if (it.id == selectedId) it.copy(selected = true) else it },
+            markers = markers,
+            selectedId = selectedId,
             route = ui.app.route?.map { GeoPoint(it.lat, it.lon) },
             userPosition = ui.app.userPosition?.let { GeoPoint(it.lat, it.lon) },
         )

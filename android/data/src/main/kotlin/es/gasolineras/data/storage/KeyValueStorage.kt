@@ -16,6 +16,9 @@ interface KeyValueStorage {
     fun setItem(key: String, value: String)
     fun removeItem(key: String)
     fun keys(): List<String>
+
+    /** Whether [key] has a value, without reading it. */
+    fun contains(key: String): Boolean = getItem(key) != null
 }
 
 /** In-memory storage with an optional size limit (counted as key + value characters). For tests. */
@@ -35,6 +38,8 @@ class MemoryStorage(private val capacity: Int = Int.MAX_VALUE) : KeyValueStorage
     }
 
     @Synchronized override fun keys() = data.keys.toList()
+
+    @Synchronized override fun contains(key: String) = key in data
 }
 
 /**
@@ -64,6 +69,8 @@ class FileStorage(private val directory: File, private val maxBytes: Long = Long
     @Synchronized override fun removeItem(key: String) {
         fileFor(key).delete()
     }
+
+    @Synchronized override fun contains(key: String) = fileFor(key).isFile
 
     @Synchronized override fun keys(): List<String> =
         files().map { URLDecoder.decode(it.name.removeSuffix(SUFFIX), "UTF-8") }

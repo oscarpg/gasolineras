@@ -2,6 +2,8 @@ package es.gasolineras.map.maplibre
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,6 +24,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import es.gasolineras.map.api.CameraTarget
 import es.gasolineras.map.api.GeoPoint
 import es.gasolineras.map.api.MapContent
+import es.gasolineras.map.api.MapMarker
 import es.gasolineras.map.api.MapRenderer
 import es.gasolineras.map.api.MapStyle
 import org.maplibre.android.MapLibre
@@ -32,9 +35,6 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression.get
-import org.maplibre.android.style.expressions.Expression.literal
-import org.maplibre.android.style.expressions.Expression.switchCase
-import org.maplibre.android.style.expressions.Expression.toBool
 import org.maplibre.android.style.expressions.Expression.toColor
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
@@ -105,7 +105,7 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
                 m.uiSettings.isTiltGesturesEnabled = false
                 m.addOnMapClickListener { point ->
                     val screen = m.projection.toScreenLocation(point)
-                    val id = m.queryRenderedFeatures(screen, MARKER_LAYER)
+                    val id = m.queryRenderedFeatures(screen, SELECTED_LAYER, MARKER_LAYER)
                         .firstOrNull()
                         ?.getStringProperty(PROP_ID)
                     if (id != null) currentOnMarkerClick(id)
@@ -130,33 +130,37 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
             }
         }
 
-        LaunchedEffect(loadedStyle, content) {
+        // Markers: rebuilt only when the list changes; the GeoJSON is built off the main thread.
+        LaunchedEffect(loadedStyle, content.markers) {
             val s = loadedStyle ?: return@LaunchedEffect
-            s.getSourceAs<GeoJsonSource>(MARKER_SOURCE)?.setGeoJson(
-                FeatureCollection.fromFeatures(
-                    content.markers.map { marker ->
-                        Feature.fromGeometry(marker.position.toPoint()).apply {
-                            addStringProperty(PROP_ID, marker.id)
-                            addStringProperty(PROP_LABEL, marker.label)
-                            addStringProperty(PROP_COLOR, marker.color.toHex())
-                            addBooleanProperty(PROP_SELECTED, marker.selected)
-                        }
-                    },
-                ),
-            )
-            s.getSourceAs<GeoJsonSource>(ROUTE_SOURCE)?.setGeoJson(
+            val json = withContext(Dispatchers.Default) { markersGeoJson(content.markers) }
+            s.getSourceAs<GeoJsonSource>(MARKER_SOURCE)?.setGeoJson(json)
+        }
+
+        // Selection: a one-feature source drawn on top, so selecting never touches the other markers.
+        LaunchedEffect(loadedStyle, content.selectedId, content.markers) {
+            val s = loadedStyle ?: return@LaunchedEffect
+            val selected = content.selectedId?.let { id -> content.markers.firstOrNull { it.id == id } }
+            s.getSourceAs<GeoJsonSource>(SELECTED_SOURCE)?.setGeoJson(markersGeoJson(listOfNotNull(selected)))
+        }
+
+        LaunchedEffect(loadedStyle, content.route) {
+            val s = loadedStyle ?: return@LaunchedEffect
+            val route = content.route
+            val json = withContext(Dispatchers.Default) {
                 FeatureCollection.fromFeatures(
                     listOfNotNull(
-                        content.route?.takeIf { it.size >= 2 }?.let { route ->
-                            Feature.fromGeometry(LineString.fromLngLats(route.map { it.toPoint() }))
-                        },
+                        route?.takeIf { it.size >= 2 }?.let { Feature.fromGeometry(LineString.fromLngLats(it.map { p -> p.toPoint() })) },
                     ),
-                ),
-            )
+                ).toJson()
+            }
+            s.getSourceAs<GeoJsonSource>(ROUTE_SOURCE)?.setGeoJson(json)
+        }
+
+        LaunchedEffect(loadedStyle, content.userPosition) {
+            val s = loadedStyle ?: return@LaunchedEffect
             s.getSourceAs<GeoJsonSource>(USER_SOURCE)?.setGeoJson(
-                FeatureCollection.fromFeatures(
-                    listOfNotNull(content.userPosition?.let { Feature.fromGeometry(it.toPoint()) }),
-                ),
+                FeatureCollection.fromFeatures(listOfNotNull(content.userPosition?.let { Feature.fromGeometry(it.toPoint()) })),
             )
         }
 
@@ -200,7 +204,7 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         s.addLayer(
             CircleLayer(MARKER_LAYER, MARKER_SOURCE).withProperties(
                 circleColor(toColor(get(PROP_COLOR))),
-                circleRadius(switchCase(toBool(get(PROP_SELECTED)), literal(11f), literal(7f))),
+                circleRadius(7f),
                 circleStrokeColor("#FFFFFF"),
                 circleStrokeWidth(2f),
             ),
@@ -215,6 +219,15 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
                 textHaloColor("#FFFFFF"),
                 textHaloWidth(1.5f),
                 textOptional(true),
+            ),
+        )
+        s.addSource(GeoJsonSource(SELECTED_SOURCE))
+        s.addLayer(
+            CircleLayer(SELECTED_LAYER, SELECTED_SOURCE).withProperties(
+                circleColor(toColor(get(PROP_COLOR))),
+                circleRadius(12f),
+                circleStrokeColor("#FFFFFF"),
+                circleStrokeWidth(3f),
             ),
         )
         s.addSource(GeoJsonSource(USER_SOURCE))
@@ -234,18 +247,47 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         const val LABEL_LAYER = "gas-markers-labels"
         const val ROUTE_SOURCE = "gas-route"
         const val ROUTE_LAYER = "gas-route-line"
+        const val SELECTED_SOURCE = "gas-selected"
+        const val SELECTED_LAYER = "gas-selected-circle"
         const val USER_SOURCE = "gas-user"
         const val USER_LAYER = "gas-user-dot"
-        const val PROP_ID = "id"
-        const val PROP_LABEL = "label"
-        const val PROP_COLOR = "color"
-        const val PROP_SELECTED = "selected"
         const val ROUTE_COLOR = "#1A73E8"
         const val CAMERA_ANIMATION_MS = 600
     }
 }
 
 private fun GeoPoint.toPoint(): Point = Point.fromLngLat(lon, lat)
+
+private const val PROP_ID = "id"
+private const val PROP_LABEL = "label"
+private const val PROP_COLOR = "color"
+
+/** GeoJSON text for markers (built as a string: faster than MapLibre's Feature objects for hundreds of points). */
+private fun markersGeoJson(markers: List<MapMarker>): String = buildString(markers.size * 120) {
+    append("""{"type":"FeatureCollection","features":[""")
+    markers.forEachIndexed { i, m ->
+        if (i > 0) append(',')
+        append("""{"type":"Feature","geometry":{"type":"Point","coordinates":[""")
+        append(m.position.lon).append(',').append(m.position.lat)
+        append("""]},"properties":{"id":""").append(jsonString(m.id))
+        append(""","label":""").append(jsonString(m.label))
+        append(""","color":"""").append(m.color.toHex()).append(""""}}""")
+    }
+    append("]}")
+}
+
+private fun jsonString(s: String): String = buildString(s.length + 2) {
+    append('"')
+    for (c in s) {
+        when {
+            c == '"' -> append("\\\"")
+            c == '\\' -> append("\\\\")
+            c < ' ' -> append(String.format(java.util.Locale.ROOT, "\\u%04x", c.code))
+            else -> append(c)
+        }
+    }
+    append('"')
+}
 
 private fun Color.toHex(): String = String.format(java.util.Locale.ROOT, "#%06X", 0xFFFFFF and toArgb())
 
