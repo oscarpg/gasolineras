@@ -54,6 +54,24 @@ scripts/            developer scripts
 docs/SMOKE_TEST.md  manual checklist to run after each refactor phase
 ```
 
+## Android app
+
+A native Android version lives in `android/` (Kotlin, Jetpack Compose, Material 3; Android 8.0+).
+
+- **Install:** download `gasolineras-<version>.apk` from the
+  [latest Android release](https://github.com/oscarpg/gasolineras/releases?q=android-v) on the phone
+  and open it (allow installing unknown apps if Android asks). Update by installing the new APK over
+  the old one; settings are kept.
+- **Test builds:** every push publishes a debug build to the
+  [android-test-build](https://github.com/oscarpg/gasolineras/releases/tag/android-test-build)
+  pre-release (app id `es.gasolineras.debug`, installs alongside the release).
+- **Publishing a release:** push a tag `android-vX.Y.Z`, or run the "Android release" workflow from
+  the Actions tab with the version `X.Y.Z` (it creates the tag); `.github/workflows/android-release.yml`
+  runs the tests, builds and signs the APK and creates the GitHub Release. Signing uses the
+  repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`
+  and `ANDROID_KEY_PASSWORD`.
+- Plan and decisions: `docs/ANDROID_PLAN.md`.
+
 ## Data sources
 
 - Fuel prices: [MITECO – Geoportal de hidrocarburos](https://geoportalgasolineras.es/) REST service

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fuel pump on the 108dp adaptive-icon canvas (safe zone: central 66dp). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:translateX="30" android:translateY="30">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M4,2h22a2,2 0,0 1,2 2v40h-26v-40a2,2 0,0 1,2 -2zM8,8v12h14v-12z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M0,44h30v4h-30z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M30,14l8,6v18a3,3 0,0 0,6 0v-24l-6,-6 2.5,-2.5 7.5,7.5v25a7,7 0,0 1,-14 0v-16l-4,-3z" />
+    </group>
+</vector>
