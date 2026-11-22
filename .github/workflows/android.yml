@@ -25,15 +25,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
       - name: Check string resources
         working-directory: .
         run: python3 android/scripts/check_strings.py
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
       - name: Build, test and lint
         # Retry once when dependency downloads fail (Maven Central sometimes drops CI runners).
         run: |
@@ -50,13 +50,13 @@ jobs:
       - name: Name the APK
         run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/gasolineras-test.apk
       - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: gasolineras-debug-apk
           path: android/app/build/outputs/apk/debug/gasolineras-test.apk
       - name: Upload reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: build-reports
           path: |
@@ -82,8 +82,8 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
         with:
           name: gasolineras-debug-apk
           path: apk
@@ -91,7 +91,7 @@ jobs:
         run: |
           git tag -f android-test-build
           git push -f origin refs/tags/android-test-build
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           tag_name: android-test-build
           name: Android test build
@@ -115,12 +115,12 @@ jobs:
       matrix:
         api: [26, 30, 36]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
       - name: Enable KVM
         working-directory: .
         run: |
@@ -139,7 +139,7 @@ jobs:
           script: ./gradlew connectedDebugAndroidTest > gradle.log 2>&1; status=$?; cat gradle.log; if [ $status -ne 0 ] && grep -qE "Could not (GET|download|resolve|find)" gradle.log; then echo "::warning::Dependency download failed, retrying once"; ./gradlew --refresh-dependencies connectedDebugAndroidTest; status=$?; fi; echo "::group::Diagnostics log"; adb logcat -d -s GasolinerasDiag:I; echo "::endgroup::"; exit $status
       - name: Upload test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: emulator-reports-api-${{ matrix.api }}
           path: android/app/build/reports/androidTests/
