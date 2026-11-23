@@ -4,6 +4,7 @@ import type { BrandedStation, Car } from '../../domain/types';
 import { html, raw, type SafeHtml } from '../dom';
 import { discountLabel, euros, km, pricePerLitre, stalenessText, stationName } from '../format';
 import { i18n } from '../i18nContext';
+import { directionsUrl } from '../stationActions';
 
 export interface CardContext {
   car: Car | null;
@@ -19,6 +20,40 @@ export function favouriteButtonHtml(station: BrandedStation, isFavourite: boolea
   const { t } = i18n();
   const label = t(isFavourite ? 'favourites.remove' : 'favourites.add', { name: stationName(station.name) });
   return html`<button type="button" class="btn-icon btn-favourite" data-action="favourite" data-station="${station.id}" aria-pressed="${String(isFavourite)}" aria-label="${label}" title="${label}"><span aria-hidden="true">${isFavourite ? '♥' : '♡'}</span></button>`;
+}
+
+/** A compact link that opens directions to the station in a maps app. */
+export function directionsLinkHtml(station: BrandedStation): SafeHtml {
+  const label = i18n().t('station.directionsTo', { name: stationName(station.name) });
+  return html`<a class="btn-icon btn-directions-icon" href="${directionsUrl(station.lat, station.lon)}" target="_blank" rel="noopener" aria-label="${label}" title="${label}"><span aria-hidden="true">🧭</span></a>`;
+}
+
+/**
+ * What a screen reader says for a card, as one sentence:
+ * "{position}. {name}, {price}, {distance}[, favourite]".
+ */
+export function stationCardLabel(
+  row: StationRow,
+  index: number,
+  { car, hasRoute, sortedByTotalCost }: CardContext,
+  isFavourite: boolean,
+): string {
+  const { t } = i18n();
+  const amount =
+    car && sortedByTotalCost && row.cost.totalCost != null
+      ? t('unit.euros', { value: euros(row.cost.totalCost) })
+      : pricePerLitre(row.finalPrice);
+  const distance = hasRoute
+    ? row.routeDetourKm !== null && t('card.labelDetour', { km: km(row.routeDetourKm) })
+    : row.distanceFromUserKm !== null && t('card.labelDistance', { km: km(row.distanceFromUserKm) });
+  return [
+    `${index + 1}. ${stationName(row.station.name)}`,
+    amount,
+    distance,
+    isFavourite && t('card.labelFavourite'),
+  ]
+    .filter(Boolean)
+    .join(', ');
 }
 
 /** Inner HTML of one result card (position `index` starts at 0). Every value is escaped. */

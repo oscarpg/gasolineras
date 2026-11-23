@@ -45,6 +45,7 @@ async function boot({ prefs = {}, search = async () => null, provincesWithin }: 
   document.body.innerHTML = BODY;
   document.documentElement.lang = 'es';
   const downloads: string[] = [];
+  const shared: string[] = [];
   const miteco: MitecoService = {
     hasCachedProvince: () => true,
     getProvinceStations: async (code) => (downloads.push(code), stations),
@@ -70,9 +71,11 @@ async function boot({ prefs = {}, search = async () => null, provincesWithin }: 
       }),
     }),
     browserLanguages: ['es-ES'],
+    shareDeps: (toast) => ({ share: async ({ text }) => void shared.push(text), toast }),
+    touch: false,
   });
   for (let i = 0; i < 5; i++) await flush();
-  return { store, leaflet, downloads };
+  return { store, leaflet, downloads, shared };
 }
 
 const $ = <T extends HTMLElement = HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
@@ -233,6 +236,30 @@ describe('startApp (DOM)', () => {
     expect(ctx.store.getState().favouritesOnly).toBe(false);
     expect($('#favourites-chip').hidden).toBe(true);
     expect($$('.station-card')).toHaveLength(20);
+  });
+
+  it('station actions: a card click highlights its marker; the popup shares the station', async () => {
+    $$('.station-card')[1]!.click();
+    const marker = ctx.leaflet.markers.filter((m) => m.open).pop()!;
+    expect((marker.icon as { className: string }).className).toContain('is-selected');
+    expect(marker.zIndexOffset).toBe(1000);
+
+    const slot = document.createElement('div');
+    slot.innerHTML = marker.html;
+    document.getElementById('map')!.append(slot);
+    expect(slot.querySelector('a[href^="https://www.google.com/maps/dir/"]')).not.toBeNull();
+    slot.querySelector<HTMLElement>('[data-action="share"]')!.click();
+    await flush();
+    expect(ctx.shared).toHaveLength(1);
+    expect(ctx.shared[0]!.split('\n')).toEqual([
+      'CEPSA — Gasolina 95: 1,501 €/l',
+      'Calle s1',
+      expect.stringContaining('https://www.google.com/maps/search/'),
+    ]);
+
+    // Each card has a directions link next to it, and reads as one sentence.
+    expect($$('#results-list a[href^="https://www.google.com/maps/dir/"]')).toHaveLength(20);
+    expect($('.station-card').getAttribute('aria-label')).toBe('1. REPSOL 0, 1,500 €/l, a 0,0 km');
   });
 
   it('favourites: the heart in a popup toggles too', () => {

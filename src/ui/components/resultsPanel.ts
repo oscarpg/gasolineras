@@ -6,7 +6,7 @@ import { setPreferences, toggleFavourite } from '../../state/transitions';
 import { byId, delegate, html, setHtml } from '../dom';
 import { statusSummary } from '../format';
 import { i18n } from '../i18nContext';
-import { favouriteButtonHtml, stationCardHtml } from './stationCard';
+import { directionsLinkHtml, favouriteButtonHtml, stationCardHtml, stationCardLabel } from './stationCard';
 
 /** How many result cards the panel lists (the map shows all). */
 export const MAX_LISTED = 20;
@@ -185,12 +185,10 @@ export function createResultsPanel(store: Store<AppState>, actions: ResultsPanel
       : undefined;
     setHtml(
       list,
-      html`${rows
-        .slice(0, MAX_LISTED)
-        .map(
-          (row, i) =>
-            html`<div class="station-item"><div class="station-card" role="button" tabindex="0" data-station="${row.station.id}">${stationCardHtml(row, i, context)}</div><div class="station-item-actions">${favouriteButtonHtml(row.station, favourites.has(row.station.id))}</div></div>`,
-        )}`,
+      html`${rows.slice(0, MAX_LISTED).map((row, i) => {
+        const favourite = favourites.has(row.station.id);
+        return html`<div class="station-item"><div class="station-card" role="button" tabindex="0" data-station="${row.station.id}" aria-label="${stationCardLabel(row, i, context, favourite)}">${stationCardHtml(row, i, context)}</div><div class="station-item-actions">${favouriteButtonHtml(row.station, favourite)}${directionsLinkHtml(row.station)}</div></div>`;
+      })}`,
     );
     if (focused)
       [...list.querySelectorAll<HTMLElement>('.station-card')]

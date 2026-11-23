@@ -20,3 +20,56 @@ button.btn-history {
   justify-content: space-between;
   gap: 6px;
 }
+
+/* Every fuel the station sells */
+.popup-fuels {
+  margin-top: 6px;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.popup-fuels caption {
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.popup-fuels th,
+.popup-fuels td {
+  padding: 1px 8px 1px 0;
+  font-weight: 400;
+  text-align: left;
+}
+
+.popup-fuels td {
+  text-align: right;
+}
+
+.popup-fuels tr.is-selected th,
+.popup-fuels tr.is-selected td {
+  font-weight: 700;
+}
+
+/* Directions and share */
+.popup-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.popup-actions .btn {
+  flex: 1;
+  display: inline-block;
+  text-align: center;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  text-decoration: none;
+  font-size: 0.82rem;
+}
+
+.leaflet-popup-content .popup-actions a.btn {
+  color: var(--color-text-on-primary);
+}

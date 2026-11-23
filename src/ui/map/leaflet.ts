@@ -36,6 +36,7 @@ export interface LeafletMarker extends LeafletLayer {
   openPopup(): this;
   isPopupOpen(): boolean;
   getPopup(): LeafletPopup | undefined;
+  setZIndexOffset(offset: number): this;
 }
 
 export interface LeafletLayerGroup extends LeafletLayer {

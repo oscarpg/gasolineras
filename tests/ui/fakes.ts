@@ -80,6 +80,11 @@ export function fakeLeaflet() {
       this.icon = icon;
       return this;
     }
+    zIndexOffset = 0;
+    setZIndexOffset(z: number) {
+      this.zIndexOffset = z;
+      return this;
+    }
   }
   const L = {
     map: () => map,

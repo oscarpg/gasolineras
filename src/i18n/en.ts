@@ -136,11 +136,20 @@ export const en: Record<MessageKey, string> = {
   'station.distance': '📍 {km} km away ({roundTrip} km round trip)',
   'station.tankCost': 'Tank: {cost} €',
   'station.tripCost': 'Round trip ({km} km · {litres} L): +{cost} €',
+  'station.directions': 'Directions',
+  'station.directionsTo': 'Directions to {name}',
+  'station.share': 'Share',
+  'station.copied': 'Copied to clipboard',
+  'station.copyFailed': 'Could not copy',
+  'station.allPrices': 'All prices',
   'station.totalCost': 'Real total: {cost} €',
 
   'card.detour': '🛣️ Detour {km} km · ',
   'card.distance': '📍 {km} km · ',
   'card.costLine': '🚗 Tank: {tank} € + round trip: {trip} € =',
+  'card.labelDistance': '{km} km away',
+  'card.labelDetour': '{km} km detour',
+  'card.labelFavourite': 'favourite',
   'card.total': 'Total: {cost} €',
 
   'unit.pricePerLitre': '{value} €/l',
@@ -180,6 +189,7 @@ export const en: Record<MessageKey, string> = {
   'message.routeError': 'Route error: {message}',
   'message.yourLocation': 'Your location / starting point',
   'message.retry': 'Retry',
+  'message.offline': 'Offline: showing saved prices',
   'message.dismiss': 'Dismiss',
 
   'errors.download-failed': 'Could not download the station data.',

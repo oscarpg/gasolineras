@@ -140,11 +140,20 @@ export const es = {
   'station.tankCost': 'Depósito: {cost} €',
   'station.tripCost': 'Desplazamiento i/v ({km} km · {litres}L): +{cost} €',
   'station.totalCost': 'Total real: {cost} €',
+  'station.directions': 'Cómo llegar',
+  'station.directionsTo': 'Cómo llegar a {name}',
+  'station.share': 'Compartir',
+  'station.copied': 'Copiado al portapapeles',
+  'station.copyFailed': 'No se pudo copiar',
+  'station.allPrices': 'Todos los precios',
 
   'card.detour': '🛣️ Desvío {km} km · ',
   'card.distance': '📍 {km} km · ',
   'card.costLine': '🚗 Depósito: {tank} € + Viaje i/v: {trip} € =',
   'card.total': 'Total: {cost} €',
+  'card.labelDistance': 'a {km} km',
+  'card.labelDetour': 'desvío de {km} km',
+  'card.labelFavourite': 'favorita',
 
   'unit.pricePerLitre': '{value} €/l',
   'unit.euros': '{value} €',
@@ -184,6 +193,7 @@ export const es = {
   'message.yourLocation': 'Tu ubicación / Origen',
   'message.retry': 'Reintentar',
   'message.dismiss': 'Cerrar aviso',
+  'message.offline': 'Sin conexión: precios guardados',
 
   'errors.download-failed': 'No se pudo descargar la información de las gasolineras.',
   'errors.timeout': 'el servidor tardó demasiado en responder',

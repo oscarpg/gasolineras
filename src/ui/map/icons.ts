@@ -5,8 +5,22 @@ import type { LeafletIcon, LeafletStatic } from './leaflet';
 export const userIcon = (L: LeafletStatic): LeafletIcon =>
   L.divIcon({ className: 'user-marker', iconSize: [18, 18], iconAnchor: [9, 9], popupAnchor: [0, -10] });
 
+export interface StationIconOptions {
+  /** The station picked last: drawn bigger and outlined. */
+  selected?: boolean;
+  /**
+   * Touch screen: the pin sits in a transparent ~44×46 px box, so a tap near it hits
+   * it (minimum touch size, WCAG 2.5.5).
+   */
+  touch?: boolean;
+}
+
 /** Map pin filled with the station's price colour. */
-export function stationIcon(L: LeafletStatic, color: string): LeafletIcon {
+export function stationIcon(
+  L: LeafletStatic,
+  color: string,
+  { selected = false, touch = false }: StationIconOptions = {},
+): LeafletIcon {
   const fill = escapeHtml(color);
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="26" height="38" viewBox="0 0 26 38">
@@ -14,11 +28,8 @@ export function stationIcon(L: LeafletStatic, color: string): LeafletIcon {
             fill="${fill}" stroke="#ffffff" stroke-width="2"/>
       <circle cx="13" cy="13" r="4.5" fill="#ffffff"/>
     </svg>`;
-  return L.divIcon({
-    className: 'station-marker',
-    html: svg,
-    iconSize: [26, 38],
-    iconAnchor: [13, 37],
-    popupAnchor: [0, -34],
-  });
+  const className = `station-marker${selected ? ' is-selected' : ''}${touch ? ' is-touch' : ''}`;
+  return touch
+    ? L.divIcon({ className, html: svg, iconSize: [44, 46], iconAnchor: [22, 45], popupAnchor: [0, -34] })
+    : L.divIcon({ className, html: svg, iconSize: [26, 38], iconAnchor: [13, 37], popupAnchor: [0, -34] });
 }

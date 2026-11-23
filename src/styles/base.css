@@ -122,3 +122,19 @@ button.btn-favourite[aria-pressed='true'] {
     scroll-behavior: auto !important;
   }
 }
+
+/* An icon link styled like .btn-icon */
+a.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-size: 1rem;
+}
+
+a.btn-icon:hover {
+  background: var(--color-primary-hover-bg);
+}

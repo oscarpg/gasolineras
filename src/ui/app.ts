@@ -16,6 +16,7 @@ import type { Effects } from '../state/effects';
 import { createVisibleStationsSelector, selectActiveCar } from '../state/selectors';
 import type { Store } from '../state/store';
 import { toggleFavourite } from '../state/transitions';
+import { fuelLabel } from './format';
 import { bindPriceHistoryButtons } from './components/priceChart';
 import { createCarsSection } from './components/prefsDrawer/carsSection';
 import { createDiscountsSection } from './components/prefsDrawer/discountsSection';
@@ -29,8 +30,10 @@ import { createLocationController } from './locationController';
 import type { LeafletStatic } from './map/leaflet';
 import { createMapView } from './map/mapView';
 import { createStationMarkers } from './map/stationMarkers';
-import { delegate } from './dom';
-import { createToaster } from './toast';
+import { byId, delegate } from './dom';
+import { bindOfflineBanner } from './offlineBanner';
+import { browserShareDeps, shareStation, shareText, type ShareDeps } from './stationActions';
+import { createToaster, type Toaster } from './toast';
 
 export interface AppContext {
   store: Store<AppState>;
@@ -45,6 +48,10 @@ export interface AppContext {
   provinceShapes?: () => Promise<ProvinceShapes>;
   /** Browser language preferences, used when the user hasn't chosen a language. */
   browserLanguages?: readonly string[];
+  /** Share sheet and clipboard (default: the browser's). */
+  shareDeps?: (toast: Toaster) => ShareDeps;
+  /** Touch screen: bigger tap targets for markers (default: from the pointer media query). */
+  touch?: boolean;
 }
 
 /** Zoom used when a result card is clicked. */
@@ -60,6 +67,8 @@ export function startApp({
   leaflet,
   provinceShapes = loadProvinceShapes,
   browserLanguages = navigator.languages ?? [navigator.language],
+  shareDeps = browserShareDeps,
+  touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches,
 }: AppContext): void {
   /** Switches the translator when the chosen (or browser) language changes. Returns true if it changed. */
   const applyLocale = (state: AppState): boolean => {
@@ -74,7 +83,7 @@ export function startApp({
   const selectVisible = createVisibleStationsSelector();
   const toast = createToaster();
   const mapView = createMapView('map', leaflet);
-  const markers = createStationMarkers(mapView.L, mapView.stationsLayer);
+  const markers = createStationMarkers(mapView.L, mapView.stationsLayer, { touch });
   const drawer = createDrawer();
 
   const results = createResultsPanel(store, {
@@ -82,16 +91,25 @@ export function startApp({
       const station = store.getState().stations.find((s) => s.id === stationId);
       if (!station) return;
       mapView.focus([station.lat, station.lon], STATION_ZOOM);
+      markers.select(stationId);
       markers.open(stationId);
     },
     onFavouritesOnly: (on) => void location.showFavourites(on),
   });
 
-  // The heart in a station's popup (the list handles its own hearts).
-  delegate(document.getElementById('map') ?? document, 'click', '[data-action="favourite"]', (button) => {
+  // The heart and share buttons in a station's popup (the list handles its own hearts).
+  const mapElement = document.getElementById('map') ?? document;
+  delegate(mapElement, 'click', '[data-action="favourite"]', (button) => {
     const station = store.getState().stations.find((s) => s.id === button.dataset.station);
     if (station) store.update((s) => toggleFavourite(s, station));
   });
+  delegate(mapElement, 'click', '[data-action="share"]', (button) => {
+    const state = store.getState();
+    const row = selectVisible(state).rows.find((r) => r.station.id === button.dataset.station);
+    if (row) void shareStation(shareText(row, fuelLabel(state.preferences.fuel)), shareDeps(toast));
+  });
+
+  bindOfflineBanner(byId('offline-banner'));
 
   const location = createLocationController({
     store,

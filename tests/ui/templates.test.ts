@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { selectVisibleStations } from '../../src/domain/filters';
 import type { BrandedStation } from '../../src/domain/types';
-import { favouriteButtonHtml, stationCardHtml } from '../../src/ui/components/stationCard';
+import {
+  directionsLinkHtml,
+  favouriteButtonHtml,
+  stationCardHtml,
+  stationCardLabel,
+} from '../../src/ui/components/stationCard';
 import { priceChartSvg } from '../../src/ui/components/priceChart';
 import { escapeHtml, html, raw, SafeHtml } from '../../src/ui/dom';
 import { createStationMarkers } from '../../src/ui/map/stationMarkers';
@@ -124,6 +129,48 @@ describe('station templates content', () => {
     ).not.toContain('price-history');
   });
 
+  it('the popup lists every fuel sold, the selected one marked, plus directions and share', () => {
+    const [row] = visible([
+      branded('a', {
+        lat: 40.41,
+        lon: -3.69,
+        prices: prices({ GASOLINA_95: 1.5, GASOLEO_A: 1.4, GLP: 0.9 }),
+      }),
+    ]);
+    const out = stationPopupHtml(row!, {
+      fuel: 'GASOLINA_95',
+      car: null,
+      hasRoute: false,
+      favourites: new Set(),
+    }).value;
+    expect(out).toContain('Todos los precios');
+    expect(out.match(/<tr/g)).toHaveLength(3);
+    expect(out).toMatch(/<tr class="is-selected"><th scope="row">Gasolina 95<\/th><td>1,500 €\/l/);
+    expect(out).toContain('<td>0,900 €/l</td>');
+    expect(out).toContain('href="https://www.google.com/maps/dir/?api=1&amp;destination=40.41,-3.69"');
+    expect(out).toContain('rel="noopener"');
+    expect(out).toContain('data-action="share" data-station="a"');
+
+    const [single] = visible([branded('b')]);
+    expect(
+      stationPopupHtml(single!, { fuel: 'GASOLINA_95', car: null, hasRoute: false, favourites: new Set() })
+        .value,
+    ).not.toContain('popup-fuels'); // only one fuel: no table
+  });
+
+  it('cards read as one sentence and have a directions link', () => {
+    const [row] = visible([branded('a', { lat: 40.4 + 2 / 111.32, prices: prices({ GASOLINA_95: 1.5 }) })]);
+    const ctx = { car: null, hasRoute: false, sortedByTotalCost: false };
+    expect(stationCardLabel(row!, 2, ctx, false)).toBe('3. REPSOL, 1,500 €/l, a 2,0 km');
+    expect(stationCardLabel(row!, 0, ctx, true)).toBe('1. REPSOL, 1,500 €/l, a 2,0 km, favorita');
+    const car = { id: 'c', name: 'C', fuel: 'GASOLINA_95' as const, tankLitres: 50, consumptionL100km: 6 };
+    const [withCar] = visible([branded('a', { lat: 40.4 + 2 / 111.32 })], { car });
+    expect(stationCardLabel(withCar!, 0, { car, hasRoute: false, sortedByTotalCost: true }, false)).toMatch(
+      /^1\. REPSOL, \d+,\d\d €, a 2,0 km$/,
+    );
+    expect(directionsLinkHtml(row!.station).value).toContain('aria-label="Cómo llegar a REPSOL"');
+  });
+
   it('the heart shows whether the station is a favourite', () => {
     const [row] = visible([branded('a')]);
     const off = stationPopupHtml(row!, {
@@ -191,9 +238,10 @@ function fakeLeaflet() {
     shown = '';
     constructor(
       readonly position: readonly [number, number],
-      options?: { icon?: unknown },
+      options?: { icon?: unknown; zIndexOffset?: number },
     ) {
       this.icon = options?.icon;
+      this.zIndexOffset = options?.zIndexOffset ?? 0;
       log.push('create');
     }
     bindPopup(p: string | (() => string)) {
@@ -215,6 +263,11 @@ function fakeLeaflet() {
       log.push('setIcon');
       return this;
     }
+    zIndexOffset = 0;
+    setZIndexOffset(z: number) {
+      this.zIndexOffset = z;
+      return this;
+    }
     openPopup() {
       this.opened = true;
       this.evaluate();
@@ -227,7 +280,11 @@ function fakeLeaflet() {
   }
   const L = {
     marker: (pos: readonly [number, number], opts?: { icon?: unknown }) => new FakeMarker(pos, opts),
-    divIcon: (o: { html?: string }) => ({ html: o.html }),
+    divIcon: (o: { html?: string; className?: string; iconSize?: [number, number] }) => ({
+      html: o.html,
+      className: o.className,
+      iconSize: o.iconSize,
+    }),
   } as unknown as LeafletStatic;
   return { L, layer, log };
 }
@@ -255,6 +312,40 @@ describe('createStationMarkers', () => {
     expect(log).toContain('setIcon');
     expect(markers.size()).toBe(2);
     expect(layer.markers.size).toBe(2);
+  });
+
+  it('highlights the selected station until another is picked, also across updates', () => {
+    const { L, layer } = fakeLeaflet();
+    const markers = createStationMarkers(L, layer as never);
+    markers.update(visible(stations), ctx);
+    const all = () =>
+      [...layer.markers] as unknown as { icon: { className: string }; zIndexOffset: number }[];
+
+    markers.select('s1');
+    expect(all().map((m) => m.icon.className.includes('is-selected'))).toEqual([false, true, false]);
+    expect(all().map((m) => m.zIndexOffset)).toEqual([0, 1000, 0]);
+
+    markers.select('s2');
+    expect(all().map((m) => m.icon.className.includes('is-selected'))).toEqual([false, false, true]);
+    expect(all().map((m) => m.zIndexOffset)).toEqual([0, 0, 1000]);
+
+    // s2 leaves and comes back: still highlighted. A colour change keeps the highlight too.
+    markers.update(visible(stations.slice(0, 2)), ctx);
+    markers.update(visible(stations), ctx);
+    expect(all().at(-1)!.icon.className).toContain('is-selected');
+    expect(all().at(-1)!.zIndexOffset).toBe(1000);
+
+    markers.select(null);
+    expect(all().some((m) => m.icon.className.includes('is-selected'))).toBe(false);
+  });
+
+  it('touch screens get a 44 px tap target around the pin', () => {
+    const { L, layer } = fakeLeaflet();
+    createStationMarkers(L, layer as never, { touch: true }).update(visible(stations), ctx);
+    const icon = ([...layer.markers][0] as unknown as { icon: { className: string; iconSize: number[] } })
+      .icon;
+    expect(icon.iconSize).toEqual([44, 46]);
+    expect(icon.className).toContain('is-touch');
   });
 
   it('opens a station’s popup', () => {
