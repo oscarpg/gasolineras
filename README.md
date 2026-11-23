@@ -70,6 +70,8 @@ A native Android version lives in `android/` (Kotlin, Jetpack Compose, Material 
   runs the tests, builds and signs the APK and creates the GitHub Release. Signing uses the
   repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`
   and `ANDROID_KEY_PASSWORD`.
+- **Changelog:** `android/CHANGELOG.md`. Add a `## [X.Y.Z]` entry before releasing: the release
+  workflow puts it at the top of the GitHub Release, and stops if the entry is missing.
 - Plan and decisions: `docs/ANDROID_PLAN.md`.
 
 ## Data sources

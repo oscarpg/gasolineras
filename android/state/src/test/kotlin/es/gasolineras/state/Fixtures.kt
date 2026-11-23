@@ -7,6 +7,7 @@ import es.gasolineras.core.domain.FuelType
 import es.gasolineras.core.domain.HistoryPrices
 import es.gasolineras.core.domain.LatLng
 import es.gasolineras.core.domain.Preferences
+import es.gasolineras.core.domain.RouteProbe
 import es.gasolineras.core.domain.Station
 import es.gasolineras.data.geo.GeocodeResult
 import es.gasolineras.data.geo.Geocoder
@@ -62,8 +63,21 @@ class FakeGeocoder(
     override suspend fun reverseProvince(position: LatLng) = province(position)
 }
 
-class FakeRouter(var result: List<LatLng>? = null) : Router {
+class FakeRouter(
+    var result: List<LatLng>? = null,
+    /** Extra km for each checked station (RouteChecker); throws when [failChecks]. */
+    var extra: (String) -> Double = { 0.2 },
+    var failChecks: Boolean = false,
+) : Router {
+    val checked = mutableListOf<List<String>>()
+
     override suspend fun route(from: LatLng, to: LatLng) = result
+
+    override suspend fun extraDistances(probes: List<RouteProbe>): List<Double> {
+        checked += probes.map { it.id }
+        if (failChecks) throw java.io.IOException("offline")
+        return probes.map { extra(it.id) }
+    }
 }
 
 class FakeGps(var position: LatLng? = LatLng(40.4, -3.7), var available: Boolean = true) : PositionProvider {

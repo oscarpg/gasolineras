@@ -13,6 +13,9 @@ object Endpoints {
     /** OSRM routing: append `lon,lat;lon,lat?...`. */
     const val OSRM_ROUTE = "https://router.project-osrm.org/route/v1/driving/"
 
+    /** OSRM distance matrix: append `lon,lat;lon,lat;...?sources=...&destinations=...`. */
+    const val OSRM_TABLE = "https://router.project-osrm.org/table/v1/driving/"
+
     /** Nominatim forward search: append the URL-encoded query. */
     const val NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q="
 

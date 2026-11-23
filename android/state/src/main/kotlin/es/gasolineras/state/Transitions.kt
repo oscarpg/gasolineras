@@ -6,6 +6,7 @@ import es.gasolineras.core.domain.Discount
 import es.gasolineras.core.domain.FavouriteStation
 import es.gasolineras.core.domain.FuelType
 import es.gasolineras.core.domain.LatLng
+import es.gasolineras.core.domain.RouteChecks
 import es.gasolineras.core.domain.MAX_CUSTOM_AGE_DAYS
 import es.gasolineras.core.domain.MIN_CUSTOM_AGE_DAYS
 import es.gasolineras.core.domain.Preferences
@@ -134,7 +135,12 @@ fun AppState.markProvinceLoaded(province: String): AppState =
 
 fun AppState.setUserPosition(position: LatLng?): AppState = copy(userPosition = position)
 
-fun AppState.setRoute(route: List<LatLng>?): AppState = copy(route = route)
+/** A new route (or none) forgets the road checks of the previous one. */
+fun AppState.setRoute(route: List<LatLng>?): AppState = copy(route = route, routeChecks = emptyMap())
+
+/** Stores road checks made for [route]; ignored if the route has changed since. */
+fun AppState.addRouteChecks(route: List<LatLng>, checks: RouteChecks): AppState =
+    if (this.route !== route) this else copy(routeChecks = routeChecks + checks)
 
 /* ---------- price history ---------- */
 

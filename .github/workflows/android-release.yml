@@ -82,13 +82,28 @@ jobs:
           "$apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk
           cp app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/gasolineras-$VERSION.apk"
 
+      - name: Write the release notes
+        # This version's CHANGELOG.md entry first, then the install notes. A release needs its entry.
+        run: |
+          entry="$(awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/ { exit }
+            found && /^\[[0-9.]+\]: / { exit }
+            found { print }
+          ' CHANGELOG.md)"
+          if [ -z "$(echo "$entry" | tr -d '[:space:]')" ]; then
+            echo "::error::android/CHANGELOG.md has no entry for $VERSION (add a '## [$VERSION]' section)"
+            exit 1
+          fi
+          { echo "## Novedades en $VERSION · What's new"; echo "$entry"; echo; echo "---"; echo; cat RELEASE_NOTES.md; } > "$RUNNER_TEMP/release-notes.md"
+
       - name: Publish the release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-v${{ env.VERSION }}
           target_commitish: ${{ github.sha }}
           name: Gasolineras Android ${{ env.VERSION }}
-          body_path: android/RELEASE_NOTES.md
+          body_path: ${{ runner.temp }}/release-notes.md
           files: android/app/build/outputs/apk/release/gasolineras-${{ env.VERSION }}.apk
 
       - name: Remove the keystore

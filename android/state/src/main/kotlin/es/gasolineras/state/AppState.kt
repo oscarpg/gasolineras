@@ -3,6 +3,7 @@ package es.gasolineras.state
 import es.gasolineras.core.domain.BrandedStation
 import es.gasolineras.core.domain.LatLng
 import es.gasolineras.core.domain.Preferences
+import es.gasolineras.core.domain.RouteChecks
 import es.gasolineras.core.domain.StalenessIndex
 
 /** A running price-history check for one province. */
@@ -29,6 +30,8 @@ data class AppState(
     /** Origin chosen by GPS or address search. */
     val userPosition: LatLng? = null,
     val route: List<LatLng>? = null,
+    /** Road checks of the stations near the current route ("only on the route"). */
+    val routeChecks: RouteChecks = emptyMap(),
     /** Show only favourite stations (wherever they are) instead of those within the radius or route. */
     val favouritesOnly: Boolean = false,
 )

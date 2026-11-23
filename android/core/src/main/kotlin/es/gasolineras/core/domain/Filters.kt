@@ -1,6 +1,9 @@
 package es.gasolineras.core.domain
 
-/** With "only stations on the route", the max distance from the route line (km). */
+/**
+ * With "only stations on the route", the max distance from the route line (km) for stations not
+ * checked by road yet (see RouteCheck.kt).
+ */
 const val ROUTE_ONLY_MAX_KM = 0.15
 
 data class VisibilityCriteria(
@@ -22,6 +25,8 @@ data class VisibilityCriteria(
     val onlyIds: Set<String>? = null,
     /** Nearest first (detour on a route); colours still show the price. */
     val sortByDistance: Boolean = false,
+    /** Road checks for "only on the route" (RouteCheck.kt); missing entries use the straight-line rule. */
+    val routeChecks: RouteChecks = emptyMap(),
 )
 
 data class StationRow(
@@ -61,7 +66,6 @@ data class VisibleStations(
  */
 fun selectVisibleStations(stations: List<BrandedStation>, c: VisibilityCriteria): VisibleStations {
     val sortedByTotalCost = c.car != null && c.sortByTotalCost
-    val routeLimit = if (c.routeOnly) ROUTE_ONLY_MAX_KM else c.routeDetourKm
 
     val rows = stations.mapNotNull { branded ->
         val station = branded.station
@@ -80,7 +84,11 @@ fun selectVisibleStations(stations: List<BrandedStation>, c: VisibilityCriteria)
         val inRange = if (c.onlyIds != null) {
             true
         } else if (routeDetourKm != null) {
-            routeDetourKm <= routeLimit
+            if (c.routeOnly) {
+                isOnRoute(routeDetourKm, branded.id in c.routeChecks, c.routeChecks[branded.id], ROUTE_ONLY_MAX_KM)
+            } else {
+                routeDetourKm <= c.routeDetourKm
+            }
         } else {
             distanceFromUserKm != null && distanceFromUserKm <= c.searchRadiusKm
         }

@@ -3,6 +3,7 @@ package es.gasolineras.state
 import es.gasolineras.core.domain.BrandedStation
 import es.gasolineras.core.domain.LatLng
 import es.gasolineras.core.domain.Preferences
+import es.gasolineras.core.domain.RouteChecks
 import es.gasolineras.core.domain.StalenessIndex
 import es.gasolineras.core.domain.VisibilityCriteria
 import es.gasolineras.core.domain.VisibleStations
@@ -22,10 +23,10 @@ class VisibleStationsSelector {
 
     @Synchronized
     fun select(s: AppState): VisibleStations {
-        val inputs = listOf<Any?>(s.stations, s.staleness, s.preferences, s.userPosition, s.route, s.favouritesOnly)
+        val inputs = listOf<Any?>(s.stations, s.staleness, s.preferences, s.userPosition, s.route, s.favouritesOnly, s.routeChecks)
         val previous = lastInputs
         if (previous != null && previous.indices.all { previous[it] === inputs[it] || (inputs[it] is Boolean && previous[it] == inputs[it]) }) return lastResult!!
-        val result = compute(s.stations, s.staleness, s.preferences, s.userPosition, if (s.favouritesOnly) null else s.route, s.favouritesOnly)
+        val result = compute(s.stations, s.staleness, s.preferences, s.userPosition, if (s.favouritesOnly) null else s.route, s.favouritesOnly, s.routeChecks)
         lastInputs = inputs
         lastResult = result
         return result
@@ -38,6 +39,7 @@ class VisibleStationsSelector {
         userPosition: LatLng?,
         route: List<LatLng>?,
         favouritesOnly: Boolean,
+        routeChecks: RouteChecks,
     ) = selectVisibleStations(
         stations,
         VisibilityCriteria(
@@ -50,6 +52,7 @@ class VisibleStationsSelector {
             searchRadiusKm = p.searchRadiusKm,
             routeDetourKm = p.routeDetourKm,
             routeOnly = p.routeOnly,
+            routeChecks = routeChecks,
             car = p.activeCar,
             discounts = p.discounts,
             sortByTotalCost = p.sortByTotalCost,

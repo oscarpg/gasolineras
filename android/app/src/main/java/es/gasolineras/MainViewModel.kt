@@ -52,6 +52,7 @@ import es.gasolineras.state.AppState
 import es.gasolineras.state.ControllerState
 import es.gasolineras.state.Effects
 import es.gasolineras.state.PreferencesPersister
+import es.gasolineras.state.RouteChecker
 import es.gasolineras.state.Store
 import es.gasolineras.state.VisibleStationsSelector
 import es.gasolineras.state.createInitialState
@@ -87,6 +88,11 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         LocationPositionProvider(container.location), viewModelScope,
     )
     private val persister = PreferencesPersister(store, viewModelScope, { savePreferences(container.preferencesStorage, it) }).start()
+
+    /** "Only stations on the route": checks the stations near the route by road (RouteChecker). */
+    private val routeChecker = RouteChecker(store, container.router, viewModelScope) { message, error ->
+        android.util.Log.w("Gasolineras", message, error)
+    }.start()
     private val selector = VisibleStationsSelector()
     private val widgetStore = WidgetStore(application)
     private val widgetUpdater = WidgetUpdater(application, container)
