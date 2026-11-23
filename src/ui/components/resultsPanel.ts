@@ -1,6 +1,6 @@
 import { FUEL_TYPES, isFuelType } from '../../config/fuels';
 import type { VisibleStations } from '../../domain/filters';
-import { MAX_SEARCH_RADIUS_KM } from '../../domain/preferences';
+import { activeFilterCount, MAX_SEARCH_RADIUS_KM } from '../../domain/preferences';
 import type { FuelType } from '../../domain/types';
 import type { AppState } from '../../state/appState';
 import { selectActiveCar, selectIsCheckingHistory } from '../../state/selectors';
@@ -79,6 +79,7 @@ export function createResultsPanel(store: Store<AppState>, actions: ResultsPanel
   const panel = byId('results-panel');
   const toggleIcon = byId('results-toggle-icon');
   const favouritesChip = byId<HTMLButtonElement>('favourites-chip');
+  const filtersButton = byId('open-filters');
   const fuelChips = byId('fuel-chips');
   const carChips = byId('car-chips');
   const sortGroup = byId('sort-options');
@@ -164,25 +165,37 @@ export function createResultsPanel(store: Store<AppState>, actions: ResultsPanel
     }
   });
 
-  let last: { car: unknown; locale: string; order: SortOrder; favourites: number; on: boolean } | null = null;
+  let last: {
+    car: unknown;
+    locale: string;
+    order: SortOrder;
+    favourites: number;
+    on: boolean;
+    filters: number;
+  } | null = null;
 
-  /** Sort buttons and favourites chip; skipped when nothing they show changed. */
+  /** Sort buttons, favourites chip and "Filters (N)"; skipped when nothing they show changed. */
   function renderOptions(state: AppState) {
     const car = selectActiveCar(state);
     const { locale, t } = i18n();
     const order = sortOrderOf(state.preferences);
     const favourites = state.preferences.favourites.length;
     const on = state.favouritesOnly;
+    const filters = activeFilterCount(state.preferences);
     if (
       last &&
       last.car === car &&
       last.locale === locale &&
       last.order === order &&
       last.favourites === favourites &&
-      last.on === on
+      last.on === on &&
+      last.filters === filters
     )
       return;
-    last = { car, locale, order, favourites, on };
+    last = { car, locale, order, favourites, on, filters };
+
+    filtersButton.textContent = filters ? t('filters.buttonCount', { count: filters }) : t('filters.button');
+    filtersButton.classList.toggle('is-active', filters > 0);
 
     // Without a car, "total cost" is disabled and the order shown is €/l.
     const shown = order === 'total' && !car ? 'price' : order;

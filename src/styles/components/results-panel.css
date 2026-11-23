@@ -223,6 +223,8 @@ button.chip-favourites[aria-pressed='true'] {
 }
 
 .sort-row {
+  width: 100%;
+  justify-content: space-between;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -241,4 +243,9 @@ button.chip-favourites[aria-pressed='true'] {
   margin: 0;
   padding: 6px 8px;
   font-size: 0.8rem;
+}
+
+/* "Filters (N)": highlighted while some filter is on */
+button.chip-filters.is-active {
+  background: var(--color-primary-soft-border);
 }

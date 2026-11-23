@@ -1,5 +1,5 @@
-/* Preferences side drawer and its backdrop. */
-#preferences-backdrop {
+/* Side drawers (preferences, filters) and their backdrops. */
+.drawer-backdrop {
   position: fixed;
   inset: 0;
   background: var(--color-backdrop);
@@ -7,11 +7,11 @@
   display: none;
 }
 
-#preferences-backdrop.is-active {
+.drawer-backdrop.is-active {
   display: block;
 }
 
-#preferences-drawer {
+.drawer {
   position: fixed;
   top: 0;
   left: 0;
@@ -27,7 +27,7 @@
   flex-direction: column;
 }
 
-#preferences-drawer.is-open {
+.drawer.is-open {
   transform: translateX(0);
 }
 
@@ -45,7 +45,7 @@
   font-size: 1.05rem;
 }
 
-#close-preferences {
+.drawer-header button {
   width: auto;
   margin: 0;
   padding: 4px 10px;
@@ -84,4 +84,16 @@
   display: flex;
   gap: 6px;
   align-items: center;
+}
+
+/* Brand checklist buttons */
+.brand-actions {
+  display: flex;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.brand-actions button {
+  flex: 1;
+  margin: 0;
 }

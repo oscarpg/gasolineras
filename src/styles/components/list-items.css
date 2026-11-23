@@ -55,3 +55,12 @@
   font-weight: 700;
   font-size: 0.85rem;
 }
+
+/* Car form: "Save" fills the row, "Cancel" (while editing) takes what it needs */
+.form-row > button {
+  margin-top: 0;
+}
+
+#cancel-car-edit {
+  width: auto;
+}

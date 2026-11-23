@@ -8,16 +8,39 @@ export interface Drawer {
 /** Elements outside the drawer that are made inert (unfocusable, hidden from screen readers) while it is open. */
 const BACKGROUND_IDS = ['topbar', 'map', 'results-panel'];
 
+/** Element ids of one drawer. */
+export interface DrawerIds {
+  drawer: string;
+  backdrop: string;
+  /** The button that opens it (its aria-expanded is kept in sync). */
+  opener: string;
+  close: string;
+}
+
+export const PREFERENCES_DRAWER: DrawerIds = {
+  drawer: 'preferences-drawer',
+  backdrop: 'preferences-backdrop',
+  opener: 'open-preferences',
+  close: 'close-preferences',
+};
+
+export const FILTERS_DRAWER: DrawerIds = {
+  drawer: 'filters-drawer',
+  backdrop: 'filters-backdrop',
+  opener: 'open-filters',
+  close: 'close-filters',
+};
+
 /**
- * The Preferences side panel, as a modal dialog: while open, the rest of the page
- * is inert, focus moves into the panel and Escape closes it. On close, focus goes
- * back to the button that opened it (if focus was inside the panel).
+ * A side panel as a modal dialog (Preferences, Filters): while open, the rest of
+ * the page is inert, focus moves into the panel and Escape closes it. On close,
+ * focus goes back to the button that opened it (if focus was inside the panel).
  */
-export function createDrawer(): Drawer {
-  const drawer = byId('preferences-drawer');
-  const backdrop = byId('preferences-backdrop');
-  const opener = byId('open-preferences');
-  const closeButton = byId<HTMLButtonElement>('close-preferences');
+export function createDrawer(ids: DrawerIds = PREFERENCES_DRAWER): Drawer {
+  const drawer = byId(ids.drawer);
+  const backdrop = byId(ids.backdrop);
+  const opener = byId(ids.opener);
+  const closeButton = byId<HTMLButtonElement>(ids.close);
   const background = BACKGROUND_IDS.map((id) => byId(id));
   let isOpen = false;
   let returnFocusTo: HTMLElement | null = null;

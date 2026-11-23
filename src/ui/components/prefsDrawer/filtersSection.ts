@@ -5,6 +5,7 @@ import type { Effects } from '../../../state/effects';
 import { countBrands } from '../../../state/selectors';
 import type { Store } from '../../../state/store';
 import {
+  resetFilters,
   setAllBrands,
   setBrandSelected,
   setCustomAgeDays,
@@ -16,7 +17,11 @@ import { AGE_OPTION_LABELS, brandLabel, historyStatusText } from '../../format';
 import { i18n } from '../../i18nContext';
 import { renderFuelOptions } from './carsSection';
 
-/** "Station filters": fuel, age-of-price filter and brand checklist. */
+/**
+ * The station filters in the filters panel: fuel, age-of-price filter, brand
+ * checklist (with "select all" / "deselect all") and "reset filters". The radius,
+ * detour and route-only controls are wired by locationRouteSections.ts.
+ */
 export function createFiltersSection(store: Store<AppState>, effects: Effects) {
   const fuel = byId<HTMLSelectElement>('fuel');
   const age = byId<HTMLSelectElement>('age-filter');
@@ -24,6 +29,11 @@ export function createFiltersSection(store: Store<AppState>, effects: Effects) {
   const customDaysRow = byId('custom-days-row');
   const historyInfo = byId('history-status');
   const brandList = byId('brand-list');
+  const brandsHint = byId('brands-hint');
+  const brandButtons = [
+    byId<HTMLButtonElement>('brands-deselect-all'),
+    byId<HTMLButtonElement>('brands-select-all'),
+  ];
 
   fuel.addEventListener('change', () => {
     const value = fuel.value;
@@ -40,16 +50,18 @@ export function createFiltersSection(store: Store<AppState>, effects: Effects) {
     void effects.ensureHistoryForFilter();
   });
 
-  delegate(brandList, 'change', 'input[data-brand-all]', (input) => {
-    const checked = (input as HTMLInputElement).checked;
+  // Nothing ticked means no brand filter, so "deselect all" is how to start picking a few.
+  const setAll = (all: boolean) =>
     store.update((s) =>
       setAllBrands(
         s,
-        checked,
+        all,
         countBrands(s.stations).map(([b]) => b),
       ),
     );
-  });
+  byId('brands-deselect-all').addEventListener('click', () => setAll(true));
+  byId('brands-select-all').addEventListener('click', () => setAll(false));
+  byId('reset-filters').addEventListener('click', () => store.update(resetFilters));
   delegate(brandList, 'change', 'input[data-brand]', (input) =>
     store.update((s) => setBrandSelected(s, input.dataset.brand!, (input as HTMLInputElement).checked)),
   );
@@ -85,6 +97,8 @@ export function createFiltersSection(store: Store<AppState>, effects: Effects) {
     lastBrands = { stations, brands, locale };
 
     const counts = countBrands(stations);
+    brandsHint.hidden = counts.length === 0 || brands.length > 0;
+    for (const button of brandButtons) button.disabled = counts.length === 0;
     if (counts.length === 0) {
       // Nothing loaded yet: keep (and translate) the placeholder.
       setHtml(
@@ -96,7 +110,7 @@ export function createFiltersSection(store: Store<AppState>, effects: Effects) {
     const selected = new Set(brands);
     setHtml(
       brandList,
-      html`<label><input type="checkbox" id="all-brands" data-brand-all ${selected.size === 0 ? 'checked' : ''}> ${t('filters.allBrands', { count: counts.length })}</label>${counts.map(
+      html`${counts.map(
         ([brand, n]) =>
           html`<label><input type="checkbox" data-brand="${brand}" ${selected.has(brand) ? 'checked' : ''}> ${brandLabel(brand)} (${n})</label>`,
       )}`,

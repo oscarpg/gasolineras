@@ -21,7 +21,7 @@ import { fuelLabel } from './format';
 import { bindPriceHistoryButtons } from './components/priceChart';
 import { createCarsSection } from './components/prefsDrawer/carsSection';
 import { createDiscountsSection } from './components/prefsDrawer/discountsSection';
-import { createDrawer } from './components/prefsDrawer/drawer';
+import { createDrawer, FILTERS_DRAWER } from './components/prefsDrawer/drawer';
 import { createFiltersSection } from './components/prefsDrawer/filtersSection';
 import { createLanguageSection } from './components/prefsDrawer/languageSection';
 import { createLocationRouteSections } from './components/prefsDrawer/locationRouteSections';
@@ -89,6 +89,7 @@ export function startApp({
   const mapView = createMapView('map', leaflet);
   const markers = createStationMarkers(mapView.L, mapView.stationsLayer, { touch });
   const drawer = createDrawer();
+  createDrawer(FILTERS_DRAWER);
 
   const results = createResultsPanel(store, {
     onSelect(stationId) {

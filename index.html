@@ -88,6 +88,17 @@
             ></span>
           </div>
           <div class="sort-row">
+            <button
+              type="button"
+              id="open-filters"
+              class="chip chip-filters"
+              aria-haspopup="dialog"
+              aria-expanded="false"
+              aria-controls="filters-drawer"
+              data-i18n="filters.button"
+            >
+              Filtros
+            </button>
             <span id="sort-label" class="results-options-label" data-i18n="results.sortLabel">Ordenar:</span>
             <div class="segmented" id="sort-options" role="radiogroup" aria-labelledby="sort-label">
               <button type="button" role="radio" data-sort="price" data-i18n="results.sortPrice">€/l</button>
@@ -114,10 +125,17 @@
     </section>
 
     <!-- Preferences drawer and its backdrop -->
-    <div id="preferences-backdrop"></div>
-    <aside id="preferences-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" inert>
+    <div id="preferences-backdrop" class="drawer-backdrop"></div>
+    <aside
+      id="preferences-drawer"
+      class="drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="drawer-title"
+      inert
+    >
       <div class="drawer-header">
-        <h2 id="drawer-title" data-i18n="drawer.title">⚙️ Preferencias y Filtros</h2>
+        <h2 id="drawer-title" data-i18n="drawer.title">⚙️ Preferencias</h2>
         <button
           id="close-preferences"
           title="Cerrar"
@@ -132,6 +150,7 @@
         <!-- 1. Cars -->
         <fieldset>
           <legend data-i18n="cars.legend">🚗 Mis coches</legend>
+          <div id="car-editing" class="form-hint" role="status" hidden></div>
           <label for="car-name" data-i18n="cars.name">Nombre del coche:</label>
           <input
             type="text"
@@ -173,13 +192,20 @@
               />
             </div>
           </div>
-          <button class="btn-secondary" id="save-car" data-i18n="cars.save">Añadir / Guardar coche</button>
+          <div class="form-row">
+            <button class="btn-secondary u-flex-1" id="save-car" data-i18n="cars.save">
+              Añadir / Guardar coche
+            </button>
+            <button class="btn-secondary" id="cancel-car-edit" data-i18n="cars.cancelEdit" hidden>
+              Cancelar
+            </button>
+          </div>
           <div id="car-list" class="item-list"></div>
         </fieldset>
 
         <!-- 2. Location and maximum distance -->
         <fieldset>
-          <legend data-i18n="location.legend">📍 Ubicación y Distancia</legend>
+          <legend data-i18n="location.legend">📍 Ubicación</legend>
           <button id="use-gps" class="u-mt-0" data-i18n="location.useGps">Usar mi ubicación GPS</button>
           <label for="address" data-i18n="location.orAddress">o buscar dirección:</label>
           <input
@@ -191,12 +217,6 @@
           <button class="btn-secondary" id="set-address" data-i18n="location.setAddress">
             Establecer dirección
           </button>
-
-          <label for="search-radius" class="u-mt-10">
-            <span data-i18n="location.maxDistance">Distancia máxima admitida:</span>
-            <b><span id="search-radius-value">15</span> km</b>
-          </label>
-          <input type="range" id="search-radius" min="1" max="50" step="1" value="15" />
         </fieldset>
 
         <!-- 3. Route -->
@@ -211,48 +231,10 @@
           />
           <button id="calculate-route" data-i18n="route.calculate">Calcular ruta</button>
 
-          <label for="route-detour"
-            ><span data-i18n="route.detour">Radio de desvío en ruta:</span>
-            <b><span id="route-detour-value">3</span> km</b></label
-          >
-          <input type="range" id="route-detour" min="1" max="10" step="0.5" value="3" />
-
-          <div class="form-row">
-            <input type="checkbox" id="route-only" />
-            <label for="route-only" class="u-m-0" data-i18n="route.only"
-              >Solo gasolineras en la ruta (sin desvíos)</label
-            >
-          </div>
-
           <button class="btn-secondary" id="clear-route" data-i18n="route.clear">Quitar ruta</button>
         </fieldset>
 
-        <!-- 4. Fuel, price age and brand filters -->
-        <fieldset>
-          <legend data-i18n="filters.legend">🔎 Filtros de gasolineras</legend>
-          <label for="fuel" data-i18n="filters.fuel">Carburante a mostrar:</label>
-          <select id="fuel"></select>
-
-          <label for="age-filter" data-i18n="filters.age">Filtro por días sin actualizar el precio:</label>
-          <select id="age-filter"></select>
-
-          <div id="custom-days-row" class="form-row" hidden>
-            <label for="custom-days" class="u-m-0 u-flex-1" data-i18n="filters.customDays"
-              >Número de días (X):</label
-            >
-            <input type="number" id="custom-days" min="1" max="10" step="1" value="3" class="u-w-80px" />
-          </div>
-          <div id="history-status" class="form-hint" role="status" aria-live="polite"></div>
-
-          <div id="brand-list-label" class="field-label u-mt-8" data-i18n="filters.brands">
-            Marcas permitidas:
-          </div>
-          <div id="brand-list" role="group" aria-labelledby="brand-list-label">
-            <em class="u-text-sm" data-i18n="filters.waiting">Esperando ubicación…</em>
-          </div>
-        </fieldset>
-
-        <!-- 5. Brand discounts -->
+        <!-- 4. Brand discounts -->
         <fieldset>
           <legend data-i18n="discounts.legend">🏷️ Descuentos por marca</legend>
           <label for="discount-brand" data-i18n="discounts.brand">Marca:</label>
@@ -287,7 +269,7 @@
           <div id="discount-list" class="item-list"></div>
         </fieldset>
 
-        <!-- 6. Language -->
+        <!-- 5. Language -->
         <fieldset>
           <legend data-i18n="language.legend">🌐 Idioma</legend>
           <label for="language" data-i18n="language.label">Idioma de la aplicación:</label>
@@ -296,6 +278,101 @@
 
         <button class="btn-secondary u-mb-14" id="refresh-prices" data-i18n="drawer.refresh">
           🔄 Forzar actualización de precios
+        </button>
+      </div>
+    </aside>
+
+    <!-- Station filters panel and its backdrop -->
+    <div id="filters-backdrop" class="drawer-backdrop"></div>
+    <aside
+      id="filters-drawer"
+      class="drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="filters-title"
+      inert
+    >
+      <div class="drawer-header">
+        <h2 id="filters-title" data-i18n="filters.title">🔎 Filtros</h2>
+        <button
+          id="close-filters"
+          title="Cerrar"
+          data-i18n-title="drawer.close"
+          aria-label="Cerrar"
+          data-i18n-aria-label="drawer.close"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="drawer-body">
+        <fieldset>
+          <legend data-i18n="filters.distanceLegend">📏 Distancia</legend>
+          <label for="search-radius">
+            <span data-i18n="location.maxDistance">Distancia máxima admitida:</span>
+            <b><span id="search-radius-value">15</span> km</b>
+          </label>
+          <input type="range" id="search-radius" min="1" max="50" step="1" value="15" />
+          <label for="route-detour"
+            ><span data-i18n="route.detour">Radio de desvío en ruta:</span>
+            <b><span id="route-detour-value">3</span> km</b></label
+          >
+          <input type="range" id="route-detour" min="1" max="10" step="0.5" value="3" />
+
+          <div class="form-row">
+            <input type="checkbox" id="route-only" />
+            <label for="route-only" class="u-m-0" data-i18n="route.only"
+              >Solo gasolineras en la ruta (sin desvíos)</label
+            >
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend data-i18n="filters.legend">🔎 Filtros de gasolineras</legend>
+          <label for="fuel" data-i18n="filters.fuel">Carburante a mostrar:</label>
+          <select id="fuel"></select>
+
+          <label for="age-filter" data-i18n="filters.age">Filtro por días sin actualizar el precio:</label>
+          <select id="age-filter"></select>
+
+          <div id="custom-days-row" class="form-row" hidden>
+            <label for="custom-days" class="u-m-0 u-flex-1" data-i18n="filters.customDays"
+              >Número de días (X):</label
+            >
+            <input type="number" id="custom-days" min="1" max="10" step="1" value="3" class="u-w-80px" />
+          </div>
+          <div id="history-status" class="form-hint" role="status" aria-live="polite"></div>
+
+          <div id="brand-list-label" class="field-label u-mt-8" data-i18n="filters.brands">
+            Marcas permitidas:
+          </div>
+          <div class="brand-actions">
+            <button
+              type="button"
+              class="btn-secondary btn-mini"
+              id="brands-deselect-all"
+              data-i18n="filters.deselectAll"
+            >
+              Desmarcar todas
+            </button>
+            <button
+              type="button"
+              class="btn-secondary btn-mini"
+              id="brands-select-all"
+              data-i18n="filters.selectAll"
+            >
+              Marcar todas
+            </button>
+          </div>
+          <div id="brands-hint" class="form-hint" data-i18n="filters.noneMeansAll" hidden>
+            Ninguna marcada = todas
+          </div>
+          <div id="brand-list" role="group" aria-labelledby="brand-list-label">
+            <em class="u-text-sm" data-i18n="filters.waiting">Esperando ubicación…</em>
+          </div>
+        </fieldset>
+
+        <button class="btn-secondary u-mb-14" id="reset-filters" data-i18n="filters.reset">
+          Restablecer filtros
         </button>
       </div>
     </aside>

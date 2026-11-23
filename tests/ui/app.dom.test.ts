@@ -328,6 +328,40 @@ describe('startApp (DOM)', () => {
     expect($$('.station-card')).toHaveLength(20);
   });
 
+  it('cars: editing renames in place; cancel goes back to adding', () => {
+    const fill = (name: string, tank: string) => {
+      $<HTMLInputElement>('#car-name').value = name;
+      $<HTMLSelectElement>('#car-fuel').value = 'GASOLINA_95';
+      $<HTMLInputElement>('#car-tank').value = tank;
+      $<HTMLInputElement>('#car-consumption').value = '6';
+    };
+    fill('León', '50');
+    click('#save-car');
+    const id = ctx.store.getState().preferences.cars[0]!.id;
+
+    click('[data-action="edit-car"]');
+    expect($<HTMLInputElement>('#car-name').value).toBe('León');
+    expect($('#save-car').textContent).toBe('Guardar cambios');
+    expect($('#cancel-car-edit').hidden).toBe(false);
+    expect($('#car-editing').textContent).toBe('Editando León');
+
+    $<HTMLInputElement>('#car-name').value = 'León FR';
+    click('#save-car');
+    expect(ctx.store.getState().preferences.cars).toEqual([
+      { id, name: 'León FR', fuel: 'GASOLINA_95', tankLitres: 50, consumptionL100km: 6 },
+    ]);
+    expect(ctx.store.getState().preferences.activeCarId).toBe(id);
+    expect($('#save-car').textContent).toBe('Añadir / Guardar coche');
+    expect($('#cancel-car-edit').hidden).toBe(true);
+
+    click('[data-action="edit-car"]');
+    click('#cancel-car-edit');
+    expect($<HTMLInputElement>('#car-name').value).toBe('');
+    fill('Furgo', '70');
+    click('#save-car');
+    expect(ctx.store.getState().preferences.cars.map((c) => c.name)).toEqual(['León FR', 'Furgo']);
+  });
+
   it('discounts: adds and removes a brand discount', () => {
     expect($$('#discount-brand option').map((o) => o.getAttribute('value'))).toContain('CEPSA');
     change('#discount-brand', 'CEPSA');
@@ -361,8 +395,56 @@ describe('startApp (DOM)', () => {
     ) as HTMLInputElement;
     check(repsol, true);
     expect($$('.station-card').every((c) => c.textContent!.includes('REPSOL'))).toBe(true);
-    check($<HTMLInputElement>('#all-brands'), true);
+    click('#brands-deselect-all');
     expect(ctx.store.getState().preferences.brands).toEqual([]);
+  });
+
+  it('brands: deselect all, then tick two → exactly those two; select all ticks every brand', () => {
+    expect($('#brands-hint').hidden).toBe(false); // none ticked = all
+    const box = (brand: string) =>
+      $$('#brand-list input[data-brand]').find((i) => i.dataset.brand === brand) as HTMLInputElement;
+    click('#brands-deselect-all');
+    expect($$('#brand-list input:checked')).toHaveLength(0);
+    check(box('CEPSA'), true);
+    check(box('BP'), true);
+    expect(ctx.store.getState().preferences.brands).toEqual(['CEPSA', 'BP']);
+    expect($('#brands-hint').hidden).toBe(true);
+    click('#brands-select-all');
+    expect($$('#brand-list input:checked')).toHaveLength(3);
+    expect([...ctx.store.getState().preferences.brands].sort()).toEqual(['BP', 'CEPSA', 'REPSOL']);
+  });
+
+  it('filters panel: opens from "Filters (N)", counts active filters, resets them, Escape closes it', () => {
+    const opener = $('#open-filters');
+    expect(opener.textContent).toBe('Filtros');
+    opener.focus();
+    opener.click();
+    expect($('#filters-drawer').classList.contains('is-open')).toBe(true);
+    expect($('#filters-drawer').inert).toBe(false);
+    expect(document.getElementById('results-panel')!.inert).toBe(true);
+    expect(document.activeElement?.id).toBe('close-filters');
+
+    change('#search-radius', '30', 'input');
+    change('#age-filter', 'moreThan3');
+    check($<HTMLInputElement>('#route-only'), true);
+    expect(opener.textContent).toBe('Filtros (3)');
+
+    ctx.store.update((s) => ({ ...s, preferences: { ...s.preferences, fuel: 'GASOLEO_A' } }));
+    click('#reset-filters');
+    expect(ctx.store.getState().preferences).toMatchObject({
+      searchRadiusKm: 15,
+      ageFilterOption: 'all',
+      routeOnly: false,
+      fuel: 'GASOLEO_A', // not a filter
+    });
+    expect(opener.textContent).toBe('Filtros');
+
+    key(document, 'Escape');
+    expect($('#filters-drawer').classList.contains('is-open')).toBe(false);
+    expect(document.activeElement?.id).toBe('open-filters');
+    // The preferences drawer no longer has the filters.
+    expect($('#preferences-drawer #search-radius')).toBeNull();
+    expect($('#preferences-drawer #brand-list')).toBeNull();
   });
 
   it('route: calculates and clears the route from the drawer', async () => {

@@ -4,6 +4,8 @@ import { DEFAULT_PREFERENCES } from '../../src/domain/preferences';
 import {
   addStations,
   clearFilters,
+  resetFilters,
+  updateCar,
   deleteCar,
   finishHistoryJob,
   markProvinceLoaded,
@@ -115,6 +117,49 @@ describe('filters', () => {
     const s = setBrandSelected(state({ brands: ['X', 'Y'] }), 'X', false);
     expect(s.preferences.brands).toEqual(['Y']);
     expect(setBrandSelected(s, 'Z', true).preferences.brands).toEqual(['Y', 'Z']);
+  });
+});
+
+describe('editing a car', () => {
+  const input = { name: 'León FR', fuel: 'GASOLEO_A' as const, tankLitres: 55, consumptionL100km: 5 };
+
+  it('renaming keeps one car with the same id, and the active car stays active with its new fuel', () => {
+    const s = updateCar(state({ cars: [LEON, VAN], activeCarId: 'c1' }), 'c1', input);
+    expect(s.preferences.cars).toEqual([{ id: 'c1', ...input }, VAN]);
+    expect(s.preferences.activeCarId).toBe('c1');
+    expect(s.preferences.fuel).toBe('GASOLEO_A');
+  });
+
+  it('editing an inactive car changes neither the active car nor the fuel; an unknown id does nothing', () => {
+    const s = state({ cars: [LEON, VAN], activeCarId: 'c2', fuel: 'GASOLEO_A' });
+    const edited = updateCar(s, 'c1', { ...input, fuel: 'GLP' });
+    expect(edited.preferences.activeCarId).toBe('c2');
+    expect(edited.preferences.fuel).toBe('GASOLEO_A');
+    expect(updateCar(s, 'nope', input)).toBe(s);
+  });
+});
+
+describe('resetFilters', () => {
+  it('restores only the filter preferences', () => {
+    const s = state({
+      searchRadiusKm: 40,
+      routeDetourKm: 7,
+      routeOnly: true,
+      ageFilterOption: 'atMostCustom',
+      ageFilterCustomDays: 6,
+      brands: ['BP'],
+      fuel: 'GLP',
+      sortByDistance: true,
+    });
+    expect(resetFilters(s).preferences).toEqual({
+      ...s.preferences,
+      searchRadiusKm: 15,
+      routeDetourKm: 3,
+      routeOnly: false,
+      ageFilterOption: 'all',
+      ageFilterCustomDays: 3,
+      brands: [],
+    });
   });
 });
 

@@ -60,6 +60,31 @@ export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
   favourites: [],
 });
 
+/** The preferences the filters panel sets ("Reset filters" restores their defaults). */
+export const FILTER_KEYS = [
+  'searchRadiusKm',
+  'routeDetourKm',
+  'routeOnly',
+  'ageFilterOption',
+  'ageFilterCustomDays',
+  'brands',
+] as const satisfies readonly (keyof Preferences)[];
+
+/**
+ * How many filters differ from the defaults, for the "Filters (N)" button: radius,
+ * detour, route only, price age, and brands when some are chosen.
+ */
+export function activeFilterCount(p: Preferences): number {
+  const d = DEFAULT_PREFERENCES;
+  return [
+    p.searchRadiusKm !== d.searchRadiusKm,
+    p.routeDetourKm !== d.routeDetourKm,
+    p.routeOnly !== d.routeOnly,
+    p.ageFilterOption !== d.ageFilterOption,
+    p.brands.length > 0,
+  ].filter(Boolean).length;
+}
+
 /** Range of the search radius slider (km), and how much "widen" adds. */
 export const MIN_SEARCH_RADIUS_KM = 1;
 export const MAX_SEARCH_RADIUS_KM = 50;

@@ -4,6 +4,8 @@
  */
 import { normalizeBrand } from '../domain/brands';
 import {
+  DEFAULT_PREFERENCES,
+  FILTER_KEYS,
   MAX_CUSTOM_AGE_DAYS,
   MAX_SEARCH_RADIUS_KM,
   MIN_CUSTOM_AGE_DAYS,
@@ -53,6 +55,14 @@ export function clearFilters(s: AppState): AppState {
   return setPreferences(s, { ageFilterOption: 'all', brands: [] });
 }
 
+/** "Reset filters": the filters panel's preferences back to their defaults; nothing else changes. */
+export function resetFilters(s: AppState): AppState {
+  const defaults = Object.fromEntries(
+    FILTER_KEYS.map((k) => [k, DEFAULT_PREFERENCES[k]]),
+  ) as Partial<Preferences>;
+  return setPreferences(s, { ...defaults, brands: [] });
+}
+
 /* ---------- cars ---------- */
 
 /** Activates a car and switches to its fuel. */
@@ -82,6 +92,27 @@ export function saveCar(s: AppState, input: CarInput, newId: string): AppState {
   return setPreferences(s, { cars: nextCars, activeCarId: existing ? existing.id : newId, fuel: input.fuel });
 }
 
+/**
+ * Edits a car in place, by id: it keeps its id and whether it is active (so a rename
+ * doesn't create a second car). If it is the active car, its fuel becomes the selected one.
+ */
+export function updateCar(s: AppState, id: string, input: CarInput): AppState {
+  const { cars, activeCarId } = s.preferences;
+  if (!cars.some((c) => c.id === id)) return s;
+  const nextCars = cars.map((c) =>
+    c.id === id
+      ? {
+          ...c,
+          name: input.name,
+          fuel: input.fuel,
+          tankLitres: input.tankLitres,
+          consumptionL100km: input.consumptionL100km,
+        }
+      : c,
+  );
+  return setPreferences(s, { cars: nextCars, ...(activeCarId === id ? { fuel: input.fuel } : {}) });
+}
+
 /** Removes a car. If it was active, the first remaining car (if any) becomes active, with its fuel. */
 export function deleteCar(s: AppState, id: string): AppState {
   const cars = s.preferences.cars.filter((c) => c.id !== id);
@@ -102,7 +133,10 @@ export function removeDiscount(s: AppState, brand: string): AppState {
   return setPreferences(s, { discounts });
 }
 
-/** "All brands" checkbox: checked → no brand filter; unchecked → every brand listed, selected. */
+/**
+ * The brand buttons: "Deselect all" (`all` = true) leaves no brand ticked, which means
+ * no brand filter; "Select all" ticks every brand present.
+ */
 export function setAllBrands(s: AppState, all: boolean, brandsPresent: readonly string[]): AppState {
   return setPreferences(s, { brands: all ? [] : [...brandsPresent] });
 }

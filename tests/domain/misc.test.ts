@@ -3,6 +3,7 @@ import { colorForValue, textColorFor } from '../../src/domain/colorScale';
 import { daysBefore, toMitecoDate } from '../../src/domain/dates';
 import { parseSpanishNumber } from '../../src/domain/numbers';
 import { significantPricePoints } from '../../src/domain/priceHistory';
+import { activeFilterCount, DEFAULT_PREFERENCES } from '../../src/domain/preferences';
 
 describe('colorForValue', () => {
   it('goes from green (min) through yellow to red (max)', () => {
@@ -97,5 +98,28 @@ describe('significantPricePoints', () => {
 
   it('keeps the last day even when the price did not change', () => {
     expect(significantPricePoints(series([1.5, 1.5, 1.5])).map((p) => p.idx)).toEqual([0, 2]);
+  });
+});
+
+describe('activeFilterCount', () => {
+  const d = DEFAULT_PREFERENCES;
+  it('is 0 for the defaults and counts each changed filter once', () => {
+    expect(activeFilterCount(d)).toBe(0);
+    expect(activeFilterCount({ ...d, searchRadiusKm: 20 })).toBe(1);
+    expect(activeFilterCount({ ...d, routeDetourKm: 5 })).toBe(1);
+    expect(activeFilterCount({ ...d, routeOnly: true })).toBe(1);
+    expect(activeFilterCount({ ...d, ageFilterOption: 'exactly1' })).toBe(1);
+    expect(activeFilterCount({ ...d, brands: ['BP', 'CEPSA'] })).toBe(1);
+    expect(activeFilterCount({ ...d, ageFilterCustomDays: 7, fuel: 'GLP', sortByDistance: true })).toBe(0);
+    expect(
+      activeFilterCount({
+        ...d,
+        searchRadiusKm: 20,
+        routeDetourKm: 5,
+        routeOnly: true,
+        ageFilterOption: 'exactly1',
+        brands: ['BP'],
+      }),
+    ).toBe(5);
   });
 });
