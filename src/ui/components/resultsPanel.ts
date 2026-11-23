@@ -1,10 +1,20 @@
+import { FUEL_TYPES, isFuelType } from '../../config/fuels';
 import type { VisibleStations } from '../../domain/filters';
+import { MAX_SEARCH_RADIUS_KM } from '../../domain/preferences';
+import type { FuelType } from '../../domain/types';
 import type { AppState } from '../../state/appState';
 import { selectActiveCar, selectIsCheckingHistory } from '../../state/selectors';
 import type { Store } from '../../state/store';
-import { setPreferences, toggleFavourite } from '../../state/transitions';
+import {
+  clearFilters,
+  selectCar,
+  setFuel,
+  setPreferences,
+  toggleFavourite,
+  widenedRadiusKm,
+} from '../../state/transitions';
 import { byId, delegate, html, setHtml } from '../dom';
-import { statusSummary } from '../format';
+import { fuelLabel, statusSummary } from '../format';
 import { i18n } from '../i18nContext';
 import { directionsLinkHtml, favouriteButtonHtml, stationCardHtml, stationCardLabel } from './stationCard';
 
@@ -28,6 +38,18 @@ export interface ResultsPanelActions {
   onSelect(stationId: string): void;
   /** The favourites chip was toggled. */
   onFavouritesOnly(on: boolean): void;
+  /** "Widen to N km" (no results): raise the radius and load what it reaches. */
+  onWiden(): void;
+}
+
+/** Fuels sold by at least one loaded station, plus the selected one, in the usual order. */
+function fuelsPresent(stations: AppState['stations'], selected: FuelType): FuelType[] {
+  const sold = new Set<FuelType>([selected]);
+  for (const s of stations) {
+    for (const f of FUEL_TYPES) if (s.prices[f] != null) sold.add(f);
+    if (sold.size === FUEL_TYPES.length) break;
+  }
+  return FUEL_TYPES.filter((f) => sold.has(f));
 }
 
 /** The three sort orders of the sort buttons. */
@@ -57,6 +79,8 @@ export function createResultsPanel(store: Store<AppState>, actions: ResultsPanel
   const panel = byId('results-panel');
   const toggleIcon = byId('results-toggle-icon');
   const favouritesChip = byId<HTMLButtonElement>('favourites-chip');
+  const fuelChips = byId('fuel-chips');
+  const carChips = byId('car-chips');
   const sortGroup = byId('sort-options');
   const sortButtons = [...sortGroup.querySelectorAll<HTMLButtonElement>('[data-sort]')];
   const status = byId('status');
@@ -94,6 +118,20 @@ export function createResultsPanel(store: Store<AppState>, actions: ResultsPanel
   delegate(errorBox, 'click', '[data-action="dismiss"]', clearError);
 
   favouritesChip.addEventListener('click', () => actions.onFavouritesOnly(!store.getState().favouritesOnly));
+
+  // Quick chips: fuel and car without opening the drawer.
+  delegate(fuelChips, 'click', '[data-fuel]', (chip) => {
+    const fuel = chip.dataset.fuel;
+    if (isFuelType(fuel)) store.update((s) => setFuel(s, fuel));
+  });
+  delegate(carChips, 'click', '[data-car]', (chip) => {
+    const id = chip.dataset.car!;
+    store.update((s) => (id ? selectCar(s, id) : setPreferences(s, { activeCarId: null })));
+  });
+
+  // Empty list: widen the search, or clear the price-age and brand filters.
+  delegate(list, 'click', '[data-action="widen"]', () => actions.onWiden());
+  delegate(list, 'click', '[data-action="clear-filters"]', () => store.update(clearFilters));
 
   // Sort buttons: a radio group (one tab stop; arrow keys move and select, skipping a disabled button).
   const chooseSort = (button: HTMLButtonElement) => {
@@ -163,14 +201,86 @@ export function createResultsPanel(store: Store<AppState>, actions: ResultsPanel
     favouritesChip.setAttribute('aria-pressed', String(on));
   }
 
+  let lastChips: {
+    stations: unknown;
+    fuel: string;
+    cars: unknown;
+    activeCarId: unknown;
+    locale: string;
+  } | null = null;
+
+  /** Fuel and car chips; rebuilt only when the stations, fuel, cars or language change. */
+  function renderChips(state: AppState) {
+    const { stations } = state;
+    const { fuel, cars, activeCarId } = state.preferences;
+    const { t, locale } = i18n();
+    const c = lastChips;
+    if (
+      c &&
+      c.stations === stations &&
+      c.fuel === fuel &&
+      c.cars === cars &&
+      c.activeCarId === activeCarId &&
+      c.locale === locale
+    )
+      return;
+    lastChips = { stations, fuel, cars, activeCarId, locale };
+
+    setHtml(
+      fuelChips,
+      html`${fuelsPresent(stations, fuel).map(
+        (f) =>
+          html`<button type="button" class="chip" data-fuel="${f}" aria-pressed="${String(f === fuel)}">${fuelLabel(f)}</button>`,
+      )}`,
+    );
+    // Keep the selected fuel visible in the scrolling row (scrolls the row only, never the page).
+    const pressed = fuelChips.querySelector<HTMLElement>('[aria-pressed="true"]');
+    const row = fuelChips.parentElement;
+    if (
+      pressed &&
+      row &&
+      (pressed.offsetLeft < row.scrollLeft ||
+        pressed.offsetLeft + pressed.offsetWidth > row.scrollLeft + row.clientWidth)
+    ) {
+      row.scrollLeft = pressed.offsetLeft - 8;
+    }
+    carChips.hidden = cars.length === 0;
+    const active = cars.some((car) => car.id === activeCarId) ? activeCarId : null;
+    setHtml(
+      carChips,
+      html`${cars.map(
+        (car) =>
+          html`<button type="button" class="chip" data-car="${car.id}" aria-pressed="${String(car.id === active)}">🚗 ${car.name}</button>`,
+      )}<button type="button" class="chip" data-car="" aria-pressed="${String(active === null)}">${t('results.noCar')}</button>`,
+    );
+  }
+
+  function renderEmpty(state: AppState) {
+    const { t } = i18n();
+    const p = state.preferences;
+    if (state.favouritesOnly) {
+      const message = p.favourites.length === 0 ? 'favourites.empty' : 'results.none';
+      setHtml(list, html`<em class="u-text-sm u-text-muted">${t(message)}</em>`);
+      return;
+    }
+    // Nothing to offer before there is an origin.
+    const canWiden = !!state.userPosition && !state.route && p.searchRadiusKm < MAX_SEARCH_RADIUS_KM;
+    const canClear = p.ageFilterOption !== 'all' || p.brands.length > 0;
+    const buttons = [
+      canWiden &&
+        html`<button type="button" class="btn-secondary" data-action="widen">${t('results.widen', { km: widenedRadiusKm(p) })}</button>`,
+      canClear &&
+        html`<button type="button" class="btn-secondary" data-action="clear-filters">${t('results.clearFilters')}</button>`,
+    ].filter(Boolean);
+    setHtml(
+      list,
+      html`<div class="results-empty"><em class="u-text-sm u-text-muted">${t('results.none')}</em>${buttons.length ? html`<div class="results-empty-actions">${buttons}</div>` : ''}</div>`,
+    );
+  }
+
   function renderList(state: AppState, { rows, sortedByTotalCost }: VisibleStations) {
     if (rows.length === 0) {
-      const { t } = i18n();
-      const empty = state.favouritesOnly && state.preferences.favourites.length === 0;
-      setHtml(
-        list,
-        html`<em class="u-text-sm u-text-muted">${t(empty ? 'favourites.empty' : 'results.none')}</em>`,
-      );
+      renderEmpty(state);
       return;
     }
     const context = {
@@ -197,7 +307,10 @@ export function createResultsPanel(store: Store<AppState>, actions: ResultsPanel
   }
 
   return {
-    prepare: renderOptions,
+    prepare(state) {
+      renderOptions(state);
+      renderChips(state);
+    },
     show(message) {
       status.textContent = message;
     },
@@ -215,6 +328,7 @@ export function createResultsPanel(store: Store<AppState>, actions: ResultsPanel
     clearError,
     render(state, visible) {
       renderOptions(state);
+      renderChips(state);
       renderList(state, visible);
       const p = state.preferences;
       status.textContent = statusSummary({

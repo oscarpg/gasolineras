@@ -3,6 +3,7 @@ import { createInitialState } from '../../src/state/appState';
 import { DEFAULT_PREFERENCES } from '../../src/domain/preferences';
 import {
   addStations,
+  clearFilters,
   deleteCar,
   finishHistoryJob,
   markProvinceLoaded,
@@ -18,6 +19,7 @@ import {
   setFuel,
   startHistoryJob,
   toggleFavourite,
+  widenSearch,
 } from '../../src/state/transitions';
 import { LEON, VAN, branded, prices, state, station } from './fixtures';
 
@@ -113,6 +115,19 @@ describe('filters', () => {
     const s = setBrandSelected(state({ brands: ['X', 'Y'] }), 'X', false);
     expect(s.preferences.brands).toEqual(['Y']);
     expect(setBrandSelected(s, 'Z', true).preferences.brands).toEqual(['Y', 'Z']);
+  });
+});
+
+describe('no results: widen and clear filters', () => {
+  it('widening adds 10 km, at most 50', () => {
+    expect(widenSearch(state({ searchRadiusKm: 15 })).preferences.searchRadiusKm).toBe(25);
+    expect(widenSearch(state({ searchRadiusKm: 45 })).preferences.searchRadiusKm).toBe(50);
+    expect(widenSearch(state({ searchRadiusKm: 50 })).preferences.searchRadiusKm).toBe(50);
+  });
+
+  it('clearing filters resets the price age and brands only', () => {
+    const s = state({ ageFilterOption: 'moreThan3', brands: ['CEPSA'], searchRadiusKm: 30, fuel: 'GLP' });
+    expect(clearFilters(s).preferences).toEqual({ ...s.preferences, ageFilterOption: 'all', brands: [] });
   });
 });
 

@@ -46,8 +46,14 @@ export interface LeafletLayerGroup extends LeafletLayer {
 
 export interface LeafletMap {
   setView(center: LatLngTuple, zoom: number): this;
-  fitBounds(bounds: LeafletBounds): this;
+  fitBounds(bounds: LeafletBounds, options?: FitBoundsOptions): this;
   removeLayer(layer: LeafletLayer): this;
+}
+
+export interface FitBoundsOptions {
+  paddingTopLeft?: [number, number];
+  paddingBottomRight?: [number, number];
+  maxZoom?: number;
 }
 
 export interface DivIconOptions {

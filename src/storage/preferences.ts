@@ -3,7 +3,9 @@ import { isAgeFilterOption, LEGACY_AGE_FILTER_VALUES } from '../domain/ageFilter
 import {
   DEFAULT_PREFERENCES,
   MAX_CUSTOM_AGE_DAYS,
+  MAX_SEARCH_RADIUS_KM,
   MIN_CUSTOM_AGE_DAYS,
+  MIN_SEARCH_RADIUS_KM,
   type Preferences,
 } from '../domain/preferences';
 import type { FavouriteStation } from '../domain/preferences';
@@ -99,7 +101,11 @@ export function sanitizePreferences(raw: unknown): Preferences {
       ? p.ageFilterOption
       : (LEGACY_AGE_FILTER_VALUES[String(p.ageFilterPreset)] ?? d.ageFilterOption),
     ageFilterCustomDays: clamp(customDays || d.ageFilterCustomDays, MIN_CUSTOM_AGE_DAYS, MAX_CUSTOM_AGE_DAYS),
-    searchRadiusKm: clamp(positive(p.searchRadiusKm) ?? d.searchRadiusKm, 1, 50),
+    searchRadiusKm: clamp(
+      positive(p.searchRadiusKm) ?? d.searchRadiusKm,
+      MIN_SEARCH_RADIUS_KM,
+      MAX_SEARCH_RADIUS_KM,
+    ),
     routeDetourKm: clamp(positive(p.routeDetourKm) ?? d.routeDetourKm, 1, 10),
     routeOnly: p.routeOnly === true,
     sortByTotalCost: p.sortByTotalCost === true,

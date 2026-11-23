@@ -15,7 +15,8 @@ import type { AppState } from '../state/appState';
 import type { Effects } from '../state/effects';
 import { createVisibleStationsSelector, selectActiveCar } from '../state/selectors';
 import type { Store } from '../state/store';
-import { toggleFavourite } from '../state/transitions';
+import { toggleFavourite, widenSearch } from '../state/transitions';
+import { createAutoFit } from './autoFit';
 import { fuelLabel } from './format';
 import { bindPriceHistoryButtons } from './components/priceChart';
 import { createCarsSection } from './components/prefsDrawer/carsSection';
@@ -53,6 +54,9 @@ export interface AppContext {
   /** Touch screen: bigger tap targets for markers (default: from the pointer media query). */
   touch?: boolean;
 }
+
+/** Below this width the results panel spans the bottom of the screen (see results-panel.css). */
+const NARROW_SCREEN_PX = 700;
 
 /** Zoom used when a result card is clicked. */
 const STATION_ZOOM = 15;
@@ -95,7 +99,19 @@ export function startApp({
       markers.open(stationId);
     },
     onFavouritesOnly: (on) => void location.showFavourites(on),
+    onWiden() {
+      store.update(widenSearch);
+      void location.ensureCoverage();
+    },
   });
+
+  // On phones the results panel covers the bottom of the map: keep fitted points above it.
+  const resultsPanel = byId('results-panel');
+  const autoFit = createAutoFit((points) =>
+    mapView.fitPoints(points, {
+      bottomPadding: window.innerWidth <= NARROW_SCREEN_PX ? resultsPanel.offsetHeight : 0,
+    }),
+  );
 
   // The heart and share buttons in a station's popup (the list handles its own hearts).
   const mapElement = document.getElementById('map') ?? document;
@@ -145,6 +161,7 @@ export function startApp({
       favourites: new Set(state.preferences.favourites.map((f) => f.id)),
     });
     results.render(state, visible);
+    autoFit.update(state, visible);
   }
 
   // Initial screen: controls, cars, discounts and the sort option reflect the saved preferences;

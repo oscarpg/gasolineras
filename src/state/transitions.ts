@@ -3,7 +3,13 @@
  * Every change the user or the app makes goes through one of these, via `store.update`.
  */
 import { normalizeBrand } from '../domain/brands';
-import { MAX_CUSTOM_AGE_DAYS, MIN_CUSTOM_AGE_DAYS, type Preferences } from '../domain/preferences';
+import {
+  MAX_CUSTOM_AGE_DAYS,
+  MAX_SEARCH_RADIUS_KM,
+  MIN_CUSTOM_AGE_DAYS,
+  WIDEN_STEP_KM,
+  type Preferences,
+} from '../domain/preferences';
 import type {
   BrandedStation,
   CarSpecs,
@@ -32,6 +38,19 @@ export function setFuel(s: AppState, fuel: FuelType): AppState {
 export function setCustomAgeDays(s: AppState, value: number): AppState {
   const days = Math.min(MAX_CUSTOM_AGE_DAYS, Math.max(MIN_CUSTOM_AGE_DAYS, Math.trunc(value) || 3));
   return setPreferences(s, { ageFilterCustomDays: days });
+}
+
+/** "Widen to N km" (no results): the search radius plus 10 km, at most 50. */
+export const widenedRadiusKm = (p: Preferences): number =>
+  Math.min(MAX_SEARCH_RADIUS_KM, p.searchRadiusKm + WIDEN_STEP_KM);
+
+export function widenSearch(s: AppState): AppState {
+  return setPreferences(s, { searchRadiusKm: widenedRadiusKm(s.preferences) });
+}
+
+/** "Clear filters" (no results): no price-age filter and no brand filter; nothing else changes. */
+export function clearFilters(s: AppState): AppState {
+  return setPreferences(s, { ageFilterOption: 'all', brands: [] });
 }
 
 /* ---------- cars ---------- */

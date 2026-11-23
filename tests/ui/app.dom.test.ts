@@ -273,6 +273,61 @@ describe('startApp (DOM)', () => {
     expect(ctx.store.getState().preferences.favourites.map((f) => f.id)).toEqual([first]);
   });
 
+  it('auto-zoom: the map fits the origin and the cheapest stations once, not on background updates', async () => {
+    expect(ctx.leaflet.map.fits).toBe(1);
+    expect((ctx.leaflet.map.bounds as { points: unknown[] }).points).toHaveLength(2); // a box around 4 points
+    click('#refresh-prices');
+    for (let i = 0; i < 5; i++) await flush();
+    expect(ctx.leaflet.map.fits).toBe(1);
+    click('[data-sort="distance"]');
+    expect(ctx.leaflet.map.fits).toBe(2);
+  });
+
+  it('quick chips: fuel and car without the drawer; they mirror the drawer', () => {
+    const fuels = () => $$('#fuel-chips .chip').map((c) => c.textContent);
+    expect(fuels()).toEqual(['Diésel', 'Gasolina 95']);
+    expect($('#fuel-chips [aria-pressed="true"]').textContent).toBe('Gasolina 95');
+    expect($('#car-chips').hidden).toBe(true);
+
+    click('#fuel-chips [data-fuel="GASOLEO_A"]');
+    expect(ctx.store.getState().preferences.fuel).toBe('GASOLEO_A');
+    change('#fuel', 'GASOLINA_95');
+    expect($('#fuel-chips [aria-pressed="true"]').textContent).toBe('Gasolina 95');
+
+    $<HTMLInputElement>('#car-name').value = 'Furgo';
+    $<HTMLSelectElement>('#car-fuel').value = 'GASOLEO_A';
+    $<HTMLInputElement>('#car-tank').value = '70';
+    $<HTMLInputElement>('#car-consumption').value = '8';
+    click('#save-car');
+    expect($('#car-chips').hidden).toBe(false);
+    expect($$('#car-chips .chip').map((c) => [c.textContent, c.getAttribute('aria-pressed')])).toEqual([
+      ['🚗 Furgo', 'true'],
+      ['Sin coche', 'false'],
+    ]);
+    click('#car-chips [data-car=""]');
+    expect(ctx.store.getState().preferences.activeCarId).toBeNull();
+    click('#car-chips [data-car]');
+    expect(ctx.store.getState().preferences).toMatchObject({ fuel: 'GASOLEO_A' });
+    expect(ctx.store.getState().preferences.activeCarId).not.toBeNull();
+  });
+
+  it('no results: "widen" and "clear filters" buttons', async () => {
+    change('#fuel', 'GLP'); // nobody sells it
+    expect($('#results-list').textContent).toContain('Ninguna gasolinera');
+    expect($('[data-action="widen"]').textContent).toBe('Ampliar a 25 km');
+    expect($('[data-action="clear-filters"]')).toBeNull(); // no filters to clear
+
+    click('[data-action="widen"]');
+    expect(ctx.store.getState().preferences.searchRadiusKm).toBe(25);
+
+    change('#fuel', 'GASOLINA_95');
+    change('#age-filter', 'moreThan3'); // every price changed recently: nothing left
+    await flush();
+    click('[data-action="clear-filters"]');
+    expect(ctx.store.getState().preferences.ageFilterOption).toBe('all');
+    expect($$('.station-card')).toHaveLength(20);
+  });
+
   it('discounts: adds and removes a brand discount', () => {
     expect($$('#discount-brand option').map((o) => o.getAttribute('value'))).toContain('CEPSA');
     change('#discount-brand', 'CEPSA');

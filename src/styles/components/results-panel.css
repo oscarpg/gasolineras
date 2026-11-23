@@ -114,7 +114,7 @@ button.chip {
   white-space: nowrap;
 }
 
-button.chip[aria-pressed='true'] {
+button.chip-favourites[aria-pressed='true'] {
   background: var(--color-favourite);
   border-color: var(--color-favourite);
   color: var(--color-text-on-primary);
@@ -191,4 +191,54 @@ button.chip[aria-pressed='true'] {
   color: var(--color-text-secondary);
   font-size: 0.76rem;
   flex-shrink: 0;
+}
+
+/* Options bar rows */
+.chip-row {
+  position: relative; /* offsetParent of the chips, for scrolling the selected one into view */
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 1px;
+}
+
+.chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.chip-group {
+  display: contents;
+}
+
+.chip-row .chip:not(.chip-favourites)[aria-pressed='true'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-text-on-primary);
+}
+
+.chip-row .chip {
+  flex-shrink: 0;
+}
+
+.sort-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* No results: message and actions */
+.results-empty-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.results-empty-actions button {
+  flex: 1;
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 0.8rem;
 }

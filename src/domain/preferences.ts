@@ -60,6 +60,11 @@ export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
   favourites: [],
 });
 
+/** Range of the search radius slider (km), and how much "widen" adds. */
+export const MIN_SEARCH_RADIUS_KM = 1;
+export const MAX_SEARCH_RADIUS_KM = 50;
+export const WIDEN_STEP_KM = 10;
+
 /** Allowed range of the custom age-filter days input. */
 export const MIN_CUSTOM_AGE_DAYS = 1;
 export const MAX_CUSTOM_AGE_DAYS = 10;

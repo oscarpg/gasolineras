@@ -33,8 +33,12 @@ export function fakeLeaflet() {
       map.view = { center, zoom };
       return map;
     },
-    fitBounds(b: unknown) {
+    fitOptions: null as unknown,
+    fits: 0,
+    fitBounds(b: unknown, options?: unknown) {
       map.bounds = b;
+      map.fitOptions = options ?? null;
+      map.fits++;
       return map;
     },
     removeLayer(x: unknown) {
@@ -121,6 +125,7 @@ export function recordingMapView() {
     showRoute: (points) => void calls.push(`route ${points.length}`),
     clearRoute: () => void calls.push('clear route'),
     focus: (p, z) => void calls.push(`focus ${p.join(',')} z${z}`),
+    fitPoints: (points) => void calls.push(`fit ${points.length}`),
   };
   return { view, calls };
 }

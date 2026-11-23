@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMapView } from '../../src/ui/map/mapView';
+import { boundsAround, createMapView } from '../../src/ui/map/mapView';
 import { fakeLeaflet } from './fakes';
 
 describe('createMapView', () => {
@@ -31,5 +31,37 @@ describe('createMapView', () => {
     view.clearRoute();
     view.focus([40.1, -3.1], 15);
     expect(map.view).toEqual({ center: [40.1, -3.1], zoom: 15 });
+  });
+});
+
+describe('fitting points', () => {
+  it('pads a single point to a minimum span and caps the zoom', () => {
+    expect(boundsAround([[40, -3]])).toEqual([
+      [39.9975, -3.0025],
+      [40.0025, -2.9975],
+    ]);
+    const box = boundsAround([
+      [40, -3],
+      [41, -4],
+    ]);
+    expect(box).toEqual([
+      [40, -4],
+      [41, -3],
+    ]);
+  });
+
+  it('fitPoints keeps the points clear of a bottom panel; no points, no move', () => {
+    const { L, map } = fakeLeaflet();
+    const view = createMapView('map', L);
+    view.fitPoints([]);
+    expect(map.fits).toBe(0);
+    view.fitPoints(
+      [
+        [40, -3],
+        [41, -4],
+      ],
+      { bottomPadding: 200 },
+    );
+    expect(map.fitOptions).toEqual({ paddingTopLeft: [40, 40], paddingBottomRight: [40, 240], maxZoom: 15 });
   });
 });
