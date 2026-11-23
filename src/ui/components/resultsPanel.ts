@@ -14,6 +14,7 @@ import {
   widenedRadiusKm,
 } from '../../state/transitions';
 import { byId, delegate, html, setHtml } from '../dom';
+import { bindChipRow } from '../chipRow';
 import { fuelLabel, statusSummary } from '../format';
 import { i18n } from '../i18nContext';
 import { directionsLinkHtml, favouriteButtonHtml, stationCardHtml, stationCardLabel } from './stationCard';
@@ -82,6 +83,8 @@ export function createResultsPanel(store: Store<AppState>, actions: ResultsPanel
   const filtersButton = byId('open-filters');
   const fuelChips = byId('fuel-chips');
   const carChips = byId('car-chips');
+  const fuelRow = bindChipRow(fuelChips);
+  const carRow = bindChipRow(carChips);
   const sortGroup = byId('sort-options');
   const sortButtons = [...sortGroup.querySelectorAll<HTMLButtonElement>('[data-sort]')];
   const status = byId('status');
@@ -246,17 +249,7 @@ export function createResultsPanel(store: Store<AppState>, actions: ResultsPanel
           html`<button type="button" class="chip" data-fuel="${f}" aria-pressed="${String(f === fuel)}">${fuelLabel(f)}</button>`,
       )}`,
     );
-    // Keep the selected fuel visible in the scrolling row (scrolls the row only, never the page).
-    const pressed = fuelChips.querySelector<HTMLElement>('[aria-pressed="true"]');
-    const row = fuelChips.parentElement;
-    if (
-      pressed &&
-      row &&
-      (pressed.offsetLeft < row.scrollLeft ||
-        pressed.offsetLeft + pressed.offsetWidth > row.scrollLeft + row.clientWidth)
-    ) {
-      row.scrollLeft = pressed.offsetLeft - 8;
-    }
+    fuelRow.refresh();
     carChips.hidden = cars.length === 0;
     const active = cars.some((car) => car.id === activeCarId) ? activeCarId : null;
     setHtml(
@@ -266,6 +259,7 @@ export function createResultsPanel(store: Store<AppState>, actions: ResultsPanel
           html`<button type="button" class="chip" data-car="${car.id}" aria-pressed="${String(car.id === active)}">🚗 ${car.name}</button>`,
       )}<button type="button" class="chip" data-car="" aria-pressed="${String(active === null)}">${t('results.noCar')}</button>`,
     );
+    carRow.refresh();
   }
 
   function renderEmpty(state: AppState) {

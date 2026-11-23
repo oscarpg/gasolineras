@@ -96,10 +96,6 @@
   flex-shrink: 0;
 }
 
-.results-options-label {
-  margin-left: auto;
-}
-
 /* Toggle chip (aria-pressed) */
 button.chip {
   width: auto;
@@ -200,19 +196,39 @@ button.chip-favourites[aria-pressed='true'] {
   gap: 6px;
   width: 100%;
   overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 1px;
+  overscroll-behavior-x: contain;
+  padding-bottom: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary-soft-border) transparent;
 }
 
-.chip-row::-webkit-scrollbar {
+.chip-row[hidden] {
   display: none;
 }
 
-.chip-group {
-  display: contents;
+.chip-row::-webkit-scrollbar {
+  height: 4px;
 }
 
-.chip-row .chip:not(.chip-favourites)[aria-pressed='true'] {
+.chip-row::-webkit-scrollbar-thumb {
+  background: var(--color-primary-soft-border);
+  border-radius: 2px;
+}
+
+/* Faded edges where there are more chips to scroll to */
+.chip-row.can-scroll-right {
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+
+.chip-row.can-scroll-left {
+  mask-image: linear-gradient(to right, transparent, #000 28px);
+}
+
+.chip-row.can-scroll-left.can-scroll-right {
+  mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+}
+
+.chip-row .chip[aria-pressed='true'] {
   background: var(--color-primary);
   border-color: var(--color-primary);
   color: var(--color-text-on-primary);
@@ -222,9 +238,16 @@ button.chip-favourites[aria-pressed='true'] {
   flex-shrink: 0;
 }
 
+/* Filters, favourites and sort; the sort group wraps to its own line when space is short */
 .sort-row {
   width: 100%;
-  justify-content: space-between;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-group {
   display: flex;
   align-items: center;
   gap: 6px;

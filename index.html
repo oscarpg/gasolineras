@@ -63,30 +63,21 @@
       </div>
       <div id="results-body" class="results-body">
         <div class="results-options">
-          <div class="chip-row">
-            <button
-              type="button"
-              id="favourites-chip"
-              class="chip chip-favourites"
-              aria-pressed="false"
-              hidden
-            ></button>
-            <span
-              id="fuel-chips"
-              class="chip-group"
-              role="group"
-              aria-label="Carburante"
-              data-i18n-aria-label="results.fuelChips"
-            ></span>
-            <span
-              id="car-chips"
-              class="chip-group"
-              role="group"
-              aria-label="Coche"
-              data-i18n-aria-label="results.carChips"
-              hidden
-            ></span>
-          </div>
+          <div
+            id="fuel-chips"
+            class="chip-row"
+            role="group"
+            aria-label="Carburante"
+            data-i18n-aria-label="results.fuelChips"
+          ></div>
+          <div
+            id="car-chips"
+            class="chip-row"
+            role="group"
+            aria-label="Coche"
+            data-i18n-aria-label="results.carChips"
+            hidden
+          ></div>
           <div class="sort-row">
             <button
               type="button"
@@ -99,15 +90,28 @@
             >
               Filtros
             </button>
-            <span id="sort-label" class="results-options-label" data-i18n="results.sortLabel">Ordenar:</span>
-            <div class="segmented" id="sort-options" role="radiogroup" aria-labelledby="sort-label">
-              <button type="button" role="radio" data-sort="price" data-i18n="results.sortPrice">€/l</button>
-              <button type="button" role="radio" data-sort="distance" data-i18n="results.sortDistance">
-                Distancia
-              </button>
-              <button type="button" role="radio" data-sort="total" data-i18n="results.sortTotal">
-                Coste total
-              </button>
+            <button
+              type="button"
+              id="favourites-chip"
+              class="chip chip-favourites"
+              aria-pressed="false"
+              hidden
+            ></button>
+            <div class="sort-group">
+              <span id="sort-label" class="results-options-label" data-i18n="results.sortLabel"
+                >Ordenar:</span
+              >
+              <div class="segmented" id="sort-options" role="radiogroup" aria-labelledby="sort-label">
+                <button type="button" role="radio" data-sort="price" data-i18n="results.sortPrice">
+                  €/l
+                </button>
+                <button type="button" role="radio" data-sort="distance" data-i18n="results.sortDistance">
+                  Distancia
+                </button>
+                <button type="button" role="radio" data-sort="total" data-i18n="results.sortTotal">
+                  Coste total
+                </button>
+              </div>
             </div>
           </div>
         </div>
