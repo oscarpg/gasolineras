@@ -6,6 +6,7 @@ import { favouriteButtonHtml } from '../components/stationCard';
 import { html, type SafeHtml } from '../dom';
 import { discountLabel, euros, fuelLabel, km, pricePerLitre, stalenessText, stationName } from '../format';
 import { i18n } from '../i18nContext';
+import { icon } from '../icons';
 import { directionsUrl } from '../stationActions';
 
 export interface PopupContext {
@@ -59,7 +60,7 @@ export function stationPopupHtml(
       : '';
 
   const directionsLabel = t('station.directionsTo', { name: stationName(s.name) });
-  const actions = html`<div class="popup-actions"><a class="btn btn-directions" href="${directionsUrl(s.lat, s.lon)}" target="_blank" rel="noopener" aria-label="${directionsLabel}">🧭 ${t('station.directions')}</a><button type="button" class="btn-icon btn-share" data-action="share" data-station="${s.id}" aria-label="${t('station.share')}" title="${t('station.share')}"><span aria-hidden="true">⤴</span></button></div>`;
+  const actions = html`<div class="popup-actions"><a class="btn btn-directions" href="${directionsUrl(s.lat, s.lon)}" target="_blank" rel="noopener" aria-label="${directionsLabel}">${t('station.directions')}</a><button type="button" class="btn-icon btn-share" data-action="share" data-station="${s.id}" aria-label="${t('station.share')}" title="${t('station.share')}">${icon('share')}</button></div>`;
 
   const history = s.code
     ? html`<br><button class="btn-secondary btn-history" data-action="price-history" data-code="${s.code}" data-province="${s.provinceCode}" data-station="${s.id}">${t('chart.button')}</button><div class="price-chart-slot"></div>`

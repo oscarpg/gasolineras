@@ -4,6 +4,7 @@ import type { BrandedStation, Car } from '../../domain/types';
 import { html, raw, type SafeHtml } from '../dom';
 import { discountLabel, euros, km, pricePerLitre, stalenessText, stationName } from '../format';
 import { i18n } from '../i18nContext';
+import { icon } from '../icons';
 import { directionsUrl } from '../stationActions';
 
 export interface CardContext {
@@ -25,7 +26,7 @@ export function favouriteButtonHtml(station: BrandedStation, isFavourite: boolea
 /** A compact link that opens directions to the station in a maps app. */
 export function directionsLinkHtml(station: BrandedStation): SafeHtml {
   const label = i18n().t('station.directionsTo', { name: stationName(station.name) });
-  return html`<a class="btn-icon btn-directions-icon" href="${directionsUrl(station.lat, station.lon)}" target="_blank" rel="noopener" aria-label="${label}" title="${label}"><span aria-hidden="true">🧭</span></a>`;
+  return html`<a class="btn-icon btn-directions-icon" href="${directionsUrl(station.lat, station.lon)}" target="_blank" rel="noopener" aria-label="${label}" title="${label}">${icon('directions')}</a>`;
 }
 
 /**

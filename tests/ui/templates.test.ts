@@ -150,6 +150,8 @@ describe('station templates content', () => {
     expect(out).toContain('href="https://www.google.com/maps/dir/?api=1&amp;destination=40.41,-3.69"');
     expect(out).toContain('rel="noopener"');
     expect(out).toContain('data-action="share" data-station="a"');
+    expect(out).toContain('d="M18,16.08'); // Material "share" icon
+    expect(out).not.toMatch(/🧭|⤴/);
 
     const [single] = visible([branded('b')]);
     expect(
@@ -169,6 +171,9 @@ describe('station templates content', () => {
       /^1\. REPSOL, \d+,\d\d €, a 2,0 km$/,
     );
     expect(directionsLinkHtml(row!.station).value).toContain('aria-label="Cómo llegar a REPSOL"');
+    // The Android app's Material "directions" icon, not an emoji.
+    expect(directionsLinkHtml(row!.station).value).toContain('<svg class="icon"');
+    expect(directionsLinkHtml(row!.station).value).toContain('d="M21.71,11.29');
   });
 
   it('the heart shows whether the station is a favourite', () => {
