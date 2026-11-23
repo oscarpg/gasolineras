@@ -1,12 +1,14 @@
+import type { ProvinceShapes } from '../domain/provinceShapes';
 import type { LatLng } from '../domain/types';
 import type { GeoProvider } from '../platform/geolocation';
 import type { Geocoder } from '../services/geocoding';
 import type { MitecoService } from '../services/miteco';
 import type { Router } from '../services/routing';
 import type { AppState } from '../state/appState';
+import { provincesNeeded } from '../state/coverage';
 import type { Effects } from '../state/effects';
 import type { Store } from '../state/store';
-import { resetHistoryDepth, setRoute, setUserPosition } from '../state/transitions';
+import { resetHistoryDepth, setFavouritesOnly, setRoute, setUserPosition } from '../state/transitions';
 import type { StatusLine } from './components/resultsPanel';
 import { errorText } from './format';
 import { i18n } from './i18nContext';
@@ -21,6 +23,8 @@ export interface LocationControllerDeps {
   gps: GeoProvider;
   mapView: MapView;
   status: StatusLine;
+  /** The province outlines (loaded lazily). If they fail to load, only the origin's province is used. */
+  provinceShapes: () => Promise<ProvinceShapes>;
   /** Re-renders from the current state (used to replace temporary status messages). */
   rerender: () => void;
 }
@@ -35,6 +39,13 @@ export interface LocationController {
   clearRoute(): void;
   /** Re-downloads every loaded province and rechecks price history. */
   refreshAll(): Promise<void>;
+  /**
+   * Loads every province the current radius, detour, route or favourites reach that
+   * isn't loaded yet (call after those change).
+   */
+  ensureCoverage(): Promise<void>;
+  /** Shows only favourites (loading their provinces if needed), or goes back to the normal list. */
+  showFavourites(on: boolean): Promise<void>;
   /** First location attempt when the app opens. */
   start(): void;
 }
@@ -73,6 +84,32 @@ export function createLocationController(d: LocationControllerDeps): LocationCon
     }
   }
 
+  /** The outlines, or null if they couldn't be loaded (logged once per attempt). */
+  async function shapes(): Promise<ProvinceShapes | null> {
+    try {
+      return await d.provinceShapes();
+    } catch (error) {
+      console.warn('Province outlines unavailable:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Loads every needed province that isn't loaded yet, one after another. A failure
+   * shows its own error (with Retry) and the others still load. Resolves true if
+   * anything was loaded.
+   */
+  async function loadProvincesNeeded(): Promise<boolean> {
+    const s = await shapes();
+    if (!s) return false;
+    let loaded = false;
+    for (const code of provincesNeeded(store.getState(), s)) {
+      if (store.getState().loadedProvinces.includes(code)) continue;
+      if (await loadProvince(code)) loaded = true;
+    }
+    return loaded;
+  }
+
   async function setOrigin([lat, lon]: LatLng, zoom = 13, province: string | null = null) {
     status.clearError();
     d.mapView.showUserPosition([lat, lon], zoom);
@@ -85,10 +122,14 @@ export function createLocationController(d: LocationControllerDeps): LocationCon
       } catch {
         province = null;
       }
+      // Offline outlines when geocoding fails.
+      province ??= (await shapes())?.provinceAt([lat, lon]) ?? null;
     }
 
     if (province) await loadProvince(province);
     else status.error(i18n().t('message.provinceUnknown'), () => void setOrigin([lat, lon], zoom));
+    // Neighbouring provinces within the search radius.
+    await loadProvincesNeeded();
     // The summary replaces temporary messages; errors stay in their own box until retried or dismissed.
     d.rerender();
   }
@@ -143,6 +184,8 @@ export function createLocationController(d: LocationControllerDeps): LocationCon
       }
       d.mapView.showRoute(points);
       store.update((s) => setRoute(s, points));
+      // Every province along the route, not just the destination's.
+      if (await loadProvincesNeeded()) d.rerender();
       return true;
     } catch (error) {
       fail(i18n().t('message.routeError', { message: errorText(error) }), () => void calculateRoute(query));
@@ -165,6 +208,18 @@ export function createLocationController(d: LocationControllerDeps): LocationCon
       status.clearError();
       store.update(resetHistoryDepth);
       for (const code of [...store.getState().loadedProvinces]) await loadProvince(code, true);
+      d.rerender();
+    },
+
+    async ensureCoverage() {
+      if (await loadProvincesNeeded()) d.rerender();
+    },
+
+    async showFavourites(on) {
+      store.update((s) => setFavouritesOnly(s, on));
+      if (!on) return;
+      status.clearError();
+      await loadProvincesNeeded();
       d.rerender();
     },
 

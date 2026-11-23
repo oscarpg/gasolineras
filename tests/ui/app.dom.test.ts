@@ -4,9 +4,10 @@
  * start-up, drawer, results panel, every preferences section, language switch,
  * error box and price chart.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import indexHtml from '../../index.html?raw';
 import { DEFAULT_PREFERENCES, type Preferences } from '../../src/domain/preferences';
+import type { ProvinceShapes } from '../../src/domain/provinceShapes';
 import type { LatLng, Station } from '../../src/domain/types';
 import type { GeocodeResult } from '../../src/services/geocoding';
 import type { MitecoService } from '../../src/services/miteco';
@@ -34,16 +35,19 @@ const stations: Station[] = Array.from({ length: 25 }, (_, i) =>
 interface Setup {
   prefs?: Partial<Preferences>;
   search?: () => Promise<GeocodeResult | null>;
+  /** Fake "provinces within the radius" (default: the real outlines). */
+  provincesWithin?: ProvinceShapes['provincesWithin'];
 }
 
 let ctx: Awaited<ReturnType<typeof boot>>;
 
-async function boot({ prefs = {}, search = async () => null }: Setup = {}) {
+async function boot({ prefs = {}, search = async () => null, provincesWithin }: Setup = {}) {
   document.body.innerHTML = BODY;
   document.documentElement.lang = 'es';
+  const downloads: string[] = [];
   const miteco: MitecoService = {
     hasCachedProvince: () => true,
-    getProvinceStations: async () => stations,
+    getProvinceStations: async (code) => (downloads.push(code), stations),
     getHistoryDay: async () => ({ '1000': { GASOLINA_95: 1.55 } }),
   };
   const store: Store<AppState> = createStore(createInitialState({ ...DEFAULT_PREFERENCES, ...prefs }));
@@ -57,10 +61,18 @@ async function boot({ prefs = {}, search = async () => null }: Setup = {}) {
     router: { route: async (a, b) => [a, b] },
     gps: { isAvailable: () => true, getCurrentPosition: async () => MADRID },
     leaflet: leaflet.L,
+    ...(provincesWithin && {
+      provinceShapes: async () => ({
+        codes: [],
+        provinceAt: () => null,
+        provincesWithin,
+        provincesAlongRoute: () => [],
+      }),
+    }),
     browserLanguages: ['es-ES'],
   });
   for (let i = 0; i < 5; i++) await flush();
-  return { store, leaflet };
+  return { store, leaflet, downloads };
 }
 
 const $ = <T extends HTMLElement = HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
@@ -268,5 +280,28 @@ describe('startApp (DOM)', () => {
     popup.querySelector<HTMLElement>('[data-action="price-history"]')!.click();
     for (let i = 0; i < 3; i++) await flush();
     expect(popup.querySelector('.price-chart-slot svg')).not.toBeNull();
+  });
+});
+
+describe('startApp (DOM): neighbouring provinces', () => {
+  it('loads the provinces a wider radius reaches, once the slider settles', async () => {
+    const { downloads, store } = await boot({
+      provincesWithin: (_, km) => (km > 20 ? ['28', '45'] : ['28']),
+    });
+    expect(downloads).toEqual(['28']);
+
+    vi.useFakeTimers();
+    try {
+      change('#search-radius', '20', 'input');
+      change('#search-radius', '30', 'input');
+      vi.advanceTimersByTime(399);
+      expect(downloads).toEqual(['28']);
+      vi.advanceTimersByTime(1);
+    } finally {
+      vi.useRealTimers();
+    }
+    for (let i = 0; i < 5; i++) await flush();
+    expect(store.getState().preferences.searchRadiusKm).toBe(30);
+    expect(downloads).toEqual(['28', '45']);
   });
 });

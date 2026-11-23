@@ -4,7 +4,15 @@
  */
 import { normalizeBrand } from '../domain/brands';
 import { MAX_CUSTOM_AGE_DAYS, MIN_CUSTOM_AGE_DAYS, type Preferences } from '../domain/preferences';
-import type { CarSpecs, Discount, FuelType, LatLng, StalenessIndex, Station } from '../domain/types';
+import type {
+  BrandedStation,
+  CarSpecs,
+  Discount,
+  FuelType,
+  LatLng,
+  StalenessIndex,
+  Station,
+} from '../domain/types';
 import type { AppState, HistoryJob } from './appState';
 
 /* ---------- preferences ---------- */
@@ -83,6 +91,22 @@ export function setAllBrands(s: AppState, all: boolean, brandsPresent: readonly 
 export function setBrandSelected(s: AppState, brand: string, selected: boolean): AppState {
   const brands = s.preferences.brands.filter((b) => b !== brand);
   return setPreferences(s, { brands: selected ? [...brands, brand] : brands });
+}
+
+/* ---------- favourites ---------- */
+
+/** Adds the station to favourites, or removes it if it already is one. */
+export function toggleFavourite(s: AppState, station: BrandedStation): AppState {
+  const { favourites } = s.preferences;
+  return setPreferences(s, {
+    favourites: favourites.some((f) => f.id === station.id)
+      ? favourites.filter((f) => f.id !== station.id)
+      : [...favourites, { id: station.id, provinceCode: station.provinceCode, brand: station.brand }],
+  });
+}
+
+export function setFavouritesOnly(s: AppState, on: boolean): AppState {
+  return s.favouritesOnly === on ? s : { ...s, favouritesOnly: on };
 }
 
 /* ---------- stations ---------- */

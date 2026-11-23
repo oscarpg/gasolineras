@@ -6,6 +6,7 @@ import {
   MIN_CUSTOM_AGE_DAYS,
   type Preferences,
 } from '../domain/preferences';
+import type { FavouriteStation } from '../domain/preferences';
 import type { Car, Discount } from '../domain/types';
 import type { StorageAdapter } from './adapter';
 
@@ -56,12 +57,35 @@ function sanitizeCars(raw: unknown, read: (c: Loose) => Loose): Car[] {
   return cars;
 }
 
+const PROVINCE_CODE = /^(0[1-9]|[1-4]\d|5[0-2])$/;
+
+/**
+ * Valid favourites, without duplicate ids. The province is read from `provinceCode`,
+ * or from `province` (the key the Android app writes).
+ */
+function sanitizeFavourites(raw: unknown): FavouriteStation[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const favourites: FavouriteStation[] = [];
+  for (const item of raw) {
+    if (!isObject(item)) continue;
+    const id = nonEmptyString(item.id);
+    const provinceCode = item.provinceCode ?? item.province;
+    if (!id || seen.has(id) || typeof provinceCode !== 'string' || !PROVINCE_CODE.test(provinceCode))
+      continue;
+    seen.add(id);
+    favourites.push({ id, provinceCode, brand: typeof item.brand === 'string' ? item.brand : '' });
+  }
+  return favourites;
+}
+
 /**
  * Turns anything (parsed JSON, possibly corrupted or from an older version)
  * into valid Preferences. Invalid fields fall back to their defaults.
  *
  * Also upgrades v2 (schemaVersion 2): its `ageFilterPreset` held the Spanish codes
- * of the original select ("TODAS", "MAS_X"…), now `ageFilterOption`.
+ * of the original select ("TODAS", "MAS_X"…), now `ageFilterOption`. v3 lacked
+ * `sortByDistance` and `favourites`, which take their defaults.
  */
 export function sanitizePreferences(raw: unknown): Preferences {
   const p = isObject(raw) ? raw : {};
@@ -69,7 +93,7 @@ export function sanitizePreferences(raw: unknown): Preferences {
   const customDays = parseInt(String(p.ageFilterCustomDays), 10);
 
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     fuel: isFuelType(p.fuel) ? p.fuel : d.fuel,
     ageFilterOption: isAgeFilterOption(p.ageFilterOption)
       ? p.ageFilterOption
@@ -79,11 +103,13 @@ export function sanitizePreferences(raw: unknown): Preferences {
     routeDetourKm: clamp(positive(p.routeDetourKm) ?? d.routeDetourKm, 1, 10),
     routeOnly: p.routeOnly === true,
     sortByTotalCost: p.sortByTotalCost === true,
+    sortByDistance: p.sortByDistance === true,
     brands: Array.isArray(p.brands) ? p.brands.filter((b): b is string => typeof b === 'string') : [],
     discounts: sanitizeDiscounts(p.discounts, (x) => ({ type: x.type, value: x.value })),
     cars: sanitizeCars(p.cars, (x) => x),
     activeCarId: nonEmptyString(p.activeCarId),
     locale: p.locale === 'es' || p.locale === 'en' ? p.locale : null,
+    favourites: sanitizeFavourites(p.favourites),
   };
 }
 

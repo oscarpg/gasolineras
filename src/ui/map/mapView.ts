@@ -24,7 +24,7 @@ export function createMapView(elementId: string, L: LeafletStatic): MapView {
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution:
-      "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> · Precios: MITECO",
+      "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> · Precios: MITECO · Provincias: <a href='https://www.ign.es'>IGN</a> (CC BY 4.0)",
   }).addTo(map);
   const stationsLayer = L.layerGroup().addTo(map);
   const routeLayer = L.layerGroup().addTo(map);

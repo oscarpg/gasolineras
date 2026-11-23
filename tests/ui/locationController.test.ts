@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AppError } from '../../src/domain/errors';
 import { DEFAULT_PREFERENCES } from '../../src/domain/preferences';
+import type { ProvinceShapes } from '../../src/domain/provinceShapes';
 import type { LatLng } from '../../src/domain/types';
 import type { GeoProvider } from '../../src/platform/geolocation';
 import type { Geocoder, GeocodeResult } from '../../src/services/geocoding';
@@ -8,7 +9,7 @@ import type { Router } from '../../src/services/routing';
 import { createInitialState } from '../../src/state/appState';
 import type { Effects } from '../../src/state/effects';
 import { createStore } from '../../src/state/store';
-import { markProvinceLoaded } from '../../src/state/transitions';
+import { markProvinceLoaded, setPreferences } from '../../src/state/transitions';
 import { i18n } from '../../src/ui/i18nContext';
 import { createLocationController } from '../../src/ui/locationController';
 import { flush, recordingMapView, recordingStatus } from './fakes';
@@ -24,7 +25,19 @@ interface Options {
   route?: Router['route'];
   loadFailures?: number;
   cached?: boolean;
+  /** Fake outlines (default: they know no province). `null` = they fail to load. */
+  shapes?: Partial<ProvinceShapes> | null;
+  /** Provinces whose download always fails. */
+  failing?: string[];
 }
+
+const fakeShapes = (s: Partial<ProvinceShapes> = {}): ProvinceShapes => ({
+  codes: [],
+  provinceAt: () => null,
+  provincesWithin: () => [],
+  provincesAlongRoute: () => [],
+  ...s,
+});
 
 function setup(o: Options = {}) {
   const store = createStore(createInitialState(DEFAULT_PREFERENCES));
@@ -33,7 +46,7 @@ function setup(o: Options = {}) {
   const effects: Effects = {
     async loadProvince(code, { force = false } = {}) {
       loads.push({ code, force });
-      if (failuresLeft-- > 0) throw new AppError('download-failed');
+      if (failuresLeft-- > 0 || o.failing?.includes(code)) throw new AppError('download-failed');
       store.update((s) => markProvinceLoaded(s, code));
     },
     checkHistory: async () => {},
@@ -54,6 +67,10 @@ function setup(o: Options = {}) {
     gps: { isAvailable: () => true, getCurrentPosition: async () => MADRID, ...o.gps },
     mapView: map.view,
     status: status.status,
+    provinceShapes: async () => {
+      if (o.shapes === null) throw new Error('chunk failed');
+      return fakeShapes(o.shapes);
+    },
     rerender: () => void rerenders++,
   });
   return { controller, store, loads, status, map, rerenders: () => rerenders };
@@ -246,5 +263,109 @@ describe('createLocationController', () => {
       { code: '28', force: true },
     ]);
     expect(rerenders()).toBe(2);
+  });
+
+  it('an origin near a border also loads the neighbouring province', async () => {
+    const radii: number[] = [];
+    const { controller, loads, status } = setup({
+      shapes: { provincesWithin: (_, km) => (radii.push(km), ['28', '45']) },
+    });
+    controller.start();
+    await flush();
+    expect(loads.map((l) => l.code)).toEqual(['28', '45']);
+    expect(radii).toEqual([DEFAULT_PREFERENCES.searchRadiusKm + 2]);
+    expect(status.errors).toEqual([]);
+  });
+
+  it('ensureCoverage(): a wider radius loads newly reached provinces only', async () => {
+    let reach = ['28', '45'];
+    const { controller, store, loads, rerenders } = setup({ shapes: { provincesWithin: () => reach } });
+    controller.start();
+    await flush();
+    const before = rerenders();
+    reach = ['28', '45', '19'];
+    await controller.ensureCoverage();
+    expect(loads.map((l) => l.code)).toEqual(['28', '45', '19']);
+    expect(store.getState().loadedProvinces).toEqual(['28', '45', '19']);
+    expect(rerenders()).toBe(before + 1);
+    await controller.ensureCoverage(); // nothing new: no download, no re-render
+    expect(loads).toHaveLength(3);
+    expect(rerenders()).toBe(before + 1);
+  });
+
+  it('a province that fails shows its own error while the others still load', async () => {
+    const { controller, store, status } = setup({
+      shapes: { provincesWithin: () => ['28', '45', '19'] },
+      failing: ['45'],
+    });
+    controller.start();
+    await flush();
+    expect(store.getState().loadedProvinces).toEqual(['28', '19']);
+    expect(status.errors.map((e) => e.message)).toEqual([
+      t('message.provinceError', { message: t('errors.download-failed') }),
+    ]);
+  });
+
+  it('uses the outlines when reverse geocoding finds no province', async () => {
+    const { controller, loads, status } = setup({
+      reverse: () => Promise.reject(new Error('offline')),
+      shapes: { provinceAt: () => '45' },
+    });
+    controller.start();
+    await flush();
+    expect(loads.map((l) => l.code)).toEqual(['45']);
+    expect(status.errors).toEqual([]);
+  });
+
+  it('works as before when the outlines fail to load', async () => {
+    const warn = console.warn;
+    console.warn = () => {};
+    try {
+      const { controller, loads, status } = setup({ shapes: null });
+      controller.start();
+      await flush();
+      expect(loads.map((l) => l.code)).toEqual(['28']);
+      expect(status.errors).toEqual([]);
+      await controller.ensureCoverage();
+      expect(loads).toHaveLength(1);
+    } finally {
+      console.warn = warn;
+    }
+  });
+
+  it('calculateRoute(): loads every province along the route', async () => {
+    const detours: number[] = [];
+    const { controller, loads } = setup({
+      search: async () => ({ ...GETAFE, provinceCode: '50' }),
+      shapes: { provincesAlongRoute: (_, km) => (detours.push(km), ['28', '19', '50']) },
+    });
+    controller.start();
+    await flush();
+    expect(await controller.calculateRoute('Zaragoza')).toBe(true);
+    expect(loads.map((l) => l.code)).toEqual(['28', '50', '19']);
+    expect(detours).toEqual([DEFAULT_PREFERENCES.routeDetourKm + 2]);
+  });
+
+  it("showFavourites(): loads the favourites' provinces that aren't loaded; off just clears the flag", async () => {
+    const { controller, store, loads, rerenders } = setup();
+    controller.start();
+    await flush();
+    store.update((s) =>
+      setPreferences(s, {
+        favourites: [
+          { id: 'a', provinceCode: '28', brand: 'X' },
+          { id: 'b', provinceCode: '07', brand: 'X' },
+        ],
+      }),
+    );
+    const before = rerenders();
+    await controller.showFavourites(true);
+    expect(store.getState().favouritesOnly).toBe(true);
+    expect(loads.map((l) => l.code)).toEqual(['28', '07']);
+    expect(rerenders()).toBe(before + 1);
+
+    await controller.showFavourites(false);
+    expect(store.getState().favouritesOnly).toBe(false);
+    expect(loads).toHaveLength(2);
   });
 });

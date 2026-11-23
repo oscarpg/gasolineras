@@ -14,10 +14,12 @@ import {
   setBrandSelected,
   setCustomAgeDays,
   setDiscount,
+  setFavouritesOnly,
   setFuel,
   startHistoryJob,
+  toggleFavourite,
 } from '../../src/state/transitions';
-import { LEON, VAN, prices, state, station } from './fixtures';
+import { LEON, VAN, branded, prices, state, station } from './fixtures';
 
 describe('createInitialState', () => {
   it('activates the first car when none is active, and uses the active car’s fuel', () => {
@@ -111,6 +113,29 @@ describe('filters', () => {
     const s = setBrandSelected(state({ brands: ['X', 'Y'] }), 'X', false);
     expect(s.preferences.brands).toEqual(['Y']);
     expect(setBrandSelected(s, 'Z', true).preferences.brands).toEqual(['Y', 'Z']);
+  });
+});
+
+describe('favourites', () => {
+  it('toggling adds the station with its province and brand, then removes it', () => {
+    const st = branded('s1', { provinceCode: '07', brand: 'CEPSA' });
+    const added = toggleFavourite(state(), st);
+    expect(added.preferences.favourites).toEqual([{ id: 's1', provinceCode: '07', brand: 'CEPSA' }]);
+    expect(toggleFavourite(added, st).preferences.favourites).toEqual([]);
+  });
+
+  it('removing one keeps the others in order', () => {
+    const s = [branded('a'), branded('b'), branded('c')].reduce(toggleFavourite, state());
+    expect(toggleFavourite(s, branded('b')).preferences.favourites.map((f) => f.id)).toEqual(['a', 'c']);
+  });
+
+  it('favourites mode is a flag outside the preferences', () => {
+    const s = state();
+    const on = setFavouritesOnly(s, true);
+    expect(on.favouritesOnly).toBe(true);
+    expect(on.preferences).toBe(s.preferences);
+    expect(setFavouritesOnly(on, true)).toBe(on);
+    expect(setFavouritesOnly(on, false).favouritesOnly).toBe(false);
   });
 });
 

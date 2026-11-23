@@ -23,6 +23,7 @@ const criteria = (c: Partial<VisibilityCriteria> = {}): VisibilityCriteria => ({
   car: null,
   discounts: {},
   sortByTotalCost: false,
+  sortByDistance: false,
   ...c,
 });
 
@@ -128,9 +129,72 @@ describe('selectVisibleStations — prices, costs and order', () => {
     expect(byCost.rows[0]!.cost.roundTripKm).toBeCloseTo(2, 6);
   });
 
-  it('keeps load order for equal prices (stable sort)', () => {
+  it('puts the nearer station first when prices are equal', () => {
+    const stations = [branded('far', north(8)), branded('near', north(2)), branded('mid', north(5))];
+    expect(ids(selectVisibleStations(stations, criteria()))).toEqual(['near', 'mid', 'far']);
+  });
+
+  it('on a route, equal prices go by smaller detour first', () => {
+    const route: LatLng[] = [HOME, [40.4 + 30 / 111.32, -3.7]]; // 30 km due north
+    const east = (km: number, northKm: number) =>
+      branded(`e${km}`, {
+        lat: 40.4 + northKm / 111.32,
+        lon: -3.7 + km / (111.32 * Math.cos(((40.4 + northKm / 111.32) * Math.PI) / 180)),
+      });
+    // e2 is nearer the user but farther off the route than e1.
+    const stations = [east(2, 1), east(1, 20)];
+    expect(ids(selectVisibleStations(stations, criteria({ route, routeDetourKm: 3 })))).toEqual(['e1', 'e2']);
+  });
+
+  it('keeps load order for equal prices and equal distances (stable sort)', () => {
     const stations = ['x', 'y', 'z'].map((id) => branded(id, north(1)));
     expect(ids(selectVisibleStations(stations, criteria()))).toEqual(['x', 'y', 'z']);
+  });
+
+  it('sorts by distance while colours still follow the price', () => {
+    const stations = [
+      branded('far-cheap', { ...north(9), prices: prices({ GASOLINA_95: 1.4 }) }),
+      branded('near-dear', { ...north(1), prices: prices({ GASOLINA_95: 1.6 }) }),
+      branded('mid', { ...north(5), prices: prices({ GASOLINA_95: 1.5 }) }),
+    ];
+    const r = selectVisibleStations(stations, criteria({ sortByDistance: true }));
+    expect(ids(r)).toEqual(['near-dear', 'mid', 'far-cheap']);
+    expect(r.sortedByDistance).toBe(true);
+    expect(r.rows.map((x) => x.color)).toEqual([
+      'hsl(0, 82%, 40%)',
+      'hsl(60, 82%, 40%)',
+      'hsl(120, 82%, 40%)',
+    ]);
+  });
+
+  it('by distance, equal distances go cheaper first', () => {
+    const stations = [
+      branded('dear', { ...north(3), prices: prices({ GASOLINA_95: 1.6 }) }),
+      branded('cheap', { ...north(3), prices: prices({ GASOLINA_95: 1.5 }) }),
+    ];
+    expect(ids(selectVisibleStations(stations, criteria({ sortByDistance: true })))).toEqual([
+      'cheap',
+      'dear',
+    ]);
+  });
+
+  it('by distance on a route, the detour is what counts', () => {
+    const route: LatLng[] = [HOME, [40.4 + 30 / 111.32, -3.7]];
+    const offRoute = branded('off', {
+      lat: 40.4 + 1 / 111.32,
+      lon: -3.7 + 2 / (111.32 * Math.cos(((40.4 + 1 / 111.32) * Math.PI) / 180)),
+    });
+    const onRouteFar = branded('on', north(20));
+    const r = selectVisibleStations([offRoute, onRouteFar], criteria({ route, sortByDistance: true }));
+    expect(ids(r)).toEqual(['on', 'off']);
+  });
+
+  it('sorting by distance overrides sorting by total cost', () => {
+    const car = { tankLitres: 50, consumptionL100km: 6 };
+    const stations = [branded('a', north(4)), branded('b', north(1))];
+    const r = selectVisibleStations(stations, criteria({ car, sortByTotalCost: true, sortByDistance: true }));
+    expect(r.sortedByTotalCost).toBe(false);
+    expect(ids(r)).toEqual(['b', 'a']);
   });
 
   it('colours the best row green and the worst red', () => {
@@ -142,5 +206,31 @@ describe('selectVisibleStations — prices, costs and order', () => {
       'hsl(60, 82%, 40%)',
       'hsl(0, 82%, 40%)',
     ]);
+  });
+});
+
+describe('selectVisibleStations — only these ids (favourites)', () => {
+  const stations = [
+    branded('fav-far', { ...north(200), prices: prices({ GASOLINA_95: 1.6 }) }),
+    branded('near', { ...north(1), prices: prices({ GASOLINA_95: 1.4 }) }),
+    branded('fav-near', { ...north(3), prices: prices({ GASOLINA_95: 1.5 }) }),
+  ];
+  const onlyIds = new Set(['fav-far', 'fav-near']);
+
+  it('shows favourites wherever they are and hides the rest', () => {
+    const r = selectVisibleStations(stations, criteria({ onlyIds }));
+    expect(ids(r)).toEqual(['fav-near', 'fav-far']);
+    expect(r.rows[1]!.distanceFromUserKm).toBeCloseTo(200, 0);
+  });
+
+  it('works without a position (no distance)', () => {
+    const r = selectVisibleStations(stations, criteria({ onlyIds, userPosition: null }));
+    expect(ids(r)).toEqual(['fav-near', 'fav-far']);
+    expect(r.rows[0]!.distanceFromUserKm).toBeNull();
+  });
+
+  it('still applies the fuel and brand filters', () => {
+    expect(ids(selectVisibleStations(stations, criteria({ onlyIds, fuel: 'GASOLEO_A' })))).toEqual([]);
+    expect(ids(selectVisibleStations(stations, criteria({ onlyIds, brands: ['CEPSA'] })))).toEqual([]);
   });
 });

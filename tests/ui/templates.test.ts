@@ -52,6 +52,7 @@ const visible = (
     car: null,
     discounts: {},
     sortByTotalCost: false,
+    sortByDistance: false,
     ...extra,
   }).rows;
 

@@ -4,9 +4,17 @@ import type { Car, Discount, FuelType } from './types';
 
 export type Locale = 'es' | 'en';
 
+/** A saved favourite: enough to find it again (its province is loaded when favourites are shown). */
+export interface FavouriteStation {
+  id: string;
+  /** Two-digit province code (01–52). */
+  provinceCode: string;
+  brand: string;
+}
+
 /** Everything the user chooses that survives a reload. Persisted by storage/preferences.ts. */
 export interface Preferences {
-  schemaVersion: 3;
+  schemaVersion: 4;
   fuel: FuelType;
   /** Chosen age-filter option (see AGE_FILTER_OPTIONS). */
   ageFilterOption: AgeFilterOption;
@@ -20,6 +28,8 @@ export interface Preferences {
   routeOnly: boolean;
   /** Sort by tank + trip cost instead of €/l. */
   sortByTotalCost: boolean;
+  /** Sort nearest first (detour on a route); colours still show the price. */
+  sortByDistance: boolean;
   /** Brands to show; empty = all. */
   brands: string[];
   /** Discount per brand. */
@@ -28,10 +38,12 @@ export interface Preferences {
   activeCarId: string | null;
   /** UI language; `null` = follow the browser. */
   locale: Locale | null;
+  /** Favourite stations, shown wherever they are with the favourites chip. */
+  favourites: FavouriteStation[];
 }
 
 export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
-  schemaVersion: 3,
+  schemaVersion: 4,
   fuel: DEFAULT_FUEL,
   ageFilterOption: 'all',
   ageFilterCustomDays: 3,
@@ -39,11 +51,13 @@ export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
   routeDetourKm: 3,
   routeOnly: false,
   sortByTotalCost: false,
+  sortByDistance: false,
   brands: [],
   discounts: {},
   cars: [],
   activeCarId: null,
   locale: null,
+  favourites: [],
 });
 
 /** Allowed range of the custom age-filter days input. */

@@ -31,7 +31,7 @@ const V1 = {
 describe('migrateV1', () => {
   it('converts every field of the original format', () => {
     expect(migrateV1(V1)).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 4,
       fuel: 'GASOLEO_A',
       ageFilterOption: 'moreThanCustom',
       ageFilterCustomDays: 5,
@@ -39,6 +39,7 @@ describe('migrateV1', () => {
       routeDetourKm: 4.5,
       routeOnly: true,
       sortByTotalCost: true,
+      sortByDistance: false,
       brands: ['REPSOL', 'CEPSA'],
       discounts: { REPSOL: { type: 'CTS', value: 5 }, CEPSA: { type: 'PCT', value: 3 } },
       cars: [
@@ -47,6 +48,7 @@ describe('migrateV1', () => {
       ],
       activeCarId: 'car_2',
       locale: null,
+      favourites: [],
     });
   });
 
@@ -99,13 +101,52 @@ describe('sanitizePreferences', () => {
     expect(Object.keys(p.discounts)).toEqual(['A']);
   });
 
-  it('upgrades v2 preferences (Spanish age-filter codes) to v3 options', () => {
+  it('upgrades v2 preferences (Spanish age-filter codes) to current options', () => {
     const v2 = { ...migrateV1(V1), schemaVersion: 2, ageFilterPreset: 'EXACTO_2' } as Record<string, unknown>;
     delete v2.ageFilterOption;
     const p = sanitizePreferences(v2);
-    expect(p.schemaVersion).toBe(3);
+    expect(p.schemaVersion).toBe(4);
     expect(p.ageFilterOption).toBe('exactly2');
     expect(p.cars).toHaveLength(2);
+  });
+
+  it('upgrades v3 preferences: no favourites, sorted by price', () => {
+    const v3 = { ...migrateV1(V1), schemaVersion: 3 } as Record<string, unknown>;
+    delete v3.favourites;
+    delete v3.sortByDistance;
+    const p = sanitizePreferences(v3);
+    expect(p.schemaVersion).toBe(4);
+    expect(p.favourites).toEqual([]);
+    expect(p.sortByDistance).toBe(false);
+    expect(p.cars).toHaveLength(2);
+  });
+
+  it('reads sortByDistance as a strict boolean', () => {
+    expect(sanitizePreferences({ sortByDistance: true }).sortByDistance).toBe(true);
+    expect(sanitizePreferences({ sortByDistance: 'yes' }).sortByDistance).toBe(false);
+  });
+
+  it('keeps valid favourites, drops invalid and duplicate ones', () => {
+    const p = sanitizePreferences({
+      favourites: [
+        { id: 'a', provinceCode: '28', brand: 'REPSOL' },
+        { id: 'b', province: '07', brand: 'CEPSA' }, // the key the Android app writes
+        { id: 'c', provinceCode: '28' }, // no brand: kept, brand empty
+        { id: 'a', provinceCode: '15', brand: 'X' }, // duplicate id
+        { id: '', provinceCode: '28', brand: 'X' },
+        { id: 'd', provinceCode: '53', brand: 'X' },
+        { id: 'e', provinceCode: '00', brand: 'X' },
+        { id: 'f', provinceCode: '8', brand: 'X' },
+        { id: 'g', brand: 'X' },
+        'junk',
+      ],
+    });
+    expect(p.favourites).toEqual([
+      { id: 'a', provinceCode: '28', brand: 'REPSOL' },
+      { id: 'b', provinceCode: '07', brand: 'CEPSA' },
+      { id: 'c', provinceCode: '28', brand: '' },
+    ]);
+    expect(sanitizePreferences({ favourites: 'nope' }).favourites).toEqual([]);
   });
 
   it('is idempotent', () => {

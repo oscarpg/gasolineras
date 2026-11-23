@@ -27,8 +27,10 @@ function memoize<A extends readonly unknown[], R>(compute: (...args: A) => R): (
 
 /**
  * Creates a memoised selector for the stations to show. Only stations, staleness,
- * preferences, position and route matter, so history-job bookkeeping and other
- * changes don't trigger a recomputation.
+ * preferences, position, route and the favourites toggle matter, so history-job
+ * bookkeeping and other changes don't trigger a recomputation.
+ *
+ * With favourites on, only favourites are shown, wherever they are: the route is ignored.
  */
 export function createVisibleStationsSelector(): (s: AppState) => VisibleStations {
   const compute = memoize(
@@ -38,6 +40,7 @@ export function createVisibleStationsSelector(): (s: AppState) => VisibleStation
       p: Preferences,
       userPosition: AppState['userPosition'],
       route: AppState['route'],
+      favouritesOnly: boolean,
     ) => {
       const car = p.cars.find((c) => c.id === p.activeCarId) ?? null;
       return selectVisibleStations(stations, {
@@ -46,17 +49,19 @@ export function createVisibleStationsSelector(): (s: AppState) => VisibleStation
         ageFilter: selectAgeFilter(p),
         staleness,
         userPosition,
-        route,
+        route: favouritesOnly ? null : route,
         searchRadiusKm: p.searchRadiusKm,
         routeDetourKm: p.routeDetourKm,
         routeOnly: p.routeOnly,
         car,
         discounts: p.discounts,
         sortByTotalCost: p.sortByTotalCost,
+        sortByDistance: p.sortByDistance,
+        onlyIds: favouritesOnly ? new Set(p.favourites.map((f) => f.id)) : null,
       });
     },
   );
-  return (s) => compute(s.stations, s.staleness, s.preferences, s.userPosition, s.route);
+  return (s) => compute(s.stations, s.staleness, s.preferences, s.userPosition, s.route, s.favouritesOnly);
 }
 
 /** Brands of the loaded stations with how many stations each has, sorted (Spanish collation). */

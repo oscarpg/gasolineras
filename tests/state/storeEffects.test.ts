@@ -4,7 +4,7 @@ import { createEffects } from '../../src/state/effects';
 import { persistPreferences } from '../../src/state/persistence';
 import { createVisibleStationsSelector } from '../../src/state/selectors';
 import { createStore } from '../../src/state/store';
-import { setPreferences, setUserPosition } from '../../src/state/transitions';
+import { setFavouritesOnly, setPreferences, setRoute, setUserPosition } from '../../src/state/transitions';
 import { prices, state, station } from './fixtures';
 
 describe('createStore', () => {
@@ -32,6 +32,46 @@ describe('createVisibleStationsSelector', () => {
     expect(r0.rows).toHaveLength(1);
     expect(select({ ...s0, historyStatus: { status: 'done', days: 4 } })).toBe(r0);
     expect(select(setPreferences(s0, { searchRadiusKm: 5 }))).not.toBe(r0);
+  });
+
+  it('passes the distance sort through', () => {
+    const select = createVisibleStationsSelector();
+    const s = setUserPosition(
+      {
+        ...state({ sortByDistance: true }),
+        stations: [
+          { ...station('far', { lat: 40.45, prices: prices({ GASOLINA_95: 1.4 }) }), brand: 'REPSOL' },
+          { ...station('near', { lat: 40.41 }), brand: 'REPSOL' },
+        ],
+      },
+      [40.4, -3.7],
+    );
+    expect(select(s).rows.map((r) => r.station.id)).toEqual(['near', 'far']);
+    expect(select(s).sortedByDistance).toBe(true);
+  });
+
+  it('in favourites mode shows only favourites, ignoring the radius and the route', () => {
+    const select = createVisibleStationsSelector();
+    const s0 = setRoute(
+      setUserPosition(
+        {
+          ...state({ favourites: [{ id: 'far', provinceCode: '07', brand: 'REPSOL' }] }),
+          stations: [
+            { ...station('far', { lat: 39.57, lon: 2.65 }), brand: 'REPSOL' },
+            { ...station('near'), brand: 'REPSOL' },
+          ],
+        },
+        [40.4, -3.7],
+      ),
+      [
+        [40.4, -3.7],
+        [40.5, -3.7],
+      ],
+    );
+    expect(select(s0).rows.map((r) => r.station.id)).toEqual(['near']);
+    const fav = setFavouritesOnly(s0, true);
+    expect(select(fav).rows.map((r) => r.station.id)).toEqual(['far']);
+    expect(select(fav).rows[0]!.routeDetourKm).toBeNull();
   });
 });
 

@@ -6,6 +6,9 @@ import { byId, syncChecked, syncValue } from '../../dom';
 import { i18n } from '../../i18nContext';
 import type { Drawer } from './drawer';
 
+/** Sliders fire many events while dragged: wait this long after the last one before loading provinces. */
+export const COVERAGE_DEBOUNCE_MS = 400;
+
 /** "Location & distance" and "Route" sections, plus the top-bar GPS button and "refresh prices". */
 export function createLocationRouteSections(
   store: Store<AppState>,
@@ -37,15 +40,25 @@ export function createLocationRouteSections(
   byId('clear-route').addEventListener('click', () => location.clearRoute());
   byId('refresh-prices').addEventListener('click', () => void location.refreshAll());
 
-  radius.addEventListener('input', () =>
-    store.update((s) => setPreferences(s, { searchRadiusKm: Number(radius.value) })),
-  );
-  detour.addEventListener('input', () =>
-    store.update((s) => setPreferences(s, { routeDetourKm: Number(detour.value) })),
-  );
-  routeOnly.addEventListener('change', () =>
-    store.update((s) => setPreferences(s, { routeOnly: routeOnly.checked })),
-  );
+  // A wider radius or detour can reach provinces that aren't loaded yet.
+  let coverageTimer: ReturnType<typeof setTimeout> | undefined;
+  const ensureCoverageSoon = () => {
+    clearTimeout(coverageTimer);
+    coverageTimer = setTimeout(() => void location.ensureCoverage(), COVERAGE_DEBOUNCE_MS);
+  };
+
+  radius.addEventListener('input', () => {
+    store.update((s) => setPreferences(s, { searchRadiusKm: Number(radius.value) }));
+    ensureCoverageSoon();
+  });
+  detour.addEventListener('input', () => {
+    store.update((s) => setPreferences(s, { routeDetourKm: Number(detour.value) }));
+    ensureCoverageSoon();
+  });
+  routeOnly.addEventListener('change', () => {
+    store.update((s) => setPreferences(s, { routeOnly: routeOnly.checked }));
+    ensureCoverageSoon();
+  });
 
   return {
     render(state: AppState) {

@@ -31,6 +31,10 @@ export interface VisibilityCriteria {
   car: CarSpecs | null;
   discounts: Readonly<Record<string, Discount>>;
   sortByTotalCost: boolean;
+  /** Nearest first (detour on a route); colours still show the price. */
+  sortByDistance: boolean;
+  /** When set, only these station ids, wherever they are (favourites): radius and route don't apply. */
+  onlyIds?: ReadonlySet<string> | null;
 }
 
 export interface StationRow {
@@ -54,6 +58,8 @@ export interface VisibleStations {
   rows: StationRow[];
   /** True when rows are ranked by total cost (requires a car). */
   sortedByTotalCost: boolean;
+  /** True when rows are ranked by distance. */
+  sortedByDistance: boolean;
 }
 
 /**
@@ -62,8 +68,14 @@ export interface VisibleStations {
  *
  * A station is shown when it matches the brand filter, sells the fuel, passes the
  * age filter, and is within the search radius (or, with a route, within the detour
- * limit of the route). Rows are sorted by €/l, or by total cost when a car is
- * selected and that option is on; the sort is stable.
+ * limit of the route). With `onlyIds`, only those stations are shown and the range
+ * check is skipped.
+ *
+ * Rows are sorted by €/l, or by total cost when a car is selected and that option
+ * is on. Equal values go nearer first (detour from the route, then distance from
+ * the user). With `sortByDistance`, rows go nearest first, then cheapest. Remaining
+ * ties keep load order (the sort is stable). Colours always rank the price (or
+ * total cost), whatever the order.
  */
 export function selectVisibleStations(
   stations: readonly BrandedStation[],
@@ -75,6 +87,7 @@ export function selectVisibleStations(
 
   const rows: Omit<StationRow, 'metric' | 'color'>[] = [];
   for (const station of stations) {
+    if (c.onlyIds && !c.onlyIds.has(station.id)) continue;
     if (brandFilter.size > 0 && !brandFilter.has(station.brand)) continue;
 
     const basePrice = station.prices[c.fuel];
@@ -87,9 +100,11 @@ export function selectVisibleStations(
     const routeDetourKm = c.route ? distanceToRouteKm(position, c.route) : null;
     const distanceFromUserKm = c.userPosition ? distanceKm(position, c.userPosition) : null;
 
-    const inRange = c.route
-      ? routeDetourKm! <= routeLimit
-      : distanceFromUserKm !== null && distanceFromUserKm <= c.searchRadiusKm;
+    const inRange = c.onlyIds
+      ? true
+      : c.route
+        ? routeDetourKm! <= routeLimit
+        : distanceFromUserKm !== null && distanceFromUserKm <= c.searchRadiusKm;
     if (!inRange) continue;
 
     const discount = c.discounts[station.brand] ?? null;
@@ -108,21 +123,32 @@ export function selectVisibleStations(
     });
   }
 
-  rows.sort((a, b) =>
-    sortedByTotalCost && a.cost.totalCost != null && b.cost.totalCost != null
-      ? a.cost.totalCost - b.cost.totalCost
-      : a.finalPrice - b.finalPrice,
-  );
-
-  const metricOf = (r: (typeof rows)[number]) =>
+  type Row = (typeof rows)[number];
+  const far = Number.POSITIVE_INFINITY;
+  const metricOf = (r: Row) =>
     sortedByTotalCost && r.cost.totalCost != null ? r.cost.totalCost : r.finalPrice;
-  const min = rows.length ? metricOf(rows[0]!) : 0;
-  const max = rows.length ? metricOf(rows[rows.length - 1]!) : 0;
+  const distanceOf = (r: Row) => r.routeDetourKm ?? r.distanceFromUserKm ?? far;
+
+  if (c.sortByDistance) {
+    rows.sort((a, b) => distanceOf(a) - distanceOf(b) || metricOf(a) - metricOf(b));
+  } else {
+    rows.sort(
+      (a, b) =>
+        metricOf(a) - metricOf(b) ||
+        (a.routeDetourKm ?? far) - (b.routeDetourKm ?? far) ||
+        (a.distanceFromUserKm ?? far) - (b.distanceFromUserKm ?? far),
+    );
+  }
+
+  const metrics = rows.map(metricOf);
+  const min = metrics.reduce((m, v) => Math.min(m, v), metrics[0] ?? 0);
+  const max = metrics.reduce((m, v) => Math.max(m, v), metrics[0] ?? 0);
 
   return {
-    sortedByTotalCost,
-    rows: rows.map((r) => {
-      const metric = metricOf(r);
+    sortedByTotalCost: sortedByTotalCost && !c.sortByDistance,
+    sortedByDistance: c.sortByDistance,
+    rows: rows.map((r, i) => {
+      const metric = metrics[i]!;
       return { ...r, metric, color: colorForValue(metric, min, max) };
     }),
   };

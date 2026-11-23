@@ -14,7 +14,7 @@ export type HistoryStatus = { status: 'loading' | 'done' | 'error'; days: number
 /** Everything the app knows. Replaced (never mutated) on every change. */
 export interface AppState {
   preferences: Preferences;
-  /** All stations loaded so far, in load order (which is also the tie-break order when sorting). */
+  /** All stations loaded so far, in load order (the last tie-break when sorting, after price and distance). */
   stations: BrandedStation[];
   staleness: StalenessIndex;
   /** Provinces whose stations have been loaded. */
@@ -27,6 +27,8 @@ export interface AppState {
   /** Origin chosen by GPS or address search. */
   userPosition: LatLng | null;
   route: LatLng[] | null;
+  /** Show only favourite stations (wherever they are) instead of those within the radius or route. Not saved. */
+  favouritesOnly: boolean;
 }
 
 /**
@@ -47,5 +49,6 @@ export function createInitialState(saved: Preferences): AppState {
     historyStatus: null,
     userPosition: null,
     route: null,
+    favouritesOnly: false,
   };
 }

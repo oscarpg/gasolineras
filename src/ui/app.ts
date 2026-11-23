@@ -5,6 +5,7 @@
  * the language) haven't changed; map markers are diffed. All HTML is built with
  * the escaping `html` helper, and dynamic buttons use event delegation.
  */
+import { loadProvinceShapes, type ProvinceShapes } from '../domain/provinceShapes';
 import { createI18n, resolveLocale } from '../i18n';
 import type { GeoProvider } from '../platform/geolocation';
 import type { Geocoder } from '../services/geocoding';
@@ -38,6 +39,8 @@ export interface AppContext {
   gps: GeoProvider;
   /** The map library (main.ts passes Leaflet; tests pass a fake). */
   leaflet: LeafletStatic;
+  /** The province outlines (default: the bundled file, loaded lazily). */
+  provinceShapes?: () => Promise<ProvinceShapes>;
   /** Browser language preferences, used when the user hasn't chosen a language. */
   browserLanguages?: readonly string[];
 }
@@ -53,6 +56,7 @@ export function startApp({
   router,
   gps,
   leaflet,
+  provinceShapes = loadProvinceShapes,
   browserLanguages = navigator.languages ?? [navigator.language],
 }: AppContext): void {
   /** Switches the translator when the chosen (or browser) language changes. Returns true if it changed. */
@@ -87,6 +91,7 @@ export function startApp({
     gps,
     mapView,
     status: results,
+    provinceShapes,
     rerender: () => render(store.getState()),
   });
 
