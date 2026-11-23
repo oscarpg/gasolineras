@@ -4,40 +4,23 @@ import { setPreferences } from '../../../state/transitions';
 import type { LocationController } from '../../locationController';
 import { byId, syncChecked, syncValue } from '../../dom';
 import { i18n } from '../../i18nContext';
-import type { Drawer } from './drawer';
 
 /** Sliders fire many events while dragged: wait this long after the last one before loading provinces. */
 export const COVERAGE_DEBOUNCE_MS = 400;
 
-/** "Location & distance" and "Route" sections, plus the top-bar GPS button and "refresh prices". */
-export function createLocationRouteSections(
-  store: Store<AppState>,
-  location: LocationController,
-  drawer: Drawer,
-) {
-  const address = byId<HTMLInputElement>('address');
+/**
+ * The distance controls of the filters panel (search radius, route detour, route
+ * only), plus the top-bar GPS button and "refresh prices". Searching an address or
+ * a destination is the search bar's job (searchBar.ts).
+ */
+export function createLocationRouteSections(store: Store<AppState>, location: LocationController) {
   const radius = byId<HTMLInputElement>('search-radius');
   const radiusValue = byId('search-radius-value');
-  const destination = byId<HTMLInputElement>('destination');
   const detour = byId<HTMLInputElement>('route-detour');
   const detourValue = byId('route-detour-value');
   const routeOnly = byId<HTMLInputElement>('route-only');
 
-  byId('use-gps').addEventListener('click', () => {
-    location.requestGps();
-    drawer.close();
-  });
   byId('quick-gps').addEventListener('click', () => location.requestGps());
-
-  byId('set-address').addEventListener('click', async () => {
-    const query = address.value.trim();
-    if (query && (await location.searchAddress(query))) drawer.close();
-  });
-  byId('calculate-route').addEventListener('click', async () => {
-    const query = destination.value.trim();
-    if (query && (await location.calculateRoute(query))) drawer.close();
-  });
-  byId('clear-route').addEventListener('click', () => location.clearRoute());
   byId('refresh-prices').addEventListener('click', () => void location.refreshAll());
 
   // A wider radius or detour can reach provinces that aren't loaded yet.

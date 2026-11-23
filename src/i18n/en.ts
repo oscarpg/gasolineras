@@ -8,6 +8,11 @@ export const en: Record<MessageKey, string> = {
   'topbar.openPreferences': 'Open preferences',
   'topbar.useGps': 'Use my GPS location',
 
+  'search.placeholder': 'Search address or destination',
+  'search.clear': 'Clear search',
+  'search.routeHere': 'Route here',
+  'search.routeActive': 'Route active · Clear route',
+
   'map.label': 'Petrol station map',
 
   'results.title': '⛽ Cheapest petrol stations',
@@ -75,20 +80,10 @@ export const en: Record<MessageKey, string> = {
   'cars.delete': 'Delete car',
   'cars.details': '{fuel} · Tank: {tank} L · {consumption} l/100 km',
 
-  'location.legend': '📍 Location',
-  'location.useGps': 'Use my GPS location',
-  'location.orAddress': 'or search for an address:',
-  'location.addressPlaceholder': 'Street, number, city…',
-  'location.setAddress': 'Set address',
   'location.maxDistance': 'Maximum distance:',
 
-  'route.legend': '🛣️ Route',
-  'route.destination': 'Destination:',
-  'route.destinationPlaceholder': 'City or destination address…',
-  'route.calculate': 'Calculate route',
   'route.detour': 'Maximum detour from the route:',
   'route.only': 'Only stations on the route (no detours)',
-  'route.clear': 'Clear route',
 
   'filters.legend': '🔎 Station filters',
   'filters.fuel': 'Fuel to show:',
@@ -189,9 +184,9 @@ export const en: Record<MessageKey, string> = {
 
   'message.locating': 'Getting your location…',
   'message.locatingGps': 'Getting GPS location…',
-  'message.gpsError': 'GPS error: {message}. Use Preferences to search for an address.',
-  'message.noLocationYet': 'Open Preferences (⚙️) or tap 📍 to set your location.',
-  'message.noGeolocation': 'Open Preferences (⚙️) to search for an address.',
+  'message.gpsError': 'GPS error: {message}. Search for an address in the bar above.',
+  'message.noLocationYet': 'Search for an address above or tap 📍 to set your location.',
+  'message.noGeolocation': 'Search for an address in the bar above.',
   'message.findingProvince': 'Finding the province…',
   'message.provinceUnknown': 'Could not work out the province.',
   'message.downloadingProvince': 'Downloading data for province {code}…',

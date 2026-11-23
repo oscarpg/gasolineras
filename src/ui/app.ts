@@ -26,6 +26,7 @@ import { createFiltersSection } from './components/prefsDrawer/filtersSection';
 import { createLanguageSection } from './components/prefsDrawer/languageSection';
 import { createLocationRouteSections } from './components/prefsDrawer/locationRouteSections';
 import { createResultsPanel } from './components/resultsPanel';
+import { createSearchBar } from './components/searchBar';
 import { i18n, setI18n, translateStaticText } from './i18nContext';
 import { createLocationController } from './locationController';
 import type { LeafletStatic } from './map/leaflet';
@@ -88,7 +89,7 @@ export function startApp({
   const toast = createToaster();
   const mapView = createMapView('map', leaflet);
   const markers = createStationMarkers(mapView.L, mapView.stationsLayer, { touch });
-  const drawer = createDrawer();
+  createDrawer();
   createDrawer(FILTERS_DRAWER);
 
   const results = createResultsPanel(store, {
@@ -142,7 +143,8 @@ export function startApp({
   });
 
   const sections = [
-    createLocationRouteSections(store, location, drawer),
+    createSearchBar(location),
+    createLocationRouteSections(store, location),
     createFiltersSection(store, effects),
     createCarsSection(store, toast),
     createDiscountsSection(store),

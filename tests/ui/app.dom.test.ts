@@ -447,20 +447,50 @@ describe('startApp (DOM)', () => {
     expect($('#preferences-drawer #brand-list')).toBeNull();
   });
 
-  it('route: calculates and clears the route from the drawer', async () => {
+  it('search bar: the arrow draws a route to the place; the chip clears it', async () => {
     ctx = await boot({ search: async () => ({ latLng: [40.3, -3.73], provinceCode: '28' }) });
-    click('#open-preferences');
-    $<HTMLInputElement>('#destination').value = 'Getafe';
-    click('#calculate-route');
+    expect($('#search-route').hidden).toBe(true); // nothing typed yet
+    expect($('#route-chip').hidden).toBe(true);
+    change('#search-input', 'Getafe', 'input');
+    expect($('#search-route').hidden).toBe(false);
+    expect($('#search-clear').hidden).toBe(false);
+
+    click('#search-route');
     for (let i = 0; i < 3; i++) await flush();
     expect(ctx.store.getState().route).toHaveLength(2);
-    expect($('#preferences-drawer').classList.contains('is-open')).toBe(false); // closes on success
+    expect(ctx.store.getState().userPosition).toEqual(MADRID); // the origin stays
     expect($('#status').textContent).toContain('en ruta');
+    expect($('#route-chip').hidden).toBe(false);
+    expect($('#route-chip').textContent).toContain('Ruta activa · Quitar ruta');
+
     check($<HTMLInputElement>('#route-only'), true);
     change('#route-detour', '5', 'input');
     expect(ctx.store.getState().preferences.routeDetourKm).toBe(5);
-    click('#clear-route');
+    click('#route-chip');
     expect(ctx.store.getState().route).toBeNull();
+    expect($('#route-chip').hidden).toBe(true);
+  });
+
+  it('search bar: Enter makes the place the origin; ✕ clears the text', async () => {
+    ctx = await boot({ search: async () => ({ latLng: [40.3, -3.73], provinceCode: '28' }) });
+    change('#search-input', 'Getafe', 'input');
+    $<HTMLFormElement>('#search-form').requestSubmit();
+    for (let i = 0; i < 3; i++) await flush();
+    expect(ctx.store.getState().userPosition).toEqual([40.3, -3.73]);
+    expect(ctx.store.getState().route).toBeNull();
+
+    click('#search-clear');
+    expect($<HTMLInputElement>('#search-input').value).toBe('');
+    expect($('#search-route').hidden).toBe(true);
+    expect($('#search-clear').hidden).toBe(true);
+    // An empty search does nothing.
+    $<HTMLFormElement>('#search-form').requestSubmit();
+    expect(ctx.store.getState().userPosition).toEqual([40.3, -3.73]);
+  });
+
+  it('preferences no longer have location or route sections', () => {
+    expect($('#preferences-drawer #search-input')).toBeNull();
+    expect(document.querySelector('#address, #destination, #calculate-route, #use-gps')).toBeNull();
   });
 
   it('language: switching to English translates static text, aria-labels and the list', () => {
@@ -476,23 +506,18 @@ describe('startApp (DOM)', () => {
   });
 
   it('error box: address not found shows an error without Retry, ✕ dismisses it', async () => {
-    click('#open-preferences');
-    $<HTMLInputElement>('#address').value = 'nowhere';
-    click('#set-address');
+    change('#search-input', 'nowhere', 'input');
+    $<HTMLFormElement>('#search-form').requestSubmit();
     for (let i = 0; i < 3; i++) await flush();
     expect($('#status-error').hidden).toBe(false);
     expect($('#status-error').textContent).toContain('no encontrada');
     expect($('#status-error [data-action="retry"]')).toBeNull();
-    expect($('#preferences-drawer').classList.contains('is-open')).toBe(true);
     click('#status-error [data-action="dismiss"]');
     expect($('#status-error').hidden).toBe(true);
   });
 
-  it('GPS buttons and "refresh prices" run without errors', async () => {
+  it('the GPS button and "refresh prices" run without errors', async () => {
     click('#quick-gps');
-    click('#open-preferences');
-    click('#use-gps');
-    expect($('#preferences-drawer').classList.contains('is-open')).toBe(false);
     click('#refresh-prices');
     for (let i = 0; i < 5; i++) await flush();
     expect($$('.station-card')).toHaveLength(20);

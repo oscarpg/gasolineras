@@ -11,6 +11,11 @@ export const es = {
   'topbar.openPreferences': 'Abrir Preferencias',
   'topbar.useGps': 'Usar mi ubicación GPS',
 
+  'search.placeholder': 'Buscar dirección o destino',
+  'search.clear': 'Borrar búsqueda',
+  'search.routeHere': 'Ruta hasta aquí',
+  'search.routeActive': 'Ruta activa · Quitar ruta',
+
   'map.label': 'Mapa de gasolineras',
 
   'results.title': '⛽ Gasolineras más baratas',
@@ -78,20 +83,10 @@ export const es = {
   'cars.delete': 'Eliminar coche',
   'cars.details': '{fuel} · Depósito: {tank} L · {consumption} l/100km',
 
-  'location.legend': '📍 Ubicación',
-  'location.useGps': 'Usar mi ubicación GPS',
-  'location.orAddress': 'o buscar dirección:',
-  'location.addressPlaceholder': 'Calle, número, ciudad…',
-  'location.setAddress': 'Establecer dirección',
   'location.maxDistance': 'Distancia máxima admitida:',
 
-  'route.legend': '🛣️ Ruta',
-  'route.destination': 'Dirección de destino:',
-  'route.destinationPlaceholder': 'Ciudad o dirección de destino…',
-  'route.calculate': 'Calcular ruta',
   'route.detour': 'Radio de desvío en ruta:',
   'route.only': 'Solo gasolineras en la ruta (sin desvíos)',
-  'route.clear': 'Quitar ruta',
 
   'filters.legend': '🔎 Filtros de gasolineras',
   'filters.fuel': 'Carburante a mostrar:',
@@ -192,9 +187,9 @@ export const es = {
 
   'message.locating': 'Obteniendo tu ubicación…',
   'message.locatingGps': 'Obteniendo ubicación GPS…',
-  'message.gpsError': 'Error GPS: {message}. Usa Preferencias para buscar dirección.',
-  'message.noLocationYet': 'Abre Preferencias (⚙️) o pulsa 📍 para indicar tu ubicación.',
-  'message.noGeolocation': 'Abre Preferencias (⚙️) para buscar una dirección.',
+  'message.gpsError': 'Error GPS: {message}. Busca una dirección en la barra de arriba.',
+  'message.noLocationYet': 'Busca una dirección arriba o pulsa 📍 para indicar tu ubicación.',
+  'message.noGeolocation': 'Busca una dirección en la barra de arriba.',
   'message.findingProvince': 'Determinando provincia…',
   'message.provinceUnknown': 'No se pudo determinar la provincia correspondiente.',
   'message.downloadingProvince': 'Descargando datos de la provincia ({code})…',

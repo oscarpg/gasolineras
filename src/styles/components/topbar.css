@@ -1,4 +1,4 @@
-/* Floating top bar: Preferences button (left) and quick GPS button (right). */
+/* Floating top bar: Preferences button (left), search bar, quick GPS button (right). */
 #topbar {
   position: absolute;
   top: 12px;
@@ -59,4 +59,86 @@
   .icon-desktop {
     display: none;
   }
+}
+
+/* Search bar: address or destination (between the Preferences and GPS buttons) */
+.search-card {
+  flex: 1;
+  min-width: 0;
+  max-width: 480px;
+  margin: 0 8px;
+  padding: 2px 4px 2px 10px;
+  gap: 2px;
+}
+
+.search-icon {
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+}
+
+.search-icon .icon {
+  width: 20px;
+  height: 20px;
+}
+
+#search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 6px;
+  font-size: 0.9rem;
+}
+
+#search-input:focus-visible {
+  outline: none;
+}
+
+.search-card:has(#search-input:focus) {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* The browser's own clear button: ours does the same */
+#search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-card button.btn-icon {
+  color: var(--color-text-muted);
+}
+
+#search-route {
+  color: var(--color-primary);
+}
+
+/* "Route active · Clear route", under the top bar */
+.route-chip {
+  position: absolute;
+  top: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-floating);
+  width: auto;
+  margin: 0;
+  padding: 4px 8px 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--color-primary-soft-border);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-card);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.route-chip[hidden] {
+  display: none;
+}
+
+.route-chip .icon {
+  width: 18px;
+  height: 18px;
 }
