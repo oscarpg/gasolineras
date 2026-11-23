@@ -12,3 +12,11 @@ button.btn-history {
   padding: 4px 6px;
   font-size: 0.78rem;
 }
+
+/* Station name with its favourite button */
+.popup-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}

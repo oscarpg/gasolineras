@@ -15,6 +15,7 @@ import type { AppState } from '../state/appState';
 import type { Effects } from '../state/effects';
 import { createVisibleStationsSelector, selectActiveCar } from '../state/selectors';
 import type { Store } from '../state/store';
+import { toggleFavourite } from '../state/transitions';
 import { bindPriceHistoryButtons } from './components/priceChart';
 import { createCarsSection } from './components/prefsDrawer/carsSection';
 import { createDiscountsSection } from './components/prefsDrawer/discountsSection';
@@ -28,6 +29,7 @@ import { createLocationController } from './locationController';
 import type { LeafletStatic } from './map/leaflet';
 import { createMapView } from './map/mapView';
 import { createStationMarkers } from './map/stationMarkers';
+import { delegate } from './dom';
 import { createToaster } from './toast';
 
 export interface AppContext {
@@ -75,11 +77,20 @@ export function startApp({
   const markers = createStationMarkers(mapView.L, mapView.stationsLayer);
   const drawer = createDrawer();
 
-  const results = createResultsPanel(store, (stationId) => {
-    const station = store.getState().stations.find((s) => s.id === stationId);
-    if (!station) return;
-    mapView.focus([station.lat, station.lon], STATION_ZOOM);
-    markers.open(stationId);
+  const results = createResultsPanel(store, {
+    onSelect(stationId) {
+      const station = store.getState().stations.find((s) => s.id === stationId);
+      if (!station) return;
+      mapView.focus([station.lat, station.lon], STATION_ZOOM);
+      markers.open(stationId);
+    },
+    onFavouritesOnly: (on) => void location.showFavourites(on),
+  });
+
+  // The heart in a station's popup (the list handles its own hearts).
+  delegate(document.getElementById('map') ?? document, 'click', '[data-action="favourite"]', (button) => {
+    const station = store.getState().stations.find((s) => s.id === button.dataset.station);
+    if (station) store.update((s) => toggleFavourite(s, station));
   });
 
   const location = createLocationController({
@@ -112,7 +123,8 @@ export function startApp({
     markers.update(visible.rows, {
       fuel: state.preferences.fuel,
       car: selectActiveCar(state),
-      hasRoute: !!state.route,
+      hasRoute: !!state.route && !state.favouritesOnly,
+      favourites: new Set(state.preferences.favourites.map((f) => f.id)),
     });
     results.render(state, visible);
   }

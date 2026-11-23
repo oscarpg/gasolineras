@@ -84,8 +84,10 @@ describe('UI text in both languages', () => {
     customDays: 6,
     checkingHistory: true,
     sortedByTotalCost: true,
+    sortedByDistance: false,
     hasRoute: false,
     radiusKm: 15,
+    favouritesOnly: false,
   };
 
   it('status line', () => {
@@ -97,6 +99,18 @@ describe('UI text in both languages', () => {
     expect(
       statusSummary({ ...summary, ageOption: 'all', checkingHistory: false, carName: null, hasRoute: true }),
     ).toBe('27 stations · Petrol 95 · sort: total cost · on route');
+    expect(
+      statusSummary({
+        ...summary,
+        ageOption: 'all',
+        checkingHistory: false,
+        carName: null,
+        sortedByDistance: true,
+      }),
+    ).toBe('27 stations · Petrol 95 · sort: distance · max. 15 km');
+    expect(
+      statusSummary({ ...summary, count: 1, ageOption: 'all', checkingHistory: false, favouritesOnly: true }),
+    ).toBe('1 favourite · Petrol 95 · León · sort: total cost');
     setI18n(createI18n('es'));
   });
 

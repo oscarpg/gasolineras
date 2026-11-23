@@ -81,12 +81,13 @@
   font-size: 0.75rem;
 }
 
-/* "Sort by total cost" option bar */
+/* Options bar: favourites chip and sort buttons */
 .results-options {
   padding: 6px 10px;
   background: var(--color-primary-soft);
   border-bottom: 1px solid var(--color-primary-soft-border);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   font-size: 0.78rem;
@@ -95,24 +96,61 @@
   flex-shrink: 0;
 }
 
-.results-options.is-disabled {
-  background: var(--color-surface-disabled);
-  border-bottom-color: var(--color-border);
-  color: var(--color-text-faint);
-  font-weight: 400;
+.results-options-label {
+  margin-left: auto;
 }
 
-.results-options input[type='checkbox'] {
+/* Toggle chip (aria-pressed) */
+button.chip {
+  width: auto;
   margin: 0;
-  cursor: pointer;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-primary-soft-border);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.results-options label {
+button.chip[aria-pressed='true'] {
+  background: var(--color-favourite);
+  border-color: var(--color-favourite);
+  color: var(--color-text-on-primary);
+}
+
+/* Segmented control (role="radiogroup") */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.segmented button {
+  width: auto;
   margin: 0;
-  cursor: pointer;
-  font-size: 0.78rem;
-  color: inherit;
-  user-select: none;
+  padding: 3px 8px;
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.segmented button + button {
+  border-left: 1px solid var(--color-primary);
+}
+
+.segmented button[aria-checked='true'] {
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+}
+
+.segmented button:focus-visible {
+  outline-offset: -3px;
 }
 
 /* Status line */

@@ -1,6 +1,6 @@
 import { textColorFor } from '../../domain/colorScale';
 import type { StationRow } from '../../domain/filters';
-import type { Car } from '../../domain/types';
+import type { BrandedStation, Car } from '../../domain/types';
 import { html, raw, type SafeHtml } from '../dom';
 import { discountLabel, euros, km, pricePerLitre, stalenessText, stationName } from '../format';
 import { i18n } from '../i18nContext';
@@ -9,6 +9,16 @@ export interface CardContext {
   car: Car | null;
   hasRoute: boolean;
   sortedByTotalCost: boolean;
+}
+
+/**
+ * The heart that adds or removes a favourite (cards and popups). Handled by event
+ * delegation through `data-action="favourite"` and `data-station`.
+ */
+export function favouriteButtonHtml(station: BrandedStation, isFavourite: boolean): SafeHtml {
+  const { t } = i18n();
+  const label = t(isFavourite ? 'favourites.remove' : 'favourites.add', { name: stationName(station.name) });
+  return html`<button type="button" class="btn-icon btn-favourite" data-action="favourite" data-station="${station.id}" aria-pressed="${String(isFavourite)}" aria-label="${label}" title="${label}"><span aria-hidden="true">${isFavourite ? '♥' : '♡'}</span></button>`;
 }
 
 /** Inner HTML of one result card (position `index` starts at 0). Every value is escaped. */

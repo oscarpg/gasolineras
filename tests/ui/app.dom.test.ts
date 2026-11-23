@@ -153,6 +153,7 @@ describe('startApp (DOM)', () => {
   });
 
   it('cars: validates, saves, sorts by total cost, switches and deletes', () => {
+    expect($<HTMLButtonElement>('[data-sort="total"]').disabled).toBe(true); // no car yet
     click('#save-car');
     expect($('.toast').textContent).toContain('Completa');
 
@@ -162,11 +163,12 @@ describe('startApp (DOM)', () => {
     $<HTMLInputElement>('#car-consumption').value = '6';
     click('#save-car');
     expect($('#car-list').textContent).toContain('León');
-    expect($<HTMLInputElement>('#sort-by-cost').disabled).toBe(false);
+    expect($<HTMLButtonElement>('[data-sort="total"]').disabled).toBe(false);
     expect($('.station-card').textContent).toContain('Depósito');
 
-    check($<HTMLInputElement>('#sort-by-cost'), true);
+    click('[data-sort="total"]');
     expect(ctx.store.getState().preferences.sortByTotalCost).toBe(true);
+    expect($('[data-sort="total"]').getAttribute('aria-checked')).toBe('true');
     expect($('#status').textContent).toContain('coste total');
 
     $<HTMLInputElement>('#car-name').value = 'Furgo';
@@ -179,6 +181,69 @@ describe('startApp (DOM)', () => {
     click('[data-action="delete-car"]');
     click('[data-action="delete-car"]');
     expect($('#car-list').textContent).toContain('No hay coches');
+  });
+
+  it('sort buttons: distance reorders the cards; arrow keys move the choice', () => {
+    const sort = (order: string) => $(`[data-sort="${order}"]`);
+    expect(sort('price').getAttribute('aria-checked')).toBe('true');
+    expect(sort('price').tabIndex).toBe(0);
+    expect(sort('distance').tabIndex).toBe(-1);
+
+    click('[data-sort="distance"]');
+    expect(ctx.store.getState().preferences).toMatchObject({ sortByDistance: true, sortByTotalCost: false });
+    expect(sort('distance').getAttribute('aria-checked')).toBe('true');
+    expect($('#status').textContent).toContain('orden: distancia');
+
+    key(sort('distance'), 'ArrowRight'); // "total cost" is disabled without a car: wraps to €/l
+    expect(sort('price').getAttribute('aria-checked')).toBe('true');
+    expect(document.activeElement).toBe(sort('price'));
+    key(sort('price'), 'ArrowLeft');
+    expect(ctx.store.getState().preferences.sortByDistance).toBe(true);
+  });
+
+  it('favourites: the heart toggles without selecting the card; the chip shows only favourites', async () => {
+    const heart = () => $$('#results-list [data-action="favourite"]')[3]!;
+    const id = heart().dataset.station!;
+    expect($('#favourites-chip').hidden).toBe(true);
+    expect(heart().getAttribute('aria-pressed')).toBe('false');
+
+    heart().click();
+    expect(ctx.store.getState().preferences.favourites).toEqual([
+      { id, provinceCode: '28', brand: expect.any(String) },
+    ]);
+    expect(ctx.leaflet.map.view?.zoom).not.toBe(15); // the card wasn't selected
+    expect(heart().getAttribute('aria-pressed')).toBe('true');
+    expect($('#favourites-chip').hidden).toBe(false);
+    expect($('#favourites-chip').textContent).toBe('♥ Favoritas (1)');
+
+    click('#favourites-chip');
+    await flush();
+    expect(ctx.store.getState().favouritesOnly).toBe(true);
+    expect($('#favourites-chip').getAttribute('aria-pressed')).toBe('true');
+    expect($$('.station-card').map((c) => c.dataset.station)).toEqual([id]);
+    expect($('#status').textContent).toMatch(/^1 favorita · /);
+    expect($('#status').textContent).not.toContain('máx.');
+
+    // Removing the last favourite in favourites mode: the chip stays so the mode can be left.
+    $('#results-list [data-action="favourite"]').click();
+    expect($('#favourites-chip').hidden).toBe(false);
+    expect($('#results-list').textContent).toContain('Aún no tienes favoritas');
+    click('#favourites-chip');
+    await flush();
+    expect(ctx.store.getState().favouritesOnly).toBe(false);
+    expect($('#favourites-chip').hidden).toBe(true);
+    expect($$('.station-card')).toHaveLength(20);
+  });
+
+  it('favourites: the heart in a popup toggles too', () => {
+    const first = $$('.station-card')[0]!.dataset.station;
+    $$('.station-card')[0]!.click(); // opens the popup
+    const marker = ctx.leaflet.markers.filter((m) => m.open).pop()!;
+    const slot = document.createElement('div');
+    slot.innerHTML = marker.html;
+    document.getElementById('map')!.append(slot);
+    slot.querySelector<HTMLElement>('[data-action="favourite"]')!.click();
+    expect(ctx.store.getState().preferences.favourites.map((f) => f.id)).toEqual([first]);
   });
 
   it('discounts: adds and removes a brand discount', () => {

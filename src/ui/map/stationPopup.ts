@@ -1,6 +1,7 @@
 import { textColorFor } from '../../domain/colorScale';
 import type { StationRow } from '../../domain/filters';
 import type { Car, FuelType } from '../../domain/types';
+import { favouriteButtonHtml } from '../components/stationCard';
 import { html, type SafeHtml } from '../dom';
 import { discountLabel, euros, fuelLabel, km, pricePerLitre, stalenessText, stationName } from '../format';
 import { i18n } from '../i18nContext';
@@ -9,13 +10,19 @@ export interface PopupContext {
   fuel: FuelType;
   car: Car | null;
   hasRoute: boolean;
+  /** Ids of the favourite stations. */
+  favourites: ReadonlySet<string>;
 }
 
 /**
  * Popup content for a station marker. Every value is escaped.
- * The history button is handled by event delegation (see priceChart.ts) via its data-* attributes.
+ * The history and favourite buttons are handled by event delegation (see priceChart.ts
+ * and app.ts) via their data-* attributes.
  */
-export function stationPopupHtml(row: StationRow, { fuel, car, hasRoute }: PopupContext): SafeHtml {
+export function stationPopupHtml(
+  row: StationRow,
+  { fuel, car, hasRoute, favourites }: PopupContext,
+): SafeHtml {
   const { t, number, decimal } = i18n();
   const s = row.station;
   const c = row.cost;
@@ -43,5 +50,7 @@ export function stationPopupHtml(row: StationRow, { fuel, car, hasRoute }: Popup
     ? html`<br><button class="btn-secondary btn-history" data-action="price-history" data-code="${s.code}" data-province="${s.provinceCode}" data-station="${s.id}">${t('chart.button')}</button><div class="price-chart-slot"></div>`
     : '';
 
-  return html`<b>${stationName(s.name)}</b><br><small>${s.address}</small><br>${priceBlock}${carBlock}<br><small>${stalenessText(s.bulletinDate, row.staleness)}</small>${distance}${hours}${history}`;
+  const title = html`<div class="popup-title"><b>${stationName(s.name)}</b>${favouriteButtonHtml(s, favourites.has(s.id))}</div>`;
+
+  return html`${title}<small>${s.address}</small><br>${priceBlock}${carBlock}<br><small>${stalenessText(s.bulletinDate, row.staleness)}</small>${distance}${hours}${history}`;
 }

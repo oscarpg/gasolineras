@@ -1,4 +1,19 @@
-/* One station row in the results list. */
+/* One row of the results list: the card plus its action buttons. */
+.station-item {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+}
+
+.station-item-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* One station in the results list. */
 .station-card {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);

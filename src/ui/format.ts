@@ -77,8 +77,11 @@ export interface StatusSummary {
   customDays: number;
   checkingHistory: boolean;
   sortedByTotalCost: boolean;
+  sortedByDistance: boolean;
   hasRoute: boolean;
   radiusKm: number;
+  /** Favourites mode: "N favourites", and the radius or route doesn't apply. */
+  favouritesOnly: boolean;
 }
 
 /** The results panel's status line, e.g. "27 gasolineras · Gasolina 95 · SEAT León · orden: €/l · máx. 15 km". */
@@ -86,13 +89,23 @@ export function statusSummary(s: StatusSummary): string {
   const { t, plural, decimal } = i18n();
   const age = AGE_STATUS[s.ageOption];
   return [
-    plural('status.count', s.count),
+    s.favouritesOnly ? plural('favourites.summary', s.count) : plural('status.count', s.count),
     fuelLabel(s.fuel),
     s.carName,
     age && t(age, { days: s.customDays }),
     s.checkingHistory && t('status.checkingHistory'),
-    t(s.sortedByTotalCost ? 'status.sortByCost' : 'status.sortByPrice'),
-    s.hasRoute ? t('status.onRoute') : t('status.maxDistance', { km: decimal(s.radiusKm) }),
+    t(
+      s.sortedByDistance
+        ? 'status.sortByDistance'
+        : s.sortedByTotalCost
+          ? 'status.sortByCost'
+          : 'status.sortByPrice',
+    ),
+    s.favouritesOnly
+      ? null
+      : s.hasRoute
+        ? t('status.onRoute')
+        : t('status.maxDistance', { km: decimal(s.radiusKm) }),
   ]
     .filter(Boolean)
     .join(' · ');

@@ -62,11 +62,18 @@
         <span id="results-toggle-icon" aria-hidden="true">▼</span>
       </div>
       <div id="results-body" class="results-body">
-        <div class="results-options" id="sort-by-cost-option">
-          <input type="checkbox" id="sort-by-cost" />
-          <label for="sort-by-cost" id="sort-by-cost-label"
-            >Ordenar por coste total (depósito + ida y vuelta)</label
-          >
+        <div class="results-options">
+          <button type="button" id="favourites-chip" class="chip" aria-pressed="false" hidden></button>
+          <span id="sort-label" class="results-options-label" data-i18n="results.sortLabel">Ordenar:</span>
+          <div class="segmented" id="sort-options" role="radiogroup" aria-labelledby="sort-label">
+            <button type="button" role="radio" data-sort="price" data-i18n="results.sortPrice">€/l</button>
+            <button type="button" role="radio" data-sort="distance" data-i18n="results.sortDistance">
+              Distancia
+            </button>
+            <button type="button" role="radio" data-sort="total" data-i18n="results.sortTotal">
+              Coste total
+            </button>
+          </div>
         </div>
         <div id="status" role="status" aria-live="polite" data-i18n="results.waiting">
           Esperando ubicación…

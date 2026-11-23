@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { selectVisibleStations } from '../../src/domain/filters';
 import type { BrandedStation } from '../../src/domain/types';
-import { stationCardHtml } from '../../src/ui/components/stationCard';
+import { favouriteButtonHtml, stationCardHtml } from '../../src/ui/components/stationCard';
 import { priceChartSvg } from '../../src/ui/components/priceChart';
 import { escapeHtml, html, raw, SafeHtml } from '../../src/ui/dom';
 import { createStationMarkers } from '../../src/ui/map/stationMarkers';
@@ -74,7 +74,12 @@ describe('station templates escape API data', () => {
   const [row] = visible([evilStation], { car, discounts: { 'B<1>': { type: 'CTS', value: 5 } } });
 
   it('popup', () => {
-    const out = stationPopupHtml(row!, { fuel: 'GASOLINA_95', car, hasRoute: false }).value;
+    const out = stationPopupHtml(row!, {
+      fuel: 'GASOLINA_95',
+      car,
+      hasRoute: false,
+      favourites: new Set(),
+    }).value;
     for (const bad of ['<img', '<script', '<b>24H', '<u>León', `data-code="1'2"`, `data-station="id"1"`]) {
       expect(out).not.toContain(bad);
     }
@@ -82,6 +87,7 @@ describe('station templates escape API data', () => {
     expect(out).toContain('data-code="1&#39;2"');
     expect(out).toContain('data-action="price-history"');
     expect(out).toContain('-5 cts/l');
+    expect(out).toContain('aria-label="Añadir &lt;img');
   });
 
   it('result card', () => {
@@ -98,7 +104,12 @@ describe('station templates content', () => {
     const [row] = visible([branded('a', { prices: prices({ GASOLINA_95: 1.5 }) })], {
       route: [HOME, [40.5, -3.7]],
     });
-    const popup = stationPopupHtml(row!, { fuel: 'GASOLINA_95', car: null, hasRoute: true }).value;
+    const popup = stationPopupHtml(row!, {
+      fuel: 'GASOLINA_95',
+      car: null,
+      hasRoute: true,
+      favourites: new Set(),
+    }).value;
     expect(popup).toContain('🛣️ Desvío de ruta: 0,0 km (0,0 km i/v)');
     expect(stationCardHtml(row!, 4, { car: null, hasRoute: true, sortedByTotalCost: false }).value).toContain(
       '5. REPSOL',
@@ -107,9 +118,26 @@ describe('station templates content', () => {
 
   it('omits the history button for stations without a MITECO code', () => {
     const [row] = visible([branded('a', { code: '' })]);
-    expect(stationPopupHtml(row!, { fuel: 'GASOLINA_95', car: null, hasRoute: false }).value).not.toContain(
-      'price-history',
-    );
+    expect(
+      stationPopupHtml(row!, { fuel: 'GASOLINA_95', car: null, hasRoute: false, favourites: new Set() })
+        .value,
+    ).not.toContain('price-history');
+  });
+
+  it('the heart shows whether the station is a favourite', () => {
+    const [row] = visible([branded('a')]);
+    const off = stationPopupHtml(row!, {
+      fuel: 'GASOLINA_95',
+      car: null,
+      hasRoute: false,
+      favourites: new Set(),
+    });
+    expect(off.value).toContain('aria-pressed="false"');
+    expect(off.value).toContain('aria-label="Añadir REPSOL a favoritas"');
+    const on = favouriteButtonHtml(row!.station, true).value;
+    expect(on).toContain('aria-pressed="true"');
+    expect(on).toContain('aria-label="Quitar REPSOL de favoritas"');
+    expect(on).toContain('data-station="a"');
   });
 });
 
@@ -205,7 +233,7 @@ function fakeLeaflet() {
 }
 
 describe('createStationMarkers', () => {
-  const ctx = { fuel: 'GASOLINA_95' as const, car: null, hasRoute: false };
+  const ctx = { fuel: 'GASOLINA_95' as const, car: null, hasRoute: false, favourites: new Set<string>() };
   const stations = [1.5, 1.6, 1.7].map((p, i) => branded(`s${i}`, { prices: prices({ GASOLINA_95: p }) }));
 
   it('adds, updates and removes only what changed', () => {
@@ -256,5 +284,10 @@ describe('createStationMarkers', () => {
     markers.update(visible(stations), { ...ctx, fuel: 'GASOLEO_A' }); // content changes → open popup refreshed
     expect(log).toContain('buildPopup');
     expect(marker.shown).not.toBe(before);
+
+    log.length = 0;
+    markers.update(visible(stations), { ...ctx, favourites: new Set(['s0']) }); // heart toggled → refreshed
+    expect(log).toContain('buildPopup');
+    expect(marker.shown).toContain('aria-pressed="true"');
   });
 });
