@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createInitialState } from '../../src/state/appState';
 import { DEFAULT_PREFERENCES } from '../../src/domain/preferences';
 import {
+  addRouteChecks,
   addStations,
   clearFilters,
   resetFilters,
@@ -19,6 +20,7 @@ import {
   setDiscount,
   setFavouritesOnly,
   setFuel,
+  setRoute,
   startHistoryJob,
   toggleFavourite,
   widenSearch,
@@ -117,6 +119,25 @@ describe('filters', () => {
     const s = setBrandSelected(state({ brands: ['X', 'Y'] }), 'X', false);
     expect(s.preferences.brands).toEqual(['Y']);
     expect(setBrandSelected(s, 'Z', true).preferences.brands).toEqual(['Y', 'Z']);
+  });
+});
+
+describe('route checks', () => {
+  it('a new route forgets the checks; checks for an old route are ignored', () => {
+    const r1: [number, number][] = [
+      [42, -8],
+      [42.1, -8],
+    ];
+    const r2: [number, number][] = [
+      [43, -8],
+      [43.1, -8],
+    ];
+    const s = addRouteChecks(setRoute(state(), r1), r1, { a: 0.2, b: null });
+    expect(s.routeChecks).toEqual({ a: 0.2, b: null });
+    expect(addRouteChecks(s, r1, { c: Infinity }).routeChecks).toEqual({ a: 0.2, b: null, c: Infinity });
+    const moved = setRoute(s, r2);
+    expect(moved.routeChecks).toEqual({});
+    expect(addRouteChecks(moved, r1, { a: 0.1 })).toBe(moved);
   });
 });
 

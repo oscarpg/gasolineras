@@ -3,6 +3,7 @@
  * Every change the user or the app makes goes through one of these, via `store.update`.
  */
 import { normalizeBrand } from '../domain/brands';
+import type { RouteChecks } from '../domain/routeCheck';
 import {
   DEFAULT_PREFERENCES,
   FILTER_KEYS,
@@ -206,8 +207,15 @@ export function setUserPosition(s: AppState, position: LatLng | null): AppState 
   return { ...s, userPosition: position };
 }
 
+/** A new route (or none) forgets the road checks of the previous one. */
 export function setRoute(s: AppState, route: LatLng[] | null): AppState {
-  return { ...s, route };
+  return { ...s, route, routeChecks: {} };
+}
+
+/** Stores road checks made for `route`; ignored if the route has changed since. */
+export function addRouteChecks(s: AppState, route: readonly LatLng[], checks: RouteChecks): AppState {
+  if (s.route !== route) return s;
+  return { ...s, routeChecks: { ...s.routeChecks, ...checks } };
 }
 
 /* ---------- price history ---------- */

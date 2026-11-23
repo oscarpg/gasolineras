@@ -11,6 +11,9 @@ export const MITECO_PROVINCE_HISTORY_URL = `${MITECO_BASE}/EstacionesTerrestresH
 /** OSRM routing: append `lon,lat;lon,lat?...`. */
 export const OSRM_ROUTE_URL = 'https://router.project-osrm.org/route/v1/driving/';
 
+/** OSRM distance matrix: append `lon,lat;lon,lat;...?sources=...&destinations=...`. */
+export const OSRM_TABLE_URL = 'https://router.project-osrm.org/table/v1/driving/';
+
 /** Nominatim forward search: append the URL-encoded query. */
 export const NOMINATIM_SEARCH_URL =
   'https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=';

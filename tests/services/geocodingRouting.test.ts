@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createGeocoder } from '../../src/services/geocoding';
 import { createHttpClient } from '../../src/services/http';
 import { createRateLimiter } from '../../src/services/rateLimit';
-import { createRouter } from '../../src/services/routing';
+import { createRouter, TABLE_BATCH } from '../../src/services/routing';
+import type { RouteProbe } from '../../src/domain/routeCheck';
 import { fakeFetch } from '../helpers';
 import realSearch from '../fixtures/nominatim-search.json';
 import realReverse from '../fixtures/nominatim-reverse.json';
@@ -140,6 +141,61 @@ describe('createRouter', () => {
     });
     const router = createRouter({ http: createHttpClient({ fetchFn }) });
     expect(await router.route([40.4, -3.7], [28.1, -15.4])).toBeNull();
+  });
+});
+
+describe('createRouter: extra distance through stations (OSRM table)', () => {
+  const probe = (k: number): RouteProbe => ({
+    id: `s${k}`,
+    before: [42, -8 - k],
+    station: [42.01, -8.001 - k],
+    after: [42.02, -8 - k],
+  });
+
+  it('asks before/station → station/after and returns the extra km', async () => {
+    // Probe 0: 2.0 + 2.1 − 4.0 = 0.1 km. Probe 1: the station can't be reached.
+    const fetchFn = fakeFetch({
+      '/table/v1/driving/': {
+        code: 'Ok',
+        distances: [
+          [2000, 4000, 0, 0],
+          [0, 2100, 0, 0],
+          [0, 0, null, 4000],
+          [0, 0, 0, 1500],
+        ],
+      },
+    });
+    const router = createRouter({ http: createHttpClient({ fetchFn }) });
+    expect(await router.extraDistances([probe(0), probe(1)])).toEqual([0.1, Infinity]);
+    const url = fetchFn.calls[0]!.url;
+    expect(url).toContain('/table/v1/driving/-8,42;-8.001,42.01;-8,42.02;-9,42;-9.001,42.01;-9,42.02?');
+    expect(url).toContain('sources=0;1;3;4&destinations=1;2;4;5&annotations=distance');
+  });
+
+  it('splits many stations into several requests, one after another', async () => {
+    const fetchFn = fakeFetch({
+      '/table/v1/driving/': (url: string) => {
+        const n = new URL(url).searchParams.get('sources')!.split(';').length;
+        const distances = Array.from({ length: n }, (_, r) =>
+          Array.from({ length: n }, (_, c) => (r % 2 === 0 && c % 2 === 1 ? 1000 : 600)),
+        );
+        return new Response(JSON.stringify({ code: 'Ok', distances }));
+      },
+    });
+    const router = createRouter({ http: createHttpClient({ fetchFn }) });
+    const out = await router.extraDistances(Array.from({ length: TABLE_BATCH + 1 }, (_, k) => probe(k)));
+    expect(fetchFn.calls).toHaveLength(2);
+    expect(out).toHaveLength(TABLE_BATCH + 1);
+    expect(out.every((x) => Math.abs(x - 0.2) < 1e-9)).toBe(true); // 600 + 600 − 1000 m
+  });
+
+  it('throws when OSRM answers with an error', async () => {
+    const fetchFn = fakeFetch({
+      '/table/v1/driving/': () => new Response('{"code":"TooBig"}', { status: 400 }),
+    });
+    const router = createRouter({ http: createHttpClient({ fetchFn }) });
+    await expect(router.extraDistances([probe(0)])).rejects.toThrow();
+    expect(await router.extraDistances([])).toEqual([]);
   });
 });
 

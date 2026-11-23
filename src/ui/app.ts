@@ -14,6 +14,7 @@ import type { Router } from '../services/routing';
 import type { AppState } from '../state/appState';
 import type { Effects } from '../state/effects';
 import { createVisibleStationsSelector, selectActiveCar } from '../state/selectors';
+import { watchRouteChecks } from '../state/routeChecks';
 import type { Store } from '../state/store';
 import { toggleFavourite, widenSearch } from '../state/transitions';
 import { createAutoFit } from './autoFit';
@@ -173,6 +174,8 @@ export function startApp({
   for (const section of sections) section.render(initial);
   results.prepare(initial);
   store.subscribe(render);
+  // "Only stations on the route": check the stations near the route by road.
+  watchRouteChecks({ store, router });
 
   location.start();
 }

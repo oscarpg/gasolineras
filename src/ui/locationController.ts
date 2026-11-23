@@ -19,7 +19,7 @@ export interface LocationControllerDeps {
   effects: Effects;
   miteco: Pick<MitecoService, 'hasCachedProvince'>;
   geocoder: Geocoder;
-  router: Router;
+  router: Pick<Router, 'route'>;
   gps: GeoProvider;
   mapView: MapView;
   status: StatusLine;

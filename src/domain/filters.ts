@@ -2,6 +2,7 @@ import { matchesAgeFilter } from './ageFilter';
 import { colorForValue } from './colorScale';
 import { distanceKm, distanceToRouteKm } from './geo';
 import { costBreakdown, effectivePrice, type CostBreakdown } from './pricing';
+import { isOnRoute, type RouteChecks } from './routeCheck';
 import type {
   AgeFilter,
   BrandedStation,
@@ -13,7 +14,10 @@ import type {
   StalenessIndex,
 } from './types';
 
-/** With "only stations on the route", the max distance from the route line (km). */
+/**
+ * With "only stations on the route", the max distance from the route line (km) for
+ * stations not checked by road yet (see routeCheck.ts).
+ */
 export const ROUTE_ONLY_MAX_KM = 0.15;
 
 export interface VisibilityCriteria {
@@ -28,6 +32,8 @@ export interface VisibilityCriteria {
   searchRadiusKm: number;
   routeDetourKm: number;
   routeOnly: boolean;
+  /** Road checks for "only on the route" (routeCheck.ts); missing = straight-line rule. */
+  routeChecks?: RouteChecks;
   car: CarSpecs | null;
   discounts: Readonly<Record<string, Discount>>;
   sortByTotalCost: boolean;
@@ -82,7 +88,6 @@ export function selectVisibleStations(
   c: VisibilityCriteria,
 ): VisibleStations {
   const sortedByTotalCost = !!(c.car && c.sortByTotalCost);
-  const routeLimit = c.routeOnly ? ROUTE_ONLY_MAX_KM : c.routeDetourKm;
   const brandFilter = new Set(c.brands);
 
   const rows: Omit<StationRow, 'metric' | 'color'>[] = [];
@@ -103,7 +108,9 @@ export function selectVisibleStations(
     const inRange = c.onlyIds
       ? true
       : c.route
-        ? routeDetourKm! <= routeLimit
+        ? c.routeOnly
+          ? isOnRoute(routeDetourKm!, c.routeChecks?.[station.id], ROUTE_ONLY_MAX_KM)
+          : routeDetourKm! <= c.routeDetourKm
         : distanceFromUserKm !== null && distanceFromUserKm <= c.searchRadiusKm;
     if (!inRange) continue;
 

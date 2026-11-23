@@ -1,4 +1,5 @@
 import type { Preferences } from '../domain/preferences';
+import type { RouteChecks } from '../domain/routeCheck';
 import type { BrandedStation, LatLng, StalenessIndex } from '../domain/types';
 
 /** A running price-history check for one province. */
@@ -27,6 +28,8 @@ export interface AppState {
   /** Origin chosen by GPS or address search. */
   userPosition: LatLng | null;
   route: LatLng[] | null;
+  /** Road checks of the stations near the current route ("only on the route"). */
+  routeChecks: RouteChecks;
   /** Show only favourite stations (wherever they are) instead of those within the radius or route. Not saved. */
   favouritesOnly: boolean;
 }
@@ -49,6 +52,7 @@ export function createInitialState(saved: Preferences): AppState {
     historyStatus: null,
     userPosition: null,
     route: null,
+    routeChecks: {},
     favouritesOnly: false,
   };
 }

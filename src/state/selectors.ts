@@ -41,6 +41,7 @@ export function createVisibleStationsSelector(): (s: AppState) => VisibleStation
       userPosition: AppState['userPosition'],
       route: AppState['route'],
       favouritesOnly: boolean,
+      routeChecks: AppState['routeChecks'],
     ) => {
       const car = p.cars.find((c) => c.id === p.activeCarId) ?? null;
       return selectVisibleStations(stations, {
@@ -53,6 +54,7 @@ export function createVisibleStationsSelector(): (s: AppState) => VisibleStation
         searchRadiusKm: p.searchRadiusKm,
         routeDetourKm: p.routeDetourKm,
         routeOnly: p.routeOnly,
+        routeChecks,
         car,
         discounts: p.discounts,
         sortByTotalCost: p.sortByTotalCost,
@@ -61,7 +63,8 @@ export function createVisibleStationsSelector(): (s: AppState) => VisibleStation
       });
     },
   );
-  return (s) => compute(s.stations, s.staleness, s.preferences, s.userPosition, s.route, s.favouritesOnly);
+  return (s) =>
+    compute(s.stations, s.staleness, s.preferences, s.userPosition, s.route, s.favouritesOnly, s.routeChecks);
 }
 
 /** Brands of the loaded stations with how many stations each has, sorted (Spanish collation). */

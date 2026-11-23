@@ -59,7 +59,7 @@ async function boot({ prefs = {}, search = async () => null, provincesWithin }: 
     effects,
     miteco,
     geocoder: { search, reverseProvince: async () => '28' },
-    router: { route: async (a, b) => [a, b] },
+    router: { route: async (a, b) => [a, b], extraDistances: async (probes) => probes.map(() => 0) },
     gps: { isAvailable: () => true, getCurrentPosition: async () => MADRID },
     leaflet: leaflet.L,
     ...(provincesWithin && {
