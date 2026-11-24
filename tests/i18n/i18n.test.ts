@@ -117,15 +117,33 @@ describe('UI text in both languages', () => {
   it('staleness', () => {
     setI18n(createI18n('en'));
     expect(stalenessText('21/11/2026', null)).toBe('📅 MITECO bulletin: 21/11/2026 (checking history…)');
+    expect(stalenessText('', { days: 0, since: '21-11-2026', windowDays: 4 })).toBe(
+      '🟢 Price updated today (21/11/2026)',
+    );
     expect(stalenessText('', { days: 1, since: '20-11-2026', windowDays: 4 })).toBe(
-      '🕒 Unchanged for 1 day (since 20/11/2026)',
+      '🕒 Price updated yesterday (20/11/2026)',
+    );
+    expect(stalenessText('', { days: 3, since: '18-11-2026', windowDays: 4 })).toBe(
+      '🕒 Price updated 3 days ago (18/11/2026)',
     );
     expect(stalenessText('', { days: 4, since: '17-11-2026', windowDays: 4 })).toBe(
-      '⚠️ Unchanged for 3+ days (≤ 17/11/2026)',
+      '⚠️ Price updated 4 or more days ago (on or before 17/11/2026)',
+    );
+    expect(stalenessText('', { days: 1, since: '20-11-2026', windowDays: 1 })).toBe(
+      '⚠️ Price updated yesterday or earlier (on or before 20/11/2026)',
     );
     setI18n(createI18n('es'));
+    expect(stalenessText('', { days: 0, since: '21-11-2026', windowDays: 4 })).toBe(
+      '🟢 Precio actualizado hoy (21/11/2026)',
+    );
+    expect(stalenessText('', { days: 1, since: '20-11-2026', windowDays: 4 })).toBe(
+      '🕒 Precio actualizado ayer (20/11/2026)',
+    );
     expect(stalenessText('', { days: 2, since: '19-11-2026', windowDays: 4 })).toBe(
-      '🕒 2 días sin actualizar (desde 19/11/2026)',
+      '🕒 Precio actualizado hace 2 días (19/11/2026)',
+    );
+    expect(stalenessText('', { days: 4, since: '17-11-2026', windowDays: 4 })).toBe(
+      '⚠️ Precio actualizado hace 4 días o más (17/11/2026 o antes)',
     );
   });
 

@@ -173,10 +173,13 @@ export const es = {
 
   'staleness.pending': '📅 Boletín MITECO: {date} (comprobando histórico…)',
   'staleness.pendingNoDate': '📅 Comprobando histórico…',
-  'staleness.today': '🟢 Actualizado hoy ({date})',
-  'staleness.days.one': '🕒 1 día sin actualizar (desde {date})',
-  'staleness.days.other': '🕒 {days} días sin actualizar (desde {date})',
-  'staleness.moreThan': '⚠️ +{days} días sin actualizar (≤ {date})',
+  'staleness.today': '🟢 Precio actualizado hoy ({date})',
+  'staleness.yesterday': '🕒 Precio actualizado ayer ({date})',
+  'staleness.days.one': '🕒 Precio actualizado hace {days} día ({date})',
+  'staleness.days.other': '🕒 Precio actualizado hace {days} días ({date})',
+  'staleness.yesterdayOrEarlier': '⚠️ Precio actualizado ayer o antes ({date} o antes)',
+  'staleness.atLeast.one': '⚠️ Precio actualizado hace {days} día o más ({date} o antes)',
+  'staleness.atLeast.other': '⚠️ Precio actualizado hace {days} días o más ({date} o antes)',
 
   'chart.button': '📈 Ver evolución (7 días)',
   'chart.loading': 'Cargando histórico de 7 días…',

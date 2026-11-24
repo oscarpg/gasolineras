@@ -170,10 +170,13 @@ export const en: Record<MessageKey, string> = {
 
   'staleness.pending': '📅 MITECO bulletin: {date} (checking history…)',
   'staleness.pendingNoDate': '📅 Checking history…',
-  'staleness.today': '🟢 Updated today ({date})',
-  'staleness.days.one': '🕒 Unchanged for 1 day (since {date})',
-  'staleness.days.other': '🕒 Unchanged for {days} days (since {date})',
-  'staleness.moreThan': '⚠️ Unchanged for {days}+ days (≤ {date})',
+  'staleness.today': '🟢 Price updated today ({date})',
+  'staleness.yesterday': '🕒 Price updated yesterday ({date})',
+  'staleness.days.one': '🕒 Price updated {days} day ago ({date})',
+  'staleness.days.other': '🕒 Price updated {days} days ago ({date})',
+  'staleness.yesterdayOrEarlier': '⚠️ Price updated yesterday or earlier (on or before {date})',
+  'staleness.atLeast.one': '⚠️ Price updated {days} or more day ago (on or before {date})',
+  'staleness.atLeast.other': '⚠️ Price updated {days} or more days ago (on or before {date})',
 
   'chart.button': '📈 7-day price history',
   'chart.loading': 'Loading 7-day history…',

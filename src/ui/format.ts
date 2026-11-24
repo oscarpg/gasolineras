@@ -36,11 +36,16 @@ export function stalenessText(bulletinDate: string, info: PriceStaleness | null)
   const { t, plural, date } = i18n();
   if (!info)
     return bulletinDate ? t('staleness.pending', { date: date(bulletinDate) }) : t('staleness.pendingNoDate');
-  const since = date(info.since);
-  const limit = info.windowDays - 1 || 3;
-  if (info.days === 0) return t('staleness.today', { date: since });
-  if (info.days <= limit) return plural('staleness.days', info.days, { days: info.days, date: since });
-  return t('staleness.moreThan', { days: limit, date: since });
+  const params = { days: info.days, date: date(info.since) };
+  // days === windowDays: every checked day had the same price, so it is at least that old.
+  if (info.windowDays > 0 && info.days >= info.windowDays) {
+    return info.days === 1
+      ? t('staleness.yesterdayOrEarlier', params)
+      : plural('staleness.atLeast', info.days, params);
+  }
+  if (info.days === 0) return t('staleness.today', params);
+  if (info.days === 1) return t('staleness.yesterday', params);
+  return plural('staleness.days', info.days, params);
 }
 
 export const AGE_OPTION_LABELS: Record<AgeFilterOption, MessageKey> = {
