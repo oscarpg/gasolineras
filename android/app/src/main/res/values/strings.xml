@@ -163,7 +163,9 @@
     <string name="widget_description">Las gasolineras más baratas cerca de ti</string>
     <string name="widget_no_origin">Abre la app para fijar tu ubicación.</string>
     <string name="widget_no_data">Sin datos todavía.</string>
-    <string name="widget_updated">Actualizado %1$s</string>
+    <string name="widget_updated_today">Actualizado a las %1$s</string>
+    <string name="widget_updated_yesterday">Actualizado ayer a las %1$s</string>
+    <string name="widget_updated_date">Actualizado el %1$s</string>
     <string name="cars_none_chip">Sin coche</string>
     <string name="widget_small_label">Gasolinera más barata</string>
     <string name="widget_list_label">Top 3 gasolineras</string>

@@ -162,7 +162,9 @@
     <string name="widget_description">The cheapest petrol stations near you</string>
     <string name="widget_no_origin">Open the app to set your location.</string>
     <string name="widget_no_data">No data yet.</string>
-    <string name="widget_updated">Updated %1$s</string>
+    <string name="widget_updated_today">Updated at %1$s</string>
+    <string name="widget_updated_yesterday">Updated yesterday at %1$s</string>
+    <string name="widget_updated_date">Updated on %1$s</string>
     <string name="cars_none_chip">No car</string>
     <string name="widget_small_label">Cheapest station</string>
     <string name="widget_list_label">Top 3 stations</string>
