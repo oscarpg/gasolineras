@@ -4,6 +4,23 @@ Todas las versiones publicadas de la app Android. Cada versión es un
 [release en GitHub](https://github.com/oscarpg/gasolineras/releases) con su APK firmado.
 _All published versions of the Android app; English below each entry._
 
+## [Sin publicar] — _Unreleased_
+
+### Corregido
+
+- **El widget ya no dice siempre «hace 0 minutos».** Ahora muestra la hora de la última
+  actualización: «Actualizado a las 14:32», «Actualizado ayer a las 14:32» o la fecha.
+- **Etiquetas de antigüedad del precio más claras** en la lista y en la ficha: «Precio actualizado
+  hoy», «ayer», «hace 2 días» o «hace 4 días o más», en lugar de «sin cambios 2 d» o «Precio
+  cambiado desde ayer».
+
+### Fixed
+
+- **The widget no longer always says "0 minutes ago".** It now shows the time of the last update:
+  "Updated at 14:32", "Updated yesterday at 14:32" or the date.
+- **Clearer price-age labels** in the list and the details: "Price updated today", "yesterday",
+  "2 days ago" or "4 or more days ago", instead of "unchanged 2 d" or "Price changed since yesterday".
+
 ## [1.0.1] — 2026-11-24
 
 ### Corregido

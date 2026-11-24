@@ -126,11 +126,12 @@ fun StationDetailSheet(
                 )
             }
             row.staleness?.let { st ->
+                val age = ageLabel(st)
                 Text(
                     when {
-                        st.days == 0 -> stringResource(R.string.detail_changed)
-                        st.days >= st.windowDays -> stringResource(R.string.detail_unchanged_at_least, st.since)
-                        else -> stringResource(R.string.detail_unchanged, st.since)
+                        st.isAtLeast() -> stringResource(R.string.detail_price_age_before, age, st.sinceLabel())
+                        st.days == 0 -> stringResource(R.string.detail_price_age, age)
+                        else -> stringResource(R.string.detail_price_age_date, age, st.sinceLabel())
                     },
                     style = MaterialTheme.typography.bodyMedium,
                 )

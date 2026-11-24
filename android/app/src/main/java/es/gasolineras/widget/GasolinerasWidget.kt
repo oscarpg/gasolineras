@@ -123,15 +123,29 @@ private fun Content(snapshot: WidgetSnapshot?, alwaysList: Boolean) {
                 if (medium) {
                     Spacer(GlanceModifier.defaultWeight())
                     Text(
-                        context.getString(
-                            R.string.widget_updated,
-                            DateUtils.getRelativeTimeSpanString(snapshot.updatedAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS),
-                        ),
+                        updatedLabel(context, snapshot.updatedAt),
                         style = TextStyle(color = muted, fontSize = 11.sp),
                     )
                 }
             }
         }
+    }
+}
+
+/**
+ * "Updated at 14:32", "Updated yesterday at 14:32" or "Updated on 22 Nov". An absolute time,
+ * because Glance only redraws when the snapshot changes, so a relative one ("0 minutes ago")
+ * would stay frozen at the value it had when the widget was drawn.
+ */
+private fun updatedLabel(context: Context, updatedAt: Long): String {
+    val time = DateUtils.formatDateTime(context, updatedAt, DateUtils.FORMAT_SHOW_TIME)
+    return when {
+        DateUtils.isToday(updatedAt) -> context.getString(R.string.widget_updated_today, time)
+        DateUtils.isToday(updatedAt + DateUtils.DAY_IN_MILLIS) -> context.getString(R.string.widget_updated_yesterday, time)
+        else -> context.getString(
+            R.string.widget_updated_date,
+            DateUtils.formatDateTime(context, updatedAt, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or DateUtils.FORMAT_NO_YEAR),
+        )
     }
 }
 
