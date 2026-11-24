@@ -31,8 +31,17 @@
     <string name="preview_summary_radius">%1$d gasolineras a menos de %2$d km</string>
     <string name="preview_summary_route">%1$d gasolineras en la ruta</string>
     <string name="preview_history_loading">Comprobando precios de %1$d días…</string>
-    <string name="preview_age">sin cambios %1$d d</string>
-    <string name="preview_age_at_least">sin cambios ≥%1$d d</string>
+    <string name="age_label_today">actualizado hoy</string>
+    <string name="age_label_yesterday">actualizado ayer</string>
+    <plurals name="age_label_days_ago">
+        <item quantity="one">actualizado hace %d día</item>
+        <item quantity="other">actualizado hace %d días</item>
+    </plurals>
+    <string name="age_label_yesterday_or_earlier">actualizado ayer o antes</string>
+    <plurals name="age_label_at_least">
+        <item quantity="one">actualizado hace %d día o más</item>
+        <item quantity="other">actualizado hace %d días o más</item>
+    </plurals>
     <string name="preview_none">Ninguna gasolinera cumple el filtro.</string>
     <string name="message_retry">Reintentar</string>
     <string name="message_dismiss">Cerrar aviso</string>
@@ -82,9 +91,9 @@
     <string name="detail_detour">Desvío de la ruta: %1$s km (%2$s km ida y vuelta)</string>
     <string name="detail_cost">Depósito %1$s € + viaje %2$s € = %3$s €</string>
     <string name="detail_discount">Descuento de %1$s aplicado (antes %2$s €)</string>
-    <string name="detail_unchanged">Precio sin cambios desde el %1$s</string>
-    <string name="detail_unchanged_at_least">Precio sin cambios desde al menos el %1$s</string>
-    <string name="detail_changed">Precio cambiado desde ayer</string>
+    <string name="detail_price_age">Precio %1$s</string>
+    <string name="detail_price_age_date">Precio %1$s (%2$s)</string>
+    <string name="detail_price_age_before">Precio %1$s (%2$s o antes)</string>
     <string name="detail_no_maps_app">No hay ninguna app de mapas instalada</string>
     <string name="chart_title">Últimos 7 días</string>
     <string name="chart_loading">Cargando historial…</string>

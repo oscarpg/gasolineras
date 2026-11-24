@@ -30,8 +30,17 @@
     <string name="preview_summary_radius">%1$d stations within %2$d km</string>
     <string name="preview_summary_route">%1$d stations along the route</string>
     <string name="preview_history_loading">Checking %1$d days of prices…</string>
-    <string name="preview_age">unchanged %1$d d</string>
-    <string name="preview_age_at_least">unchanged ≥%1$d d</string>
+    <string name="age_label_today">updated today</string>
+    <string name="age_label_yesterday">updated yesterday</string>
+    <plurals name="age_label_days_ago">
+        <item quantity="one">updated %d day ago</item>
+        <item quantity="other">updated %d days ago</item>
+    </plurals>
+    <string name="age_label_yesterday_or_earlier">updated yesterday or earlier</string>
+    <plurals name="age_label_at_least">
+        <item quantity="one">updated %d or more day ago</item>
+        <item quantity="other">updated %d or more days ago</item>
+    </plurals>
     <string name="preview_none">No stations match the filters.</string>
     <string name="message_retry">Retry</string>
     <string name="message_dismiss">Dismiss</string>
@@ -81,9 +90,9 @@
     <string name="detail_detour">Detour from route: %1$s km (%2$s km round trip)</string>
     <string name="detail_cost">Tank %1$s € + trip %2$s € = %3$s €</string>
     <string name="detail_discount">%1$s discount applied (was %2$s €)</string>
-    <string name="detail_unchanged">Price unchanged since %1$s</string>
-    <string name="detail_unchanged_at_least">Price unchanged since at least %1$s</string>
-    <string name="detail_changed">Price changed since yesterday</string>
+    <string name="detail_price_age">Price %1$s</string>
+    <string name="detail_price_age_date">Price %1$s (%2$s)</string>
+    <string name="detail_price_age_before">Price %1$s (on or before %2$s)</string>
     <string name="detail_no_maps_app">No maps app installed</string>
     <string name="chart_title">Last 7 days</string>
     <string name="chart_loading">Loading history…</string>
