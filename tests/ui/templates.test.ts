@@ -9,6 +9,7 @@ import {
 } from '../../src/ui/components/stationCard';
 import { priceChartSvg } from '../../src/ui/components/priceChart';
 import { escapeHtml, html, raw, SafeHtml } from '../../src/ui/dom';
+import { brandInitials } from '../../src/ui/map/icons';
 import { createStationMarkers } from '../../src/ui/map/stationMarkers';
 import { stationPopupHtml } from '../../src/ui/map/stationPopup';
 import type { LeafletStatic } from '../../src/ui/map/leaflet';
@@ -294,6 +295,15 @@ function fakeLeaflet() {
   return { L, layer, log };
 }
 
+describe('brandInitials', () => {
+  it('uses up to two letters, or one per word', () => {
+    expect(brandInitials('REPSOL')).toBe('RE');
+    expect(brandInitials('GAS EXPRESS')).toBe('GE');
+    expect(brandInitials('Q8')).toBe('Q8');
+    expect(brandInitials('SIN MARCA')).toBe('');
+  });
+});
+
 describe('createStationMarkers', () => {
   const ctx = { fuel: 'GASOLINA_95' as const, car: null, hasRoute: false, favourites: new Set<string>() };
   const stations = [1.5, 1.6, 1.7].map((p, i) => branded(`s${i}`, { prices: prices({ GASOLINA_95: p }) }));
@@ -344,13 +354,37 @@ describe('createStationMarkers', () => {
     expect(all().some((m) => m.icon.className.includes('is-selected'))).toBe(false);
   });
 
-  it('touch screens get a 44 px tap target around the pin', () => {
+  it('touch screens get extra tap padding around the tag', () => {
     const { L, layer } = fakeLeaflet();
     createStationMarkers(L, layer as never, { touch: true }).update(visible(stations), ctx);
-    const icon = ([...layer.markers][0] as unknown as { icon: { className: string; iconSize: number[] } })
-      .icon;
-    expect(icon.iconSize).toEqual([44, 46]);
+    const icon = ([...layer.markers][0] as unknown as { icon: { className: string } }).icon;
     expect(icon.className).toContain('is-touch');
+  });
+
+  it('draws a tag with the brand badge and the price, redrawn when the price changes', () => {
+    const { L, layer, log } = fakeLeaflet();
+    const markers = createStationMarkers(L, layer as never);
+    const repsol = branded('r', { brand: 'REPSOL', prices: prices({ GASOLINA_95: 1.459 }) });
+    markers.update(visible([repsol]), ctx);
+    const icon = () => ([...layer.markers][0] as unknown as { icon: { html: string } }).icon.html;
+    expect(icon()).toContain('station-tag');
+    expect(icon()).toContain('>RE<');
+    expect(icon()).toContain('1,459');
+
+    log.length = 0;
+    markers.update(visible([{ ...repsol, prices: prices({ GASOLINA_95: 1.479 }) }]), ctx);
+    expect(log).toContain('setIcon');
+    expect(icon()).toContain('1,479');
+  });
+
+  it('escapes the brand in the tag', () => {
+    const { L, layer } = fakeLeaflet();
+    createStationMarkers(L, layer as never).update(
+      visible([branded('x', { brand: EVIL, prices: prices({ GASOLINA_95: 1.5 }) })]),
+      ctx,
+    );
+    const icon = ([...layer.markers][0] as unknown as { icon: { html: string } }).icon;
+    expect(icon.html).not.toContain('<img');
   });
 
   it('opens a station’s popup', () => {

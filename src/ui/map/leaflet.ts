@@ -48,6 +48,9 @@ export interface LeafletMap {
   setView(center: LatLngTuple, zoom: number): this;
   fitBounds(bounds: LeafletBounds, options?: FitBoundsOptions): this;
   removeLayer(layer: LeafletLayer): this;
+  getZoom(): number;
+  getContainer(): HTMLElement;
+  on(event: 'zoomend', handler: () => void): this;
 }
 
 export interface FitBoundsOptions {

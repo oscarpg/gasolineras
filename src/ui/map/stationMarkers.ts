@@ -1,5 +1,6 @@
 import type { StationRow } from '../../domain/filters';
-import { stationIcon, type StationIconOptions } from './icons';
+import { i18n } from '../i18nContext';
+import { stationIcon, type StationIconOptions, type StationTag } from './icons';
 import type { LeafletLayerGroup, LeafletMarker, LeafletStatic } from './leaflet';
 import { stationPopupHtml, type PopupContext } from './stationPopup';
 
@@ -8,7 +9,8 @@ const SELECTED_Z = 1000;
 
 interface Entry {
   marker: LeafletMarker;
-  color: string;
+  /** What the tag shows; the icon is rebuilt only when this changes. */
+  tag: StationTag;
   row: StationRow;
   /** Popup HTML last shown, while the popup is open. */
   shown: string | null;
@@ -27,7 +29,7 @@ export interface StationMarkers {
 
 /**
  * Keeps one marker per visible station, diffed by station id: a render only adds,
- * removes or recolours the markers that changed.
+ * removes or redraws the markers that changed (price, colour or brand).
  *
  * Popup HTML is built lazily — Leaflet calls the content function when a popup
  * opens — so a render with 1,000 stations doesn't build 1,000 popups. Only an
@@ -42,8 +44,16 @@ export function createStationMarkers(
   let context: PopupContext | null = null;
   let selectedId: string | null = null;
 
-  const iconFor = (id: string, color: string) =>
-    stationIcon(L, color, { selected: id === selectedId, touch });
+  const tagFor = (row: StationRow): StationTag => ({
+    brand: row.station.brand,
+    price: i18n().number(row.finalPrice, 3),
+    color: row.color,
+  });
+  const sameTag = (a: StationTag, b: StationTag) =>
+    a.brand === b.brand && a.price === b.price && a.color === b.color;
+
+  const iconFor = (id: string, tag: StationTag) =>
+    stationIcon(L, tag, { selected: id === selectedId, touch });
 
   const popupHtml = (entry: Entry) => {
     const content = stationPopupHtml(entry.row, context!).value;
@@ -61,15 +71,17 @@ export function createStationMarkers(
         visible.add(id);
         const entry = entries.get(id);
 
+        const tag = tagFor(row);
+
         if (!entry) {
           const created: Entry = {
             marker: null as unknown as LeafletMarker,
-            color: row.color,
+            tag,
             row,
             shown: null,
           };
           created.marker = L.marker([row.station.lat, row.station.lon], {
-            icon: iconFor(id, row.color),
+            icon: iconFor(id, tag),
             ...(id === selectedId ? { zIndexOffset: SELECTED_Z } : {}),
           })
             .bindPopup(() => popupHtml(created))
@@ -79,9 +91,9 @@ export function createStationMarkers(
         }
 
         entry.row = row;
-        if (entry.color !== row.color) {
-          entry.marker.setIcon(iconFor(id, row.color));
-          entry.color = row.color;
+        if (!sameTag(entry.tag, tag)) {
+          entry.marker.setIcon(iconFor(id, tag));
+          entry.tag = tag;
         }
         if (entry.marker.isPopupOpen() && stationPopupHtml(row, nextContext).value !== entry.shown) {
           entry.marker.getPopup()?.update();
@@ -105,10 +117,10 @@ export function createStationMarkers(
       const previous = selectedId === null ? undefined : entries.get(selectedId);
       selectedId = stationId;
       if (previous) {
-        previous.marker.setIcon(iconFor(previous.row.station.id, previous.color)).setZIndexOffset(0);
+        previous.marker.setIcon(iconFor(previous.row.station.id, previous.tag)).setZIndexOffset(0);
       }
       const next = stationId === null ? undefined : entries.get(stationId);
-      next?.marker.setIcon(iconFor(stationId!, next.color)).setZIndexOffset(SELECTED_Z);
+      next?.marker.setIcon(iconFor(stationId!, next.tag)).setZIndexOffset(SELECTED_Z);
     },
 
     size: () => entries.size,
