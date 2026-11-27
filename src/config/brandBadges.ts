@@ -15,7 +15,7 @@ export interface BrandBadge {
 }
 
 export const BRAND_BADGES: Readonly<Record<string, BrandBadge>> = {
-  REPSOL: { background: '#e35205', foreground: '#ffffff', logo: 'brands/repsol.svg' },
+  REPSOL: { background: '#e35205', foreground: '#ffffff', logo: 'brands/repsol.png' },
   MOEVE: { background: '#00a19a', foreground: '#ffffff', logo: 'brands/moeve.svg' },
   CEPSA: { background: '#d6001c', foreground: '#ffffff', logo: 'brands/cepsa.svg' },
   GALP: { background: '#ee7203', foreground: '#ffffff', logo: 'brands/galp.svg' },

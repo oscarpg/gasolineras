@@ -50,6 +50,7 @@ export function fakeLeaflet() {
     zoomHandlers: [] as (() => void)[],
     getZoom: () => map.view?.zoom ?? 0,
     getContainer: () => ({
+      addEventListener: () => undefined,
       classList: {
         toggle: (c: string, on: boolean) => void (on ? map.classes.add(c) : map.classes.delete(c)),
       },

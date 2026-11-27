@@ -39,11 +39,31 @@ const PUMP_SVG = raw(
 
 function badgeHtml(brand: string) {
   const badge = BRAND_BADGES[brand] ?? DEFAULT_BRAND_BADGE;
-  if (badge.logo) {
-    const src = `${import.meta.env.BASE_URL}${badge.logo}`;
-    return html`<span class="station-tag__logo has-image"><img src="${src}" alt="" decoding="async"></span>`;
-  }
-  return html`<span class="station-tag__logo" style="background:${badge.background};color:${badge.foreground}">${brandInitials(brand) || PUMP_SVG}</span>`;
+  const style = `--badge-bg:${badge.background};--badge-fg:${badge.foreground}`;
+  const initials = html`<span class="station-tag__initials">${brandInitials(brand) || PUMP_SVG}</span>`;
+  if (!badge.logo) return html`<span class="station-tag__logo" style="${style}">${initials}</span>`;
+  // The initials stay in the markup, hidden, in case the image fails to load (see handleLogoErrors).
+  const src = `${import.meta.env.BASE_URL}${badge.logo}`;
+  return html`<span class="station-tag__logo has-image" style="${style}"><img src="${src}" alt="" decoding="async">${initials}</span>`;
+}
+
+/**
+ * Falls back to the brand's initials when a logo image fails to load. Listens on
+ * the map container (image errors don't bubble, so it listens while capturing).
+ */
+export function handleLogoErrors(container: Pick<HTMLElement, 'addEventListener'>): void {
+  container.addEventListener(
+    'error',
+    (event) => {
+      const img = event.target;
+      if (!(img instanceof HTMLImageElement)) return;
+      const badge = img.closest('.station-tag__logo');
+      if (!badge) return;
+      badge.classList.remove('has-image');
+      img.remove();
+    },
+    true,
+  );
 }
 
 /**

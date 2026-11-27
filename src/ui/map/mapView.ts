@@ -1,7 +1,7 @@
 import type { LatLng } from '../../domain/types';
 import { escapeHtml } from '../dom';
 import { i18n } from '../i18nContext';
-import { userIcon } from './icons';
+import { handleLogoErrors, userIcon } from './icons';
 import type { LeafletLayerGroup, LeafletMarker, LeafletStatic } from './leaflet';
 
 const SPAIN_CENTER: LatLng = [40.4168, -3.7038];
@@ -59,6 +59,7 @@ export function createMapView(elementId: string, L: LeafletStatic): MapView {
     map.getContainer().classList.toggle('is-zoomed-out', map.getZoom() < TAG_MIN_ZOOM);
   map.on('zoomend', syncMarkerDensity);
   syncMarkerDensity();
+  handleLogoErrors(map.getContainer());
   const routeLayer = L.layerGroup().addTo(map);
   let userMarker: LeafletMarker | null = null;
 
