@@ -43,6 +43,7 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.rememberDrawerState
+import es.gasolineras.ui.brand.BrandBadges
 import es.gasolineras.ui.settings.FiltersSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -246,6 +247,7 @@ private fun StationRow.toMarker() = MapMarker(
     position = GeoPoint(station.station.lat, station.station.lon),
     label = price(finalPrice),
     color = color.toColor(),
+    badge = BrandBadges.badge(station.brand),
 )
 
 /** Address or destination search: the keyboard's search key sets the origin, the arrow makes a route. */

@@ -159,7 +159,7 @@
     <string name="action_delete">Delete</string>
     <string name="action_edit">Edit</string>
     <string name="about_title">About</string>
-    <string name="about_data">Prices: Spanish Ministry for the Ecological Transition (MITECO). Map: © OpenStreetMap, OpenFreeMap. Province boundaries: © Instituto Geográfico Nacional (CC BY 4.0). Addresses: Nominatim. Routes: OSRM.</string>
+    <string name="about_data">Prices: Spanish Ministry for the Ecological Transition (MITECO). Map: © OpenStreetMap, OpenFreeMap. Province boundaries: © Instituto Geográfico Nacional (CC BY 4.0). Addresses: Nominatim. Routes: OSRM. Logos: Wikipedia / Wikimedia Commons; trademarks of their owners.</string>
     <string name="about_version">Version %1$s</string>
     <string name="brands_select_all">Select all</string>
     <string name="brands_select_none">Deselect all</string>

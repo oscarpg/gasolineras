@@ -22,6 +22,20 @@ data class MapMarker(
     /** Short text drawn next to the marker (e.g. the price). */
     val label: String,
     val color: Color,
+    /** Drawn inside the marker when zoomed in; null keeps a plain dot. */
+    val badge: MarkerBadge? = null,
+)
+
+/**
+ * A brand's mark: its logo (a drawable resource id) or, without one, its initials on
+ * [background]. Equal badges are drawn once and shared by every marker that uses them.
+ */
+@Immutable
+data class MarkerBadge(
+    val logo: Int?,
+    val initials: String,
+    val background: Color,
+    val foreground: Color,
 )
 
 @Immutable
