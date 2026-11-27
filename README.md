@@ -80,3 +80,4 @@ A native Android version lives in `android/` (Kotlin, Jetpack Compose, Material 
 - Map tiles and geocoding: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (Nominatim)
 - Routing: [OSRM](https://project-osrm.org/) demo server
 - Province outlines: [es-atlas](https://github.com/martgnz/es-atlas) (MIT), from © [IGN](https://www.ign.es/) data (CC BY 4.0); the file is shared with the Android app (`android/core/src/main/resources/es/gasolineras/core/provinces.txt`)
+- Brand logos (`public/brands/`): from [Wikipedia / Wikimedia Commons](https://commons.wikimedia.org/), cropped and resized for the map markers. The logos are trademarks of their respective owners and are used only to identify each station's brand

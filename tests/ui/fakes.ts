@@ -45,6 +45,25 @@ export function fakeLeaflet() {
       map.layers.delete(x);
       return map;
     },
+    /** Classes on the map container. */
+    classes: new Set<string>(),
+    zoomHandlers: [] as (() => void)[],
+    getZoom: () => map.view?.zoom ?? 0,
+    getContainer: () => ({
+      addEventListener: () => undefined,
+      classList: {
+        toggle: (c: string, on: boolean) => void (on ? map.classes.add(c) : map.classes.delete(c)),
+      },
+    }),
+    on(_event: string, handler: () => void) {
+      map.zoomHandlers.push(handler);
+      return map;
+    },
+    /** Zooms like the user would, firing 'zoomend'. */
+    zoomTo(zoom: number) {
+      map.view = { center: map.view?.center ?? [0, 0], zoom };
+      map.zoomHandlers.forEach((h) => h());
+    },
   };
   const markers: Marker[] = [];
   class Marker {
