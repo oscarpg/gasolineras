@@ -72,7 +72,10 @@
 }
 
 .station-tag__logo.has-image {
+  /* Padding keeps square logos clear of the circle's edge. */
+  padding: 2px;
   background: #fff;
+  box-shadow: inset 0 0 0 1px var(--color-border);
 }
 
 .station-tag__logo img {
