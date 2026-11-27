@@ -12,6 +12,8 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
@@ -34,6 +36,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
@@ -41,6 +44,7 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import es.gasolineras.MainActivity
 import es.gasolineras.R
+import es.gasolineras.ui.brand.BrandBadges
 import es.gasolineras.ui.text.km
 import es.gasolineras.ui.text.label
 import es.gasolineras.ui.text.price
@@ -123,15 +127,29 @@ private fun Content(snapshot: WidgetSnapshot?, alwaysList: Boolean) {
                 if (medium) {
                     Spacer(GlanceModifier.defaultWeight())
                     Text(
-                        context.getString(
-                            R.string.widget_updated,
-                            DateUtils.getRelativeTimeSpanString(snapshot.updatedAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS),
-                        ),
+                        updatedLabel(context, snapshot.updatedAt),
                         style = TextStyle(color = muted, fontSize = 11.sp),
                     )
                 }
             }
         }
+    }
+}
+
+/**
+ * "Updated at 14:32", "Updated yesterday at 14:32" or "Updated on 22 Nov". An absolute time,
+ * because Glance only redraws when the snapshot changes, so a relative one ("0 minutes ago")
+ * would stay frozen at the value it had when the widget was drawn.
+ */
+private fun updatedLabel(context: Context, updatedAt: Long): String {
+    val time = DateUtils.formatDateTime(context, updatedAt, DateUtils.FORMAT_SHOW_TIME)
+    return when {
+        DateUtils.isToday(updatedAt) -> context.getString(R.string.widget_updated_today, time)
+        DateUtils.isToday(updatedAt + DateUtils.DAY_IN_MILLIS) -> context.getString(R.string.widget_updated_yesterday, time)
+        else -> context.getString(
+            R.string.widget_updated_date,
+            DateUtils.formatDateTime(context, updatedAt, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or DateUtils.FORMAT_NO_YEAR),
+        )
     }
 }
 
@@ -142,6 +160,10 @@ private fun ItemRow(item: WidgetItem, showDistance: Boolean, onSurface: ColorPro
             .clickable(actionStartActivity<MainActivity>(actionParametersOf(GasolinerasWidget.STATION_ID to item.id))),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        BrandBadges.logo(item.brand)?.let { logo ->
+            Image(ImageProvider(logo), contentDescription = null, modifier = GlanceModifier.size(18.dp))
+            Spacer(GlanceModifier.width(6.dp))
+        }
         Text(
             item.brand,
             style = TextStyle(color = onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium),

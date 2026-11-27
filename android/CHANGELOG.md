@@ -4,6 +4,38 @@ Todas las versiones publicadas de la app Android. Cada versión es un
 [release en GitHub](https://github.com/oscarpg/gasolineras/releases) con su APK firmado.
 _All published versions of the Android app; English below each entry._
 
+## [1.0.3] — 2026-11-27
+
+### Novedades
+
+- **Logotipos de las marcas en el mapa.** Al acercar el mapa, cada gasolinera muestra el logotipo
+  de su marca (o sus iniciales si no hay logotipo) dentro de un anillo del color de su precio.
+  Al alejarlo vuelven a ser puntos de color.
+- **Logotipos en el widget**, a la izquierda del nombre de la marca.
+
+### New
+
+- **Brand logos on the map.** Zoomed in, each station shows its brand's logo (or its initials when
+  there is no logo) inside a ring of its price colour. Zoomed out, they are coloured dots again.
+- **Logos in the widget**, to the left of the brand name.
+
+## [1.0.2] — 2026-11-27
+
+### Corregido
+
+- **El widget ya no dice siempre «hace 0 minutos».** Ahora muestra la hora de la última
+  actualización: «Actualizado a las 14:32», «Actualizado ayer a las 14:32» o la fecha.
+- **Etiquetas de antigüedad del precio más claras** en la lista y en la ficha: «Precio actualizado
+  hoy», «ayer», «hace 2 días» o «hace 4 días o más», en lugar de «sin cambios 2 d» o «Precio
+  cambiado desde ayer».
+
+### Fixed
+
+- **The widget no longer always says "0 minutes ago".** It now shows the time of the last update:
+  "Updated at 14:32", "Updated yesterday at 14:32" or the date.
+- **Clearer price-age labels** in the list and the details: "Price updated today", "yesterday",
+  "2 days ago" or "4 or more days ago", instead of "unchanged 2 d" or "Price changed since yesterday".
+
 ## [1.0.1] — 2026-11-24
 
 ### Corregido

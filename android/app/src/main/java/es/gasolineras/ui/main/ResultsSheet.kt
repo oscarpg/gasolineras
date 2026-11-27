@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -274,6 +275,18 @@ private fun StationRowItem(row: StationRow, favourite: Boolean, sortedByTotalCos
     )
 }
 
+/** When the price last changed: "updated today", "updated yesterday", "updated 2 days ago"… */
 @Composable
-fun ageLabel(s: PriceStaleness): String =
-    if (s.days >= s.windowDays) stringResource(R.string.preview_age_at_least, s.days) else stringResource(R.string.preview_age, s.days)
+fun ageLabel(s: PriceStaleness): String = when {
+    // days == windowDays: every checked day had the same price, so it is at least that old.
+    s.isAtLeast() && s.days == 1 -> stringResource(R.string.age_label_yesterday_or_earlier)
+    s.isAtLeast() -> pluralStringResource(R.plurals.age_label_at_least, s.days, s.days)
+    s.days == 0 -> stringResource(R.string.age_label_today)
+    s.days == 1 -> stringResource(R.string.age_label_yesterday)
+    else -> pluralStringResource(R.plurals.age_label_days_ago, s.days, s.days)
+}
+
+fun PriceStaleness.isAtLeast(): Boolean = windowDays > 0 && days >= windowDays
+
+/** MITECO's dd-mm-yyyy as dd/mm/yyyy. */
+fun PriceStaleness.sinceLabel(): String = since.replace('-', '/')

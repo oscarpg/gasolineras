@@ -1,7 +1,12 @@
 package es.gasolineras.map.maplibre
 
 import androidx.compose.foundation.layout.PaddingValues
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.graphics.RectF
+import android.graphics.Typeface
 import androidx.compose.runtime.Composable
 import kotlin.math.hypot
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +32,7 @@ import es.gasolineras.map.api.CameraTarget
 import es.gasolineras.map.api.GeoPoint
 import es.gasolineras.map.api.MapContent
 import es.gasolineras.map.api.MapMarker
+import es.gasolineras.map.api.MarkerBadge
 import es.gasolineras.map.api.MapRenderer
 import es.gasolineras.map.api.MapStyle
 import org.maplibre.android.MapLibre
@@ -37,7 +43,11 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression.get
+import org.maplibre.android.style.expressions.Expression.literal
+import org.maplibre.android.style.expressions.Expression.step
+import org.maplibre.android.style.expressions.Expression.stop
 import org.maplibre.android.style.expressions.Expression.toColor
+import org.maplibre.android.style.expressions.Expression.zoom
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
@@ -45,6 +55,10 @@ import org.maplibre.android.style.layers.PropertyFactory.circleColor
 import org.maplibre.android.style.layers.PropertyFactory.circleRadius
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
+import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
+import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
+import org.maplibre.android.style.layers.PropertyFactory.iconImage
+import org.maplibre.android.style.layers.PropertyFactory.iconSize
 import org.maplibre.android.style.layers.PropertyFactory.lineCap
 import org.maplibre.android.style.layers.PropertyFactory.lineColor
 import org.maplibre.android.style.layers.PropertyFactory.lineJoin
@@ -73,6 +87,8 @@ val OpenFreeMapStyle = MapStyle(
 /**
  * [MapRenderer] backed by MapLibre Native. The only class in the project that knows MapLibre.
  * Markers are drawn as a GeoJSON source + circle/symbol layers so thousands stay smooth.
+ * Zoomed in, each marker shows its brand badge inside a ring of its price colour; the badge
+ * images are drawn once per brand and shared through the style.
  */
 class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRenderer {
 
@@ -110,7 +126,7 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
                     val tap = m.projection.toScreenLocation(point)
                     val r = TAP_RADIUS_DP * density.density
                     val area = RectF(tap.x - r, tap.y - r, tap.x + r, tap.y + r)
-                    val id = m.queryRenderedFeatures(area, SELECTED_LAYER, MARKER_LAYER, LABEL_LAYER)
+                    val id = m.queryRenderedFeatures(area, SELECTED_LOGO_LAYER, SELECTED_LAYER, LOGO_LAYER, MARKER_LAYER, LABEL_LAYER)
                         .mapNotNull { f ->
                             val p = f.geometry() as? Point ?: return@mapNotNull null
                             val id = f.getStringProperty(PROP_ID) ?: return@mapNotNull null
@@ -145,6 +161,7 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         LaunchedEffect(loadedStyle, content.markers) {
             val s = loadedStyle ?: return@LaunchedEffect
             val json = withContext(Dispatchers.Default) { markersGeoJson(content.markers) }
+            addBadgeImages(context, s, content.markers)
             s.getSourceAs<GeoJsonSource>(MARKER_SOURCE)?.setGeoJson(json)
         }
 
@@ -215,17 +232,25 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         s.addLayer(
             CircleLayer(MARKER_LAYER, MARKER_SOURCE).withProperties(
                 circleColor(toColor(get(PROP_COLOR))),
-                circleRadius(9f),
+                // A dot when zoomed out; a ring around the brand badge when zoomed in.
+                circleRadius(step(zoom(), literal(9f), stop(BADGE_MIN_ZOOM, literal(BADGE_RING_RADIUS)))),
                 circleStrokeColor("#FFFFFF"),
                 circleStrokeWidth(2f),
             ),
+        )
+        s.addLayer(
+            SymbolLayer(LOGO_LAYER, MARKER_SOURCE).withProperties(
+                iconImage(get(PROP_BADGE)),
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true),
+            ).apply { minZoom = BADGE_MIN_ZOOM },
         )
         s.addLayer(
             SymbolLayer(LABEL_LAYER, MARKER_SOURCE).withProperties(
                 textField(get(PROP_LABEL)),
                 textFont(arrayOf("Noto Sans Regular")),
                 textSize(12f),
-                textOffset(arrayOf(0f, 1.5f)),
+                textOffset(step(zoom(), literal(arrayOf(0f, 1.5f)), stop(BADGE_MIN_ZOOM, literal(arrayOf(0f, 2.1f))))),
                 textColor("#202124"),
                 textHaloColor("#FFFFFF"),
                 textHaloWidth(1.5f),
@@ -236,10 +261,18 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         s.addLayer(
             CircleLayer(SELECTED_LAYER, SELECTED_SOURCE).withProperties(
                 circleColor(toColor(get(PROP_COLOR))),
-                circleRadius(12f),
+                circleRadius(step(zoom(), literal(12f), stop(BADGE_MIN_ZOOM, literal(BADGE_RING_RADIUS * SELECTED_SCALE)))),
                 circleStrokeColor("#FFFFFF"),
                 circleStrokeWidth(3f),
             ),
+        )
+        s.addLayer(
+            SymbolLayer(SELECTED_LOGO_LAYER, SELECTED_SOURCE).withProperties(
+                iconImage(get(PROP_BADGE)),
+                iconSize(SELECTED_SCALE),
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true),
+            ).apply { minZoom = BADGE_MIN_ZOOM },
         )
         s.addSource(GeoJsonSource(USER_SOURCE))
         s.addLayer(
@@ -255,6 +288,8 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
     private companion object {
         const val MARKER_SOURCE = "gas-markers"
         const val MARKER_LAYER = "gas-markers-circles"
+        const val LOGO_LAYER = "gas-markers-badges"
+        const val SELECTED_LOGO_LAYER = "gas-selected-badge"
         const val LABEL_LAYER = "gas-markers-labels"
         const val ROUTE_SOURCE = "gas-route"
         const val ROUTE_LAYER = "gas-route-line"
@@ -267,14 +302,66 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
 
         /** How far from the tap (dp) a marker still counts as tapped: about a fingertip. */
         const val TAP_RADIUS_DP = 24f
+
+        /** From this zoom, markers show their brand badge; below it they are plain dots. */
+        const val BADGE_MIN_ZOOM = 12f
+        /** Radius (dp) of the price-colour ring around a [BADGE_DP] badge. */
+        const val BADGE_RING_RADIUS = 14f
+        const val SELECTED_SCALE = 1.25f
     }
 }
+
+/** Size (dp) of a brand badge image. */
+private const val BADGE_DP = 22f
+
+/** Adds the badge image of every brand in [markers] that the style doesn't have yet. */
+private fun addBadgeImages(context: Context, style: Style, markers: List<MapMarker>) {
+    markers.mapNotNullTo(HashSet()) { it.badge }.forEach { badge ->
+        val id = badge.imageId()
+        if (style.getImage(id) == null) style.addImage(id, badgeBitmap(context, badge))
+    }
+}
+
+/** Style image name for a badge: equal badges share one image. */
+private fun MarkerBadge.imageId(): String =
+    if (logo != null) "badge-logo-$logo" else "badge-$initials-${background.toHex()}-${foreground.toHex()}"
+
+/** A round badge: the logo on white, or the initials on the brand colour. */
+private fun badgeBitmap(context: Context, badge: MarkerBadge): Bitmap {
+    val metrics = context.resources.displayMetrics
+    val size = (BADGE_DP * metrics.density).toInt()
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).apply { density = metrics.densityDpi }
+    val canvas = Canvas(bitmap)
+    val radius = size / 2f
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    val logo = badge.logo?.let { context.getDrawable(it) }
+    if (logo != null) {
+        paint.color = android.graphics.Color.WHITE
+        canvas.drawCircle(radius, radius, radius, paint)
+        // Inset so a square logo's corners stay inside the circle.
+        val inset = (size * LOGO_INSET).toInt()
+        logo.setBounds(inset, inset, size - inset, size - inset)
+        logo.draw(canvas)
+    } else {
+        paint.color = badge.background.toArgb()
+        canvas.drawCircle(radius, radius, radius, paint)
+        paint.color = badge.foreground.toArgb()
+        paint.textSize = size * 0.42f
+        paint.typeface = Typeface.DEFAULT_BOLD
+        paint.textAlign = Paint.Align.CENTER
+        canvas.drawText(badge.initials, radius, radius - (paint.descent() + paint.ascent()) / 2, paint)
+    }
+    return bitmap
+}
+
+private const val LOGO_INSET = 0.13f
 
 private fun GeoPoint.toPoint(): Point = Point.fromLngLat(lon, lat)
 
 private const val PROP_ID = "id"
 private const val PROP_LABEL = "label"
 private const val PROP_COLOR = "color"
+private const val PROP_BADGE = "badge"
 
 /** GeoJSON text for markers (built as a string: faster than MapLibre's Feature objects for hundreds of points). */
 private fun markersGeoJson(markers: List<MapMarker>): String = buildString(markers.size * 120) {
@@ -285,7 +372,9 @@ private fun markersGeoJson(markers: List<MapMarker>): String = buildString(marke
         append(m.position.lon).append(',').append(m.position.lat)
         append("""]},"properties":{"id":""").append(jsonString(m.id))
         append(""","label":""").append(jsonString(m.label))
-        append(""","color":"""").append(m.color.toHex()).append(""""}}""")
+        append(""","color":"""").append(m.color.toHex()).append('"')
+        m.badge?.let { append(""","badge":""").append(jsonString(it.imageId())) }
+        append("}}")
     }
     append("]}")
 }
