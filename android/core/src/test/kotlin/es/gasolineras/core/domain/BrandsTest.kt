@@ -8,6 +8,7 @@ class BrandsTest {
         assertEquals("REPSOL", normalizeBrand("E.S. REPSOL ALCALÁ"))
         assertEquals("CEPSA", normalizeBrand("area de servicio cepsa km 23"))
         assertEquals("BP", normalizeBrand("BP OIL ESPAÑA"))
+        assertEquals("ENI", normalizeBrand("ENI IBERIA"))
     }
 
     @Test fun `does not match a brand that is only part of a longer word`() {

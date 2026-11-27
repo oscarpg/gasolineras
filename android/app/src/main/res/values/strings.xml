@@ -160,7 +160,7 @@
     <string name="action_delete">Eliminar</string>
     <string name="action_edit">Editar</string>
     <string name="about_title">Acerca de</string>
-    <string name="about_data">Precios: Ministerio para la Transición Ecológica (MITECO). Mapa: © OpenStreetMap, OpenFreeMap. Límites provinciales: © Instituto Geográfico Nacional (CC BY 4.0). Direcciones: Nominatim. Rutas: OSRM.</string>
+    <string name="about_data">Precios: Ministerio para la Transición Ecológica (MITECO). Mapa: © OpenStreetMap, OpenFreeMap. Límites provinciales: © Instituto Geográfico Nacional (CC BY 4.0). Direcciones: Nominatim. Rutas: OSRM. Logotipos: Wikipedia / Wikimedia Commons; son marcas de sus propietarios.</string>
     <string name="about_version">Versión %1$s</string>
     <string name="brands_select_all">Marcar todas</string>
     <string name="brands_select_none">Desmarcar todas</string>
