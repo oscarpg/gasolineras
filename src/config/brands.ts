@@ -9,6 +9,7 @@ export const KNOWN_BRANDS: readonly string[] = [
   'CEPSA',
   'CARBUGAL',
   'GALP',
+  'ENI',
   'BP',
   'SHELL',
   'PLENOIL',
