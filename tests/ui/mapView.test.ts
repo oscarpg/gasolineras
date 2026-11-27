@@ -15,6 +15,18 @@ describe('createMapView', () => {
     expect(log[1]).toContain('Tu ubicación');
   });
 
+  it('shrinks station tags to dots while zoomed out', () => {
+    const { L, map } = fakeLeaflet();
+    createMapView('map', L);
+    expect(map.classes.has('is-zoomed-out')).toBe(true); // starts at zoom 6
+
+    map.zoomTo(14);
+    expect(map.classes.has('is-zoomed-out')).toBe(false);
+
+    map.zoomTo(11);
+    expect(map.classes.has('is-zoomed-out')).toBe(true);
+  });
+
   it('draws, fits and clears the route; focuses a station', () => {
     const { L, map } = fakeLeaflet();
     const view = createMapView('map', L);

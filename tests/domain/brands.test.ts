@@ -6,6 +6,7 @@ describe('normalizeBrand', () => {
     expect(normalizeBrand('E.S. REPSOL ALCALÁ')).toBe('REPSOL');
     expect(normalizeBrand('area de servicio cepsa km 23')).toBe('CEPSA');
     expect(normalizeBrand('BP OIL ESPAÑA')).toBe('BP');
+    expect(normalizeBrand('ENI IBERIA')).toBe('ENI');
   });
 
   it('does not match a brand that is only part of a longer word', () => {
