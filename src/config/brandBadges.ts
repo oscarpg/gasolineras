@@ -4,6 +4,9 @@
  * `logo` is a path under `public/` (e.g. `brands/repsol.svg`), served from the app's
  * base URL. Without a logo, the marker shows the brand's initials on `background`.
  * Brands not listed here get the neutral fallback.
+ *
+ * Logo files come from Wikipedia / Wikimedia Commons (credited in the map attribution
+ * and the README); the logos are trademarks of their respective owners.
  */
 export interface BrandBadge {
   background: string;
