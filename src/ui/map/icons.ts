@@ -60,5 +60,11 @@ export function stationIcon(
 ): LeafletIcon {
   const tag = html`<div class="station-tag" style="--tag-color:${color};--tag-price-bg:${textColorFor(color)}">${badgeHtml(brand)}<span class="station-tag__price">${price}</span></div>`;
   const className = `station-marker${selected ? ' is-selected' : ''}${touch ? ' is-touch' : ''}`;
-  return L.divIcon({ className, html: tag.value, iconSize: [0, 0], iconAnchor: [0, 0], popupAnchor: [0, -40] });
+  return L.divIcon({
+    className,
+    html: tag.value,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+    popupAnchor: [0, -40],
+  });
 }
