@@ -4,6 +4,16 @@ Todas las versiones publicadas de la app Android. Cada versión es un
 [release en GitHub](https://github.com/oscarpg/gasolineras/releases) con su APK firmado.
 _All published versions of the Android app; English below each entry._
 
+## [Sin publicar] — _Unreleased_
+
+### Correcciones
+
+- **Tocar un bocadillo abre su gasolinera**, no otra que quede debajo de él.
+
+### Fixes
+
+- **Tapping a bubble opens its station**, not another one hidden under it.
+
 ## [1.0.5] — 2026-11-28
 
 ### Mejoras
