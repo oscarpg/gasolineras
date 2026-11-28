@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PointF
 import android.graphics.RectF
 import android.graphics.Typeface
 import androidx.compose.runtime.Composable
@@ -143,19 +144,13 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
                     bubbleImages += id
                 }
                 m.addOnMapClickListener { point ->
-                    // Fingers are bigger than markers: look around the tap and take the nearest marker.
                     val tap = m.projection.toScreenLocation(point)
-                    val r = TAP_RADIUS_DP * density.density
-                    val area = RectF(tap.x - r, tap.y - r, tap.x + r, tap.y + r)
-                    val id = m.queryRenderedFeatures(area, SELECTED_BUBBLE_LAYER, SELECTED_LAYER, BUBBLE_LAYER, MORE_BUBBLES_LAYER, MARKER_LAYER, LABEL_LAYER)
-                        .mapNotNull { f ->
-                            val p = f.geometry() as? Point ?: return@mapNotNull null
-                            val id = f.getStringProperty(PROP_ID) ?: return@mapNotNull null
-                            val at = m.projection.toScreenLocation(LatLng(p.latitude(), p.longitude()))
-                            id to hypot(at.x - tap.x, at.y - tap.y)
-                        }
-                        .minByOrNull { it.second }
-                        ?.first
+                    // A bubble covers what's under it: a tap on one is for its station. The selected
+                    // bubble is drawn on top, so it's checked first.
+                    val bubble = m.queryRenderedFeatures(tap, SELECTED_BUBBLE_LAYER).firstOrNull()
+                        ?: m.queryRenderedFeatures(tap, BUBBLE_LAYER, MORE_BUBBLES_LAYER).firstOrNull()
+                    // Otherwise, fingers are bigger than dots: look around the tap and take the nearest marker.
+                    val id = bubble?.getStringProperty(PROP_ID) ?: nearestMarker(m, tap, TAP_RADIUS_DP * density.density)
                     if (id != null) currentOnMarkerClick(id)
                     id != null
                 }
@@ -243,6 +238,20 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         }
 
         AndroidView(factory = { mapView }, modifier = modifier)
+    }
+
+    /** The id of the marker dot (or label) nearest to [tap], within [radius] px. */
+    private fun nearestMarker(m: MapLibreMap, tap: PointF, radius: Float): String? {
+        val area = RectF(tap.x - radius, tap.y - radius, tap.x + radius, tap.y + radius)
+        return m.queryRenderedFeatures(area, SELECTED_LAYER, MARKER_LAYER, LABEL_LAYER)
+            .mapNotNull { f ->
+                val p = f.geometry() as? Point ?: return@mapNotNull null
+                val id = f.getStringProperty(PROP_ID) ?: return@mapNotNull null
+                val at = m.projection.toScreenLocation(LatLng(p.latitude(), p.longitude()))
+                id to hypot(at.x - tap.x, at.y - tap.y)
+            }
+            .minByOrNull { it.second }
+            ?.first
     }
 
     private fun bubbleLayer(id: String) = SymbolLayer(id, MARKER_SOURCE).withProperties(
