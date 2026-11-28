@@ -23,7 +23,7 @@ describe('createMapView', () => {
     map.zoomTo(14);
     expect(map.classes.has('is-zoomed-out')).toBe(false);
 
-    map.zoomTo(11);
+    map.zoomTo(8);
     expect(map.classes.has('is-zoomed-out')).toBe(true);
   });
 

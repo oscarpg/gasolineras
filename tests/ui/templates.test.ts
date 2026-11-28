@@ -117,9 +117,9 @@ describe('station templates content', () => {
       favourites: new Set(),
     }).value;
     expect(popup).toContain('🛣️ Desvío de ruta: 0,0 km (0,0 km i/v)');
-    expect(stationCardHtml(row!, 4, { car: null, hasRoute: true, sortedByTotalCost: false }).value).toContain(
-      '5. REPSOL',
-    );
+    const card = stationCardHtml(row!, 4, { car: null, hasRoute: true, sortedByTotalCost: false }).value;
+    expect(card).toContain('brands/repsol.png');
+    expect(card.replace(/<[^>]*>/g, '')).toContain('5. REPSOL');
   });
 
   it('omits the history button for stations without a MITECO code', () => {

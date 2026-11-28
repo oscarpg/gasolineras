@@ -92,7 +92,8 @@ export function fakeLeaflet() {
     }
     openPopup() {
       this.open = true;
-      log.push(`open ${this.html.slice(0, 40)}`);
+      // The popup's text, without its markup (a logo can come before the name).
+      log.push(`open ${this.html.replace(/<[^>]*>/g, '').slice(0, 40)}`);
       return this;
     }
     isPopupOpen() {
