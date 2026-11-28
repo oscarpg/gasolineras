@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import es.gasolineras.PriceDay
 import es.gasolineras.R
+import es.gasolineras.ui.brand.BrandLogo
 import es.gasolineras.core.domain.FuelType
 import es.gasolineras.core.domain.StationRow
 import es.gasolineras.ui.text.discountLabel
@@ -89,6 +90,7 @@ fun StationDetailSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                BrandLogo(row.station.brand, 36.dp, Modifier.padding(end = 12.dp))
                 Text(row.station.brand, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 IconToggleButton(checked = favourite, onCheckedChange = { onToggleFavourite() }) {
                     Icon(

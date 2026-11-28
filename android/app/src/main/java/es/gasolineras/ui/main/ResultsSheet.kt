@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import es.gasolineras.MainUiState
 import es.gasolineras.MainViewModel
 import es.gasolineras.R
+import es.gasolineras.ui.brand.BrandLogo
 import es.gasolineras.core.domain.AgeFilterOption
 import es.gasolineras.core.domain.FuelType
 import es.gasolineras.core.domain.MAX_SEARCH_RADIUS_KM
@@ -231,6 +232,7 @@ private fun StationRowItem(row: StationRow, favourite: Boolean, sortedByTotalCos
                 if (favourite) {
                     Icon(Icons.Filled.Favorite, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp).padding(end = 4.dp))
                 }
+                BrandLogo(row.station.brand, 22.dp, Modifier.padding(end = 8.dp))
                 Text(row.station.brand, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         },
