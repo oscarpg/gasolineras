@@ -44,6 +44,8 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression.get
+import org.maplibre.android.style.expressions.Expression.gte
+import org.maplibre.android.style.expressions.Expression.lt
 import org.maplibre.android.style.expressions.Expression.literal
 import org.maplibre.android.style.expressions.Expression.step
 import org.maplibre.android.style.expressions.Expression.stop
@@ -97,6 +99,8 @@ val OpenFreeMapStyle = MapStyle(
  * station. Bubble images are drawn only when MapLibre asks for one it's about to lay out (so
  * only for nearby stations), shared by markers that look the same, and dropped when no marker
  * uses them any more. Bubbles that would overlap are hidden, earlier markers first; the dots stay.
+ * The first [TOP_BUBBLES] markers get bubbles from [BUBBLE_MIN_ZOOM]; the rest only from
+ * [BUBBLE_ALL_ZOOM], when few are in view, which keeps the number of bubble images bounded.
  */
 class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRenderer {
 
@@ -143,7 +147,7 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
                     val tap = m.projection.toScreenLocation(point)
                     val r = TAP_RADIUS_DP * density.density
                     val area = RectF(tap.x - r, tap.y - r, tap.x + r, tap.y + r)
-                    val id = m.queryRenderedFeatures(area, SELECTED_BUBBLE_LAYER, SELECTED_LAYER, BUBBLE_LAYER, MARKER_LAYER, LABEL_LAYER)
+                    val id = m.queryRenderedFeatures(area, SELECTED_BUBBLE_LAYER, SELECTED_LAYER, BUBBLE_LAYER, MORE_BUBBLES_LAYER, MARKER_LAYER, LABEL_LAYER)
                         .mapNotNull { f ->
                             val p = f.geometry() as? Point ?: return@mapNotNull null
                             val id = f.getStringProperty(PROP_ID) ?: return@mapNotNull null
@@ -241,6 +245,15 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         AndroidView(factory = { mapView }, modifier = modifier)
     }
 
+    private fun bubbleLayer(id: String) = SymbolLayer(id, MARKER_SOURCE).withProperties(
+        iconImage(get(PROP_BUBBLE)),
+        iconAnchor(Property.ICON_ANCHOR_BOTTOM),
+        iconOffset(arrayOf(0f, -BUBBLE_LIFT_DP)),
+        iconPadding(2f),
+        // Earlier markers (the list's order) win when bubbles would overlap.
+        symbolSortKey(get(PROP_ORDER)),
+    )
+
     private fun addLayers(s: Style) {
         s.addSource(GeoJsonSource(ROUTE_SOURCE))
         s.addLayer(
@@ -261,16 +274,9 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
                 circleStrokeWidth(2f),
             ),
         )
-        s.addLayer(
-            SymbolLayer(BUBBLE_LAYER, MARKER_SOURCE).withProperties(
-                iconImage(get(PROP_BUBBLE)),
-                iconAnchor(Property.ICON_ANCHOR_BOTTOM),
-                iconOffset(arrayOf(0f, -BUBBLE_LIFT_DP)),
-                iconPadding(2f),
-                // Earlier markers (the list's order) win when bubbles would overlap.
-                symbolSortKey(get(PROP_ORDER)),
-            ).apply { minZoom = BUBBLE_MIN_ZOOM },
-        )
+        // Placed top-down: the best-ranked bubbles (top layer) claim space before the rest.
+        s.addLayer(bubbleLayer(MORE_BUBBLES_LAYER).withFilter(gte(get(PROP_ORDER), literal(TOP_BUBBLES))).apply { minZoom = BUBBLE_ALL_ZOOM })
+        s.addLayer(bubbleLayer(BUBBLE_LAYER).withFilter(lt(get(PROP_ORDER), literal(TOP_BUBBLES))).apply { minZoom = BUBBLE_MIN_ZOOM })
         s.addLayer(
             SymbolLayer(LABEL_LAYER, MARKER_SOURCE).withProperties(
                 textField(get(PROP_LABEL)),
@@ -317,6 +323,7 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         const val MARKER_SOURCE = "gas-markers"
         const val MARKER_LAYER = "gas-markers-circles"
         const val BUBBLE_LAYER = "gas-markers-bubbles"
+        const val MORE_BUBBLES_LAYER = "gas-markers-more-bubbles"
         const val SELECTED_BUBBLE_LAYER = "gas-selected-bubble"
         const val LABEL_LAYER = "gas-markers-labels"
         const val ROUTE_SOURCE = "gas-route"
@@ -331,8 +338,11 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         /** How far from the tap (dp) a marker still counts as tapped: about a fingertip. */
         const val TAP_RADIUS_DP = 24f
 
-        /** From this zoom, markers are bubbles; below it they are plain dots with a price label. */
-        const val BUBBLE_MIN_ZOOM = 11f
+        /** From this zoom (about a city), markers are bubbles; below it, dots with a price label. */
+        const val BUBBLE_MIN_ZOOM = 9f
+        /** From this zoom, every marker can get a bubble, not only the first [TOP_BUBBLES]. */
+        const val BUBBLE_ALL_ZOOM = 13f
+        const val TOP_BUBBLES = 120
         /** Gap (dp) between the bubble's tip and the station, so the dot shows. */
         const val BUBBLE_LIFT_DP = 3f
         const val SELECTED_SCALE = 1.15f

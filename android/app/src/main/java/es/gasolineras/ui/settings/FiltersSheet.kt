@@ -40,6 +40,7 @@ import es.gasolineras.core.domain.MIN_SEARCH_RADIUS_KM
 import es.gasolineras.core.domain.Preferences
 import es.gasolineras.state.AppState
 import es.gasolineras.state.countBrands
+import es.gasolineras.ui.brand.BrandLogo
 import kotlin.math.roundToInt
 
 /** How many station filters differ from the defaults (shown on the "Filters" button). */
@@ -137,6 +138,7 @@ fun FiltersSheet(app: AppState, viewModel: MainViewModel, onDismiss: () -> Unit)
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Checkbox(checked = brand in prefs.brands, onCheckedChange = null)
+                                BrandLogo(brand, 24.dp, Modifier.padding(start = 12.dp))
                                 Text(stringResource(R.string.brands_count, brand, count), modifier = Modifier.padding(start = 12.dp))
                             }
                         }
