@@ -128,8 +128,10 @@
   outline-offset: var(--focus-ring-offset);
 }
 
-/* Zoomed out: each tag shrinks to a dot in its price colour, centred on the station. */
-.is-zoomed-out .station-tag {
+/* Zoomed out, or overlapping a better-ranked tag (see declutter in stationMarkers.ts):
+   the tag shrinks to a dot in its price colour, centred on the station. */
+.is-zoomed-out .station-tag,
+.station-marker.is-compact .station-tag {
   bottom: auto;
   top: 0;
   width: 14px;
@@ -143,7 +145,10 @@
 
 .is-zoomed-out .station-tag > *,
 .is-zoomed-out .station-tag::before,
-.is-zoomed-out .station-tag::after {
+.is-zoomed-out .station-tag::after,
+.station-marker.is-compact .station-tag > *,
+.station-marker.is-compact .station-tag::before,
+.station-marker.is-compact .station-tag::after {
   display: none;
 }
 

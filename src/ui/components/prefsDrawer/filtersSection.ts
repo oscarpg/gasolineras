@@ -13,6 +13,7 @@ import {
   setPreferences,
 } from '../../../state/transitions';
 import { byId, delegate, html, setHtml, syncValue } from '../../dom';
+import { brandLogoHtml } from '../../brandLogo';
 import { AGE_OPTION_LABELS, brandLabel, historyStatusText } from '../../format';
 import { i18n } from '../../i18nContext';
 import { renderFuelOptions } from './carsSection';
@@ -112,7 +113,7 @@ export function createFiltersSection(store: Store<AppState>, effects: Effects) {
       brandList,
       html`${counts.map(
         ([brand, n]) =>
-          html`<label><input type="checkbox" data-brand="${brand}" ${selected.has(brand) ? 'checked' : ''}> ${brandLabel(brand)} (${n})</label>`,
+          html`<label><input type="checkbox" data-brand="${brand}" ${selected.has(brand) ? 'checked' : ''}> ${brandLogoHtml(brand)}${brandLabel(brand)} (${n})</label>`,
       )}`,
     );
   }

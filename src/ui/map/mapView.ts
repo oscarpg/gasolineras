@@ -21,14 +21,18 @@ export interface MapView {
    * point doesn't zoom in fully). `bottomPadding` keeps them clear of a panel.
    */
   fitPoints(points: readonly LatLng[], options?: { bottomPadding?: number }): void;
+  /** Screen position (px, from the map's top-left corner) of a point. */
+  project(position: LatLng): { x: number; y: number };
+  /** Calls `handler` after every pan or zoom. */
+  onViewChange(handler: () => void): void;
 }
 
 /** Max zoom when fitting points, and the smallest span (degrees) fitted. */
 export const FIT_MAX_ZOOM = 15;
 export const FIT_MIN_SPAN_DEG = 0.005;
 
-/** Below this zoom, station tags shrink to coloured dots so they don't pile up. */
-export const TAG_MIN_ZOOM = 12;
+/** Below this zoom (about a city), every station tag is a coloured dot. */
+export const TAG_MIN_ZOOM = 9;
 
 /** The corners of a box around the points, at least `minSpan` degrees wide and tall. */
 export function boundsAround(points: readonly LatLng[], minSpan = FIT_MIN_SPAN_DEG): [LatLng, LatLng] {
@@ -84,6 +88,10 @@ export function createMapView(elementId: string, L: LeafletStatic): MapView {
     },
     focus(position, zoom) {
       map.setView(position, zoom);
+    },
+    project: (position) => map.latLngToContainerPoint(position),
+    onViewChange(handler) {
+      map.on('moveend', handler);
     },
     fitPoints(points, { bottomPadding = 0 } = {}) {
       if (points.length === 0) return;

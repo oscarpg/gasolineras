@@ -21,6 +21,14 @@ button.btn-history {
   gap: 6px;
 }
 
+.popup-title b {
+  flex: 1;
+}
+
+.popup-title .brand-logo {
+  margin-inline-end: 0;
+}
+
 /* Every fuel the station sells */
 .popup-fuels {
   margin-top: 6px;

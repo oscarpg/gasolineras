@@ -22,6 +22,8 @@ export interface StationIconOptions {
   selected?: boolean;
   /** Touch screen: the tag gets extra transparent padding, so a tap near it hits it (WCAG 2.5.5). */
   touch?: boolean;
+  /** Drawn as a dot, because its tag would overlap a better-ranked one (see declutter). */
+  compact?: boolean;
 }
 
 /** Up to two letters for a brand: "REPSOL" → "RE", "GAS EXPRESS" → "GE", "Q8" → "Q8". */
@@ -76,10 +78,10 @@ export function handleLogoErrors(container: Pick<HTMLElement, 'addEventListener'
 export function stationIcon(
   L: LeafletStatic,
   { brand, price, color }: StationTag,
-  { selected = false, touch = false }: StationIconOptions = {},
+  { selected = false, touch = false, compact = false }: StationIconOptions = {},
 ): LeafletIcon {
   const tag = html`<div class="station-tag" style="--tag-color:${color};--tag-price-bg:${textColorFor(color)}">${badgeHtml(brand)}<span class="station-tag__price">${price}</span></div>`;
-  const className = `station-marker${selected ? ' is-selected' : ''}${touch ? ' is-touch' : ''}`;
+  const className = `station-marker${selected ? ' is-selected' : ''}${touch ? ' is-touch' : ''}${compact ? ' is-compact' : ''}`;
   return L.divIcon({
     className,
     html: tag.value,
