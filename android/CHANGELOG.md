@@ -4,7 +4,7 @@ Todas las versiones publicadas de la app Android. Cada versión es un
 [release en GitHub](https://github.com/oscarpg/gasolineras/releases) con su APK firmado.
 _All published versions of the Android app; English below each entry._
 
-## [Sin publicar] — _Unreleased_
+## [1.0.4] — 2026-11-28
 
 ### Mejoras
 
