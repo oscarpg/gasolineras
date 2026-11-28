@@ -117,9 +117,9 @@ describe('station templates content', () => {
       favourites: new Set(),
     }).value;
     expect(popup).toContain('🛣️ Desvío de ruta: 0,0 km (0,0 km i/v)');
-    expect(stationCardHtml(row!, 4, { car: null, hasRoute: true, sortedByTotalCost: false }).value).toContain(
-      '5. REPSOL',
-    );
+    const card = stationCardHtml(row!, 4, { car: null, hasRoute: true, sortedByTotalCost: false }).value;
+    expect(card).toContain('brands/repsol.png');
+    expect(card.replace(/<[^>]*>/g, '')).toContain('5. REPSOL');
   });
 
   it('omits the history button for stations without a MITECO code', () => {
@@ -294,6 +294,40 @@ function fakeLeaflet() {
   } as unknown as LeafletStatic;
   return { L, layer, log };
 }
+
+describe('station marker decluttering', () => {
+  // 0.001° ≈ 10 px: stations 0.0001° apart overlap, 0.05° apart don't.
+  const project = ([lat, lon]: readonly [number, number]) => ({ x: lon * 10000, y: -lat * 10000 });
+  const ctx = { fuel: 'GASOLINA_95' as const, car: null, hasRoute: false, favourites: new Set<string>() };
+  const classes = (layer: { markers: Set<unknown> }) =>
+    new Map(
+      [...layer.markers].map((m) => {
+        const marker = m as unknown as { position: [number, number]; icon: { className: string } };
+        return [marker.position.join(), marker.icon.className];
+      }),
+    );
+
+  it('shrinks to a dot a tag that would overlap a cheaper one, and lets the selected one win', () => {
+    const { L, layer } = fakeLeaflet();
+    const markers = createStationMarkers(L, layer as never);
+    const rows = visible([
+      branded('cheap', { lat: 40.4, lon: -3.7, prices: prices({ GASOLINA_95: 1.4 }) }),
+      branded('dear', { lat: 40.4001, lon: -3.7001, prices: prices({ GASOLINA_95: 1.6 }) }),
+      branded('far', { lat: 40.45, lon: -3.65, prices: prices({ GASOLINA_95: 1.7 }) }),
+    ]);
+    markers.update(rows, ctx);
+    markers.declutter(project);
+    let c = classes(layer);
+    expect(c.get('40.4,-3.7')).not.toContain('is-compact');
+    expect(c.get('40.4001,-3.7001')).toContain('is-compact');
+    expect(c.get('40.45,-3.65')).not.toContain('is-compact');
+
+    markers.select('dear');
+    c = classes(layer);
+    expect(c.get('40.4001,-3.7001')).not.toContain('is-compact');
+    expect(c.get('40.4,-3.7')).toContain('is-compact');
+  });
+});
 
 describe('brandInitials', () => {
   it('uses up to two letters, or one per word', () => {

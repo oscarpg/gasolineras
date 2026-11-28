@@ -90,6 +90,9 @@ export function startApp({
   const toast = createToaster();
   const mapView = createMapView('map', leaflet);
   const markers = createStationMarkers(mapView.L, mapView.stationsLayer, { touch });
+  // Tags that would overlap better-ranked ones become dots; redone after every pan or zoom.
+  mapView.onViewChange(() => markers.declutter(mapView.project));
+  markers.declutter(mapView.project);
   createDrawer();
   createDrawer(FILTERS_DRAWER);
 

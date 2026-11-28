@@ -50,7 +50,8 @@ export interface LeafletMap {
   removeLayer(layer: LeafletLayer): this;
   getZoom(): number;
   getContainer(): HTMLElement;
-  on(event: 'zoomend', handler: () => void): this;
+  latLngToContainerPoint(position: LatLngTuple): { x: number; y: number };
+  on(event: 'zoomend' | 'moveend', handler: () => void): this;
 }
 
 export interface FitBoundsOptions {

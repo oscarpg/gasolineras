@@ -2,6 +2,7 @@ import { FUEL_TYPES } from '../../config/fuels';
 import { textColorFor } from '../../domain/colorScale';
 import type { StationRow } from '../../domain/filters';
 import type { Car, FuelType } from '../../domain/types';
+import { brandLogoHtml } from '../brandLogo';
 import { favouriteButtonHtml } from '../components/stationCard';
 import { html, type SafeHtml } from '../dom';
 import { discountLabel, euros, fuelLabel, km, pricePerLitre, stalenessText, stationName } from '../format';
@@ -66,7 +67,7 @@ export function stationPopupHtml(
     ? html`<br><button class="btn-secondary btn-history" data-action="price-history" data-code="${s.code}" data-province="${s.provinceCode}" data-station="${s.id}">${t('chart.button')}</button><div class="price-chart-slot"></div>`
     : '';
 
-  const title = html`<div class="popup-title"><b>${stationName(s.name)}</b>${favouriteButtonHtml(s, favourites.has(s.id))}</div>`;
+  const title = html`<div class="popup-title">${brandLogoHtml(s.brand, 'large')}<b>${stationName(s.name)}</b>${favouriteButtonHtml(s, favourites.has(s.id))}</div>`;
 
   return html`${title}<small>${s.address}</small><br>${priceBlock}${carBlock}<br><small>${stalenessText(s.bulletinDate, row.staleness)}</small>${distance}${hours}${fuels}${actions}${history}`;
 }

@@ -1,6 +1,7 @@
 import { textColorFor } from '../../domain/colorScale';
 import type { StationRow } from '../../domain/filters';
 import type { BrandedStation, Car } from '../../domain/types';
+import { brandLogoHtml } from '../brandLogo';
 import { html, raw, type SafeHtml } from '../dom';
 import { discountLabel, euros, km, pricePerLitre, stalenessText, stationName } from '../format';
 import { i18n } from '../i18nContext';
@@ -108,7 +109,7 @@ export function stationCardHtml(
   return html`
         <div class="station-card-info">
           <div class="station-card-name">
-            ${index + 1}. ${stationName(s.name)}
+            ${index + 1}. ${brandLogoHtml(s.brand)}${stationName(s.name)}
             ${hasDiscount ? html`<span class="badge">${discountLabel(row.discount)}</span>` : ''}
           </div>
           <div class="station-card-meta">${distance}${s.address}</div>

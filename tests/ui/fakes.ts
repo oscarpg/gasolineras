@@ -55,8 +55,10 @@ export function fakeLeaflet() {
         toggle: (c: string, on: boolean) => void (on ? map.classes.add(c) : map.classes.delete(c)),
       },
     }),
-    on(_event: string, handler: () => void) {
-      map.zoomHandlers.push(handler);
+    moveHandlers: [] as (() => void)[],
+    latLngToContainerPoint: ([lat, lon]: readonly [number, number]) => ({ x: lon * 100, y: -lat * 100 }),
+    on(event: string, handler: () => void) {
+      (event === 'moveend' ? map.moveHandlers : map.zoomHandlers).push(handler);
       return map;
     },
     /** Zooms like the user would, firing 'zoomend'. */
@@ -90,7 +92,8 @@ export function fakeLeaflet() {
     }
     openPopup() {
       this.open = true;
-      log.push(`open ${this.html.slice(0, 40)}`);
+      // The popup's text, without its markup (a logo can come before the name).
+      log.push(`open ${this.html.replace(/<[^>]*>/g, '').slice(0, 40)}`);
       return this;
     }
     isPopupOpen() {
@@ -145,6 +148,8 @@ export function recordingMapView() {
     clearRoute: () => void calls.push('clear route'),
     focus: (p, z) => void calls.push(`focus ${p.join(',')} z${z}`),
     fitPoints: (points) => void calls.push(`fit ${points.length}`),
+    project: ([lat, lon]) => ({ x: lon, y: -lat }),
+    onViewChange: () => undefined,
   };
   return { view, calls };
 }

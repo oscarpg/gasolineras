@@ -86,6 +86,10 @@
   align-items: center;
 }
 
+#brand-list .brand-logo {
+  margin-inline-end: 0;
+}
+
 /* Brand checklist buttons */
 .brand-actions {
   display: flex;
