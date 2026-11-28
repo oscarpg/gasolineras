@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import androidx.compose.runtime.Composable
@@ -56,9 +57,13 @@ import org.maplibre.android.style.layers.PropertyFactory.circleRadius
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
 import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
+import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
 import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
 import org.maplibre.android.style.layers.PropertyFactory.iconImage
+import org.maplibre.android.style.layers.PropertyFactory.iconOffset
+import org.maplibre.android.style.layers.PropertyFactory.iconPadding
 import org.maplibre.android.style.layers.PropertyFactory.iconSize
+import org.maplibre.android.style.layers.PropertyFactory.symbolSortKey
 import org.maplibre.android.style.layers.PropertyFactory.lineCap
 import org.maplibre.android.style.layers.PropertyFactory.lineColor
 import org.maplibre.android.style.layers.PropertyFactory.lineJoin
@@ -87,8 +92,11 @@ val OpenFreeMapStyle = MapStyle(
 /**
  * [MapRenderer] backed by MapLibre Native. The only class in the project that knows MapLibre.
  * Markers are drawn as a GeoJSON source + circle/symbol layers so thousands stay smooth.
- * Zoomed in, each marker shows its brand badge inside a ring of its price colour; the badge
- * images are drawn once per brand and shared through the style.
+ *
+ * Zoomed in, each marker is a bubble with its brand badge and price, pointing at a dot on the
+ * station. Bubble images are drawn only when MapLibre asks for one it's about to lay out (so
+ * only for nearby stations), shared by markers that look the same, and dropped when no marker
+ * uses them any more. Bubbles that would overlap are hidden, earlier markers first; the dots stay.
  */
 class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRenderer {
 
@@ -114,6 +122,9 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         var cameraInitialised by remember { mutableStateOf(false) }
         val currentOnMarkerClick by rememberUpdatedState(onMarkerClick)
         val currentOnCameraIdle by rememberUpdatedState(onCameraIdle)
+        // Badges by image key, for drawing bubbles on demand; and the bubble images in the style.
+        val badges = remember { HashMap<String, MarkerBadge>() }
+        val bubbleImages = remember { HashSet<String>() }
 
         MapViewLifecycle(mapView)
 
@@ -121,12 +132,18 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
             mapView.getMapAsync { m ->
                 m.uiSettings.isRotateGesturesEnabled = false
                 m.uiSettings.isTiltGesturesEnabled = false
+                mapView.addOnStyleImageMissingListener { id ->
+                    val s = loadedStyle ?: return@addOnStyleImageMissingListener
+                    val bubble = parseBubbleId(id, badges) ?: return@addOnStyleImageMissingListener
+                    s.addImage(id, bubbleBitmap(context, bubble))
+                    bubbleImages += id
+                }
                 m.addOnMapClickListener { point ->
                     // Fingers are bigger than markers: look around the tap and take the nearest marker.
                     val tap = m.projection.toScreenLocation(point)
                     val r = TAP_RADIUS_DP * density.density
                     val area = RectF(tap.x - r, tap.y - r, tap.x + r, tap.y + r)
-                    val id = m.queryRenderedFeatures(area, SELECTED_LOGO_LAYER, SELECTED_LAYER, LOGO_LAYER, MARKER_LAYER, LABEL_LAYER)
+                    val id = m.queryRenderedFeatures(area, SELECTED_BUBBLE_LAYER, SELECTED_LAYER, BUBBLE_LAYER, MARKER_LAYER, LABEL_LAYER)
                         .mapNotNull { f ->
                             val p = f.geometry() as? Point ?: return@mapNotNull null
                             val id = f.getStringProperty(PROP_ID) ?: return@mapNotNull null
@@ -151,6 +168,7 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         LaunchedEffect(map, styleUrl) {
             val m = map ?: return@LaunchedEffect
             loadedStyle = null
+            bubbleImages.clear() // a new style starts without images
             m.setStyle(Style.Builder().fromUri(styleUrl)) { s ->
                 addLayers(s)
                 loadedStyle = s
@@ -160,8 +178,13 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         // Markers: rebuilt only when the list changes; the GeoJSON is built off the main thread.
         LaunchedEffect(loadedStyle, content.markers) {
             val s = loadedStyle ?: return@LaunchedEffect
-            val json = withContext(Dispatchers.Default) { markersGeoJson(content.markers) }
-            addBadgeImages(context, s, content.markers)
+            val markers = content.markers
+            val (json, wanted) = withContext(Dispatchers.Default) {
+                markersGeoJson(markers) to markers.mapTo(HashSet()) { it.bubbleId() }
+            }
+            markers.forEach { m -> m.badge?.let { badges[it.key()] = it } }
+            // Drop bubbles no marker shows any more (e.g. after prices or filters change).
+            bubbleImages.filterNot { it in wanted }.forEach { s.removeImage(it); bubbleImages -= it }
             s.getSourceAs<GeoJsonSource>(MARKER_SOURCE)?.setGeoJson(json)
         }
 
@@ -232,47 +255,52 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         s.addLayer(
             CircleLayer(MARKER_LAYER, MARKER_SOURCE).withProperties(
                 circleColor(toColor(get(PROP_COLOR))),
-                // A dot when zoomed out; a ring around the brand badge when zoomed in.
-                circleRadius(step(zoom(), literal(9f), stop(BADGE_MIN_ZOOM, literal(BADGE_RING_RADIUS)))),
+                // Zoomed in, a smaller dot that the bubble points at.
+                circleRadius(step(zoom(), literal(9f), stop(BUBBLE_MIN_ZOOM, literal(5f)))),
                 circleStrokeColor("#FFFFFF"),
                 circleStrokeWidth(2f),
             ),
         )
         s.addLayer(
-            SymbolLayer(LOGO_LAYER, MARKER_SOURCE).withProperties(
-                iconImage(get(PROP_BADGE)),
-                iconAllowOverlap(true),
-                iconIgnorePlacement(true),
-            ).apply { minZoom = BADGE_MIN_ZOOM },
+            SymbolLayer(BUBBLE_LAYER, MARKER_SOURCE).withProperties(
+                iconImage(get(PROP_BUBBLE)),
+                iconAnchor(Property.ICON_ANCHOR_BOTTOM),
+                iconOffset(arrayOf(0f, -BUBBLE_LIFT_DP)),
+                iconPadding(2f),
+                // Earlier markers (the list's order) win when bubbles would overlap.
+                symbolSortKey(get(PROP_ORDER)),
+            ).apply { minZoom = BUBBLE_MIN_ZOOM },
         )
         s.addLayer(
             SymbolLayer(LABEL_LAYER, MARKER_SOURCE).withProperties(
                 textField(get(PROP_LABEL)),
                 textFont(arrayOf("Noto Sans Regular")),
                 textSize(12f),
-                textOffset(step(zoom(), literal(arrayOf(0f, 1.5f)), stop(BADGE_MIN_ZOOM, literal(arrayOf(0f, 2.1f))))),
+                textOffset(arrayOf(0f, 1.5f)),
                 textColor("#202124"),
                 textHaloColor("#FFFFFF"),
                 textHaloWidth(1.5f),
                 textOptional(true),
-            ),
+            ).apply { maxZoom = BUBBLE_MIN_ZOOM }, // zoomed in, the price is in the bubble
         )
         s.addSource(GeoJsonSource(SELECTED_SOURCE))
         s.addLayer(
             CircleLayer(SELECTED_LAYER, SELECTED_SOURCE).withProperties(
                 circleColor(toColor(get(PROP_COLOR))),
-                circleRadius(step(zoom(), literal(12f), stop(BADGE_MIN_ZOOM, literal(BADGE_RING_RADIUS * SELECTED_SCALE)))),
+                circleRadius(step(zoom(), literal(12f), stop(BUBBLE_MIN_ZOOM, literal(7f)))),
                 circleStrokeColor("#FFFFFF"),
                 circleStrokeWidth(3f),
             ),
         )
         s.addLayer(
-            SymbolLayer(SELECTED_LOGO_LAYER, SELECTED_SOURCE).withProperties(
-                iconImage(get(PROP_BADGE)),
+            SymbolLayer(SELECTED_BUBBLE_LAYER, SELECTED_SOURCE).withProperties(
+                iconImage(get(PROP_BUBBLE)),
+                iconAnchor(Property.ICON_ANCHOR_BOTTOM),
+                iconOffset(arrayOf(0f, -BUBBLE_LIFT_DP)),
                 iconSize(SELECTED_SCALE),
                 iconAllowOverlap(true),
                 iconIgnorePlacement(true),
-            ).apply { minZoom = BADGE_MIN_ZOOM },
+            ).apply { minZoom = BUBBLE_MIN_ZOOM },
         )
         s.addSource(GeoJsonSource(USER_SOURCE))
         s.addLayer(
@@ -288,8 +316,8 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
     private companion object {
         const val MARKER_SOURCE = "gas-markers"
         const val MARKER_LAYER = "gas-markers-circles"
-        const val LOGO_LAYER = "gas-markers-badges"
-        const val SELECTED_LOGO_LAYER = "gas-selected-badge"
+        const val BUBBLE_LAYER = "gas-markers-bubbles"
+        const val SELECTED_BUBBLE_LAYER = "gas-selected-bubble"
         const val LABEL_LAYER = "gas-markers-labels"
         const val ROUTE_SOURCE = "gas-route"
         const val ROUTE_LAYER = "gas-route-line"
@@ -303,57 +331,134 @@ class MapLibreRenderer(private val style: MapStyle = OpenFreeMapStyle) : MapRend
         /** How far from the tap (dp) a marker still counts as tapped: about a fingertip. */
         const val TAP_RADIUS_DP = 24f
 
-        /** From this zoom, markers show their brand badge; below it they are plain dots. */
-        const val BADGE_MIN_ZOOM = 12f
-        /** Radius (dp) of the price-colour ring around a [BADGE_DP] badge. */
-        const val BADGE_RING_RADIUS = 14f
-        const val SELECTED_SCALE = 1.25f
+        /** From this zoom, markers are bubbles; below it they are plain dots with a price label. */
+        const val BUBBLE_MIN_ZOOM = 11f
+        /** Gap (dp) between the bubble's tip and the station, so the dot shows. */
+        const val BUBBLE_LIFT_DP = 3f
+        const val SELECTED_SCALE = 1.15f
     }
 }
 
-/** Size (dp) of a brand badge image. */
-private const val BADGE_DP = 22f
+/** What a bubble shows: its image name encodes all of it, so it can be drawn on demand. */
+private class Bubble(val badge: MarkerBadge?, val label: String, val color: Int)
 
-/** Adds the badge image of every brand in [markers] that the style doesn't have yet. */
-private fun addBadgeImages(context: Context, style: Style, markers: List<MapMarker>) {
-    markers.mapNotNullTo(HashSet()) { it.badge }.forEach { badge ->
-        val id = badge.imageId()
-        if (style.getImage(id) == null) style.addImage(id, badgeBitmap(context, badge))
-    }
+/** Style image key for a badge: equal badges give equal keys. */
+private fun MarkerBadge.key(): String =
+    if (logo != null) "logo:$logo" else "ini:$initials:${background.toHex()}:${foreground.toHex()}"
+
+/** Style image name for a marker's bubble: markers that look the same share one image. */
+private fun MapMarker.bubbleId(): String = "bubble|${badge?.key().orEmpty()}|$label|${color.toHex()}"
+
+private fun parseBubbleId(id: String, badges: Map<String, MarkerBadge>): Bubble? {
+    val parts = id.split('|')
+    if (parts.size != 4 || parts[0] != "bubble") return null
+    val color = runCatching { android.graphics.Color.parseColor(parts[3]) }.getOrNull() ?: return null
+    return Bubble(badges[parts[1]], parts[2], color)
 }
 
-/** Style image name for a badge: equal badges share one image. */
-private fun MarkerBadge.imageId(): String =
-    if (logo != null) "badge-logo-$logo" else "badge-$initials-${background.toHex()}-${foreground.toHex()}"
-
-/** A round badge: the logo on white, or the initials on the brand colour. */
-private fun badgeBitmap(context: Context, badge: MarkerBadge): Bitmap {
+/**
+ * A rounded box with the brand badge and the price on a darker shade of the price colour,
+ * bordered in the price colour, with a pointer at the bottom centre (the icon's anchor).
+ */
+private fun bubbleBitmap(context: Context, bubble: Bubble): Bitmap {
     val metrics = context.resources.displayMetrics
-    val size = (BADGE_DP * metrics.density).toInt()
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).apply { density = metrics.densityDpi }
+    val dp = metrics.density
+    val fontScale = context.resources.configuration.fontScale.coerceIn(1f, 1.3f)
+
+    val pad = 3 * dp
+    val border = 2 * dp
+    val badgeSize = BADGE_DP * dp
+    val gap = 5 * dp
+    val pointerH = 8 * dp
+    val pointerW = 14 * dp
+
+    val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.WHITE
+        textSize = 15 * dp * fontScale
+        typeface = Typeface.DEFAULT_BOLD
+        textAlign = Paint.Align.CENTER
+    }
+    val chipW = text.measureText(bubble.label) + 14 * dp
+    val chipH = maxOf(24 * dp, text.textSize + 8 * dp)
+    val boxH = maxOf(badgeSize, chipH) + 2 * pad
+    val badgeW = if (bubble.badge != null) badgeSize + gap else 0f
+    val boxW = pad + badgeW + chipW + pad
+
+    val width = kotlin.math.ceil(boxW + 2).toInt()
+    val height = kotlin.math.ceil(boxH + pointerH + 2).toInt()
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply { density = metrics.densityDpi }
     val canvas = Canvas(bitmap)
-    val radius = size / 2f
+    canvas.translate(1f, 1f) // room for anti-aliased edges
+
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    // Pointer, then the box over its base.
+    paint.color = bubble.color
+    canvas.drawPath(
+        Path().apply {
+            moveTo(boxW / 2 - pointerW / 2, boxH - border)
+            lineTo(boxW / 2 + pointerW / 2, boxH - border)
+            lineTo(boxW / 2, boxH + pointerH)
+            close()
+        },
+        paint,
+    )
+    val box = RectF(border / 2, border / 2, boxW - border / 2, boxH - border / 2)
+    paint.color = android.graphics.Color.WHITE
+    canvas.drawRoundRect(box, boxH / 2, boxH / 2, paint)
+    paint.style = Paint.Style.STROKE
+    paint.strokeWidth = border
+    paint.color = bubble.color
+    canvas.drawRoundRect(box, boxH / 2, boxH / 2, paint)
+    paint.style = Paint.Style.FILL
+
+    bubble.badge?.let { drawBadge(context, canvas, it, pad, (boxH - badgeSize) / 2, badgeSize) }
+
+    val chip = RectF(pad + badgeW, (boxH - chipH) / 2, pad + badgeW + chipW, (boxH + chipH) / 2)
+    paint.color = darker(bubble.color)
+    canvas.drawRoundRect(chip, chipH / 2, chipH / 2, paint)
+    canvas.drawText(bubble.label, chip.centerX(), chip.centerY() - (text.descent() + text.ascent()) / 2, text)
+    return bitmap
+}
+
+/** A round badge at ([left], [top]): the logo on white, or the initials on the brand colour. */
+private fun drawBadge(context: Context, canvas: Canvas, badge: MarkerBadge, left: Float, top: Float, size: Float) {
+    val radius = size / 2
+    val cx = left + radius
+    val cy = top + radius
     val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     val logo = badge.logo?.let { context.getDrawable(it) }
     if (logo != null) {
         paint.color = android.graphics.Color.WHITE
-        canvas.drawCircle(radius, radius, radius, paint)
+        canvas.drawCircle(cx, cy, radius, paint)
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = size / 28
+        paint.color = 0x33000000
+        canvas.drawCircle(cx, cy, radius - paint.strokeWidth / 2, paint)
         // Inset so a square logo's corners stay inside the circle.
-        val inset = (size * LOGO_INSET).toInt()
-        logo.setBounds(inset, inset, size - inset, size - inset)
+        val inset = size * LOGO_INSET
+        logo.setBounds((left + inset).toInt(), (top + inset).toInt(), (left + size - inset).toInt(), (top + size - inset).toInt())
         logo.draw(canvas)
     } else {
         paint.color = badge.background.toArgb()
-        canvas.drawCircle(radius, radius, radius, paint)
+        canvas.drawCircle(cx, cy, radius, paint)
         paint.color = badge.foreground.toArgb()
         paint.textSize = size * 0.42f
         paint.typeface = Typeface.DEFAULT_BOLD
         paint.textAlign = Paint.Align.CENTER
-        canvas.drawText(badge.initials, radius, radius - (paint.descent() + paint.ascent()) / 2, paint)
+        canvas.drawText(badge.initials, cx, cy - (paint.descent() + paint.ascent()) / 2, paint)
     }
-    return bitmap
 }
 
+/** A darker shade of [color], dark enough for white text on it. */
+private fun darker(color: Int): Int {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(color, hsv)
+    hsv[2] *= 0.62f
+    return android.graphics.Color.HSVToColor(hsv)
+}
+
+/** Size (dp) of the brand badge inside a bubble. */
+private const val BADGE_DP = 28f
 private const val LOGO_INSET = 0.13f
 
 private fun GeoPoint.toPoint(): Point = Point.fromLngLat(lon, lat)
@@ -361,7 +466,8 @@ private fun GeoPoint.toPoint(): Point = Point.fromLngLat(lon, lat)
 private const val PROP_ID = "id"
 private const val PROP_LABEL = "label"
 private const val PROP_COLOR = "color"
-private const val PROP_BADGE = "badge"
+private const val PROP_BUBBLE = "bubble"
+private const val PROP_ORDER = "order"
 
 /** GeoJSON text for markers (built as a string: faster than MapLibre's Feature objects for hundreds of points). */
 private fun markersGeoJson(markers: List<MapMarker>): String = buildString(markers.size * 120) {
@@ -373,7 +479,8 @@ private fun markersGeoJson(markers: List<MapMarker>): String = buildString(marke
         append("""]},"properties":{"id":""").append(jsonString(m.id))
         append(""","label":""").append(jsonString(m.label))
         append(""","color":"""").append(m.color.toHex()).append('"')
-        m.badge?.let { append(""","badge":""").append(jsonString(it.imageId())) }
+        append(""","bubble":""").append(jsonString(m.bubbleId()))
+        append(""","order":""").append(i)
         append("}}")
     }
     append("]}")

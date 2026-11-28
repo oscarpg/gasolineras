@@ -4,6 +4,20 @@ Todas las versiones publicadas de la app Android. Cada versión es un
 [release en GitHub](https://github.com/oscarpg/gasolineras/releases) con su APK firmado.
 _All published versions of the Android app; English below each entry._
 
+## [1.0.4] — 2026-11-28
+
+### Mejoras
+
+- **Marcadores tipo bocadillo en el mapa.** Al acercar el mapa, cada gasolinera muestra un
+  bocadillo con el logotipo de su marca, más grande, y el precio, señalando su ubicación. Si dos
+  bocadillos se solapan, se muestra el de la gasolinera que va antes en la lista.
+
+### Improvements
+
+- **Speech-bubble markers on the map.** Zoomed in, each station shows a bubble with its brand's
+  logo, now bigger, and its price, pointing at its location. When two bubbles would overlap, the
+  one for the station higher in the list is shown.
+
 ## [1.0.3] — 2026-11-27
 
 ### Novedades

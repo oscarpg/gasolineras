@@ -22,7 +22,7 @@ data class MapMarker(
     /** Short text drawn next to the marker (e.g. the price). */
     val label: String,
     val color: Color,
-    /** Drawn inside the marker when zoomed in; null keeps a plain dot. */
+    /** Drawn in the marker's bubble when zoomed in; null shows the price alone. */
     val badge: MarkerBadge? = null,
 )
 
